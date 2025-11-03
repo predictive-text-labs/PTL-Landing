@@ -131,6 +131,7 @@
       /* Reserve scrollbar gutter to prevent width jumps on first layout */
       html {
         scrollbar-gutter: stable both-edges;
+        font-size: 80%; /* Scale everything to 80% */
       }
       /* Preapply final metrics for the hero <h1> to avoid CLS */
       h1[data-hero] {
@@ -232,6 +233,12 @@
         /* omit margin-top so utility classes control spacing */
         margin-bottom: 1rem;
       }
+      /* Founders section spacing */
+      @media (min-width: 1024px) {
+        .founders-section {
+          margin-top: 7rem;
+        }
+      }
     </style>
   </head>
 
@@ -259,118 +266,50 @@
         class="mx-auto mb-8 w-full max-w-screen-xl px-6 lg:max-w-[62rem] lg:px-0"
       >
         <div
-          class="flex w-full flex-col items-start gap-14 text-xl lg:mt-12 lg:grid lg:max-w-none lg:grid-cols-[36rem_20rem] lg:justify-center lg:gap-16 lg:gap-x-24 lg:gap-y-12"
+          class="flex w-full flex-col items-start gap-8 text-xl lg:mt-12 lg:grid lg:max-w-none lg:grid-cols-[36rem_20rem] lg:justify-center lg:gap-x-24"
         >
-          <header class="max-w-[36rem] lg:col-start-1">
-            <h1
-              class="mb-1 text-6xl font-medium tracking-wider text-stone-700 lg:mb-3 lg:text-8xl"
-              data-hero
-            >
-              Predictive
-            </h1>
-            <p
-              class="text-3xl font-light text-stone-600 italic lg:mb-4 lg:text-5xl"
-            >
-              Text Labs.
-            </p>
-          </header>
-          <section class="max-w-[36rem] flex-1 text-stone-500 lg:col-start-1">
-            <p class="mb-4">
-              The underlying insight driving Predictive Text Labs is that when
-              leaders ask “what should I do?”, they want an actionable answer,
-              not another chart. Anyone who's worked with a CEO knows that
-              actionable answers start with a prediction.
-            </p>
-            <p class="mb-4">
-              LLMs are powerful; trained on billions of articles, books, and
-              websites, they summarize the past brilliantly. But we still don’t
-              trust them to forecast. That's because reasoning to predict events
-              is fundamentally different from predicting the next token. Real
-              forecasting requires seeing how events cascade, why patterns
-              repeat, and which signals matter.
-            </p>
-            <p class="mb-4">
-              We believe temporal reasoning isn’t just another AI
-              capability—it’s the core primitive that turns LLMs from search
-              engines into decision-making partners. Without it, AI can analyze
-              the past but never predict the future.
-            </p>
-            <p class="mb-4">
-              This gap limits every organization trying to leverage AI to drive
-              decisions.
-            </p>
-            <p>Our mission is to close it.</p>
-          </section>
+          <div class="max-w-[36rem] lg:col-start-1">
+            <header>
+              <h1
+                class="mb-1 text-6xl font-medium tracking-wider text-stone-700 lg:mb-3 lg:text-8xl"
+                data-hero
+              >
+                Predictive
+              </h1>
+              <p
+                class="text-3xl font-light text-stone-600 italic lg:mb-4 lg:text-5xl"
+              >
+                Text Labs.
+              </p>
+            </header>
+            <section class="mt-12 flex-1 text-stone-500 lg:mt-16">
+              <p class="mb-4">
+                The underlying insight driving Predictive Text Labs is that when
+                leaders ask “what should I do?”, they want an actionable answer,
+                not another chart. Anyone who's worked with a CEO knows that
+                actionable answers start with a prediction.
+              </p>
+              <p class="mb-4">
+                LLMs are powerful; trained on billions of articles, books, and
+                websites, they summarize the past brilliantly. But we still
+                don’t trust them to forecast. That's because reasoning to
+                predict events is fundamentally different from predicting the
+                next token. Real forecasting requires seeing how events cascade,
+                why patterns repeat, and which signals matter.
+              </p>
+              <p class="mb-4">
+                We believe temporal reasoning isn’t just another AI
+                capability—it’s the core primitive that turns LLMs from search
+                engines into decision-making partners. Without it, AI can
+                analyze the past but never predict the future.
+              </p>
+              <p class="mb-4">
+                This gap limits every organization trying to leverage AI to
+                drive decisions.
+              </p>
+              <p>Our mission is to close it.</p>
 
-          <!-- Our team: text-only list -->
-          <section
-            class="mt-0 w-full max-w-[36rem] shrink-0 text-stone-500 lg:sticky lg:top-12 lg:col-start-2 lg:row-start-2 lg:w-[18.5rem] lg:max-w-none lg:text-stone-700"
-          >
-            <h2 class="mt-12 mb-4 text-3xl font-semibold lg:mt-0 lg:text-xl">
-              Founders
-            </h2>
-            <ul class="space-y-4 text-xl lg:text-base">
-              <li>
-                <span class="font-bold">Alex Pan / Co-CEO:</span>
-                <span class="font-light"
-                  >ML engineering and product. Authored VLO, the first synthetic
-                  benchmark for verifiable mixed logic reasoning and state
-                  management (with Prof. Dacheng Tao and Prof. Mary-Anne
-                  Williams). Founded Storipress. Forbes 30 Under 30.</span
-                >
-              </li>
-              <li>
-                <span class="font-bold">Chris Bach / Co-CEO:</span>
-                <span class="font-light"
-                  >GTM, fundraising and product. Serial entrepreneur, co-founder
-                  of Netlify ($2B+ Unicorn w 9M+ developers powering 90M+ apps
-                  and sites). Pioneered Jamstack movement and the category for
-                  the decoupled web, vast experience from a large number
-                  executive and advisory boards of private and public
-                  institutions.</span
-                >
-              </li>
-              <li>
-                <span class="font-bold">Athon Millane / CTO:</span>
-                <span class="font-light"
-                  >Data scientist. Built DLFinLab—the deep learning algotrading
-                  system that powers today's quant funds. Leads AI at The
-                  Network State. Deep understanding of both production ML and
-                  market microstructure.</span
-                >
-              </li>
-            </ul>
-            <h2 class="mt-12 mb-4 text-3xl font-semibold lg:text-xl">
-              Advisors
-            </h2>
-            <ul class="space-y-4 text-xl lg:text-base">
-              <li>
-                <span class="font-bold">Ming Jin, PhD:</span>
-                <span class="font-light"
-                  >Time Series Researcher, Griffith University.</span
-                >
-              </li>
-              <li>
-                <span class="font-bold">Andy Huang, PhD:</span>
-                <span class="font-light"
-                  >Graph Researcher, Oxford University.</span
-                >
-              </li>
-              <li>
-                <span class="font-bold">Flora Salim, PhD:</span>
-                <span class="font-light"
-                  >Time Series Researcher, University of New South Wales.</span
-                >
-              </li>
-            </ul>
-          </section>
-
-          <!-- Join us: placed in same grid to extend sticky bounds -->
-          <div
-            class="mt-16 flex flex-col items-start gap-4 lg:col-start-1 lg:mt-0"
-          >
-            <div class="max-w-[36rem] flex-1 text-xl text-stone-500">
-              <h2 class="mb-4 text-3xl font-semibold lg:mt-10">Join us</h2>
+              <h2 class="mt-12 mb-4 text-3xl font-semibold">Join us</h2>
               <p class="mb-4">
                 Our team consists of researchers, developers, and builders, and
                 are behind leading ML tools and platforms like as MLFinLab and
@@ -379,12 +318,78 @@
 
               <p class="mb-4">
                 We build large language models that predict the future. If
-                you’re world‑class in research, graphs, time series, ML
-                engineering, or product and want to ship with velocity, we’d
+                you're world‑class in research, graphs, time series, ML
+                engineering, or product and want to ship with velocity, we'd
                 love to talk.
               </p>
-            </div>
+            </section>
           </div>
+
+          <!-- Our team: text-only list -->
+          <section
+            class="founders-section w-full max-w-[36rem] shrink-0 text-stone-500 lg:col-start-2 lg:w-[18.5rem] lg:max-w-none lg:text-stone-700"
+          >
+            <div class="lg:sticky lg:top-12">
+              <h2 class="mt-12 mb-4 text-3xl font-semibold lg:mt-0 lg:text-xl">
+                Founders
+              </h2>
+              <ul class="space-y-4 text-xl lg:text-base">
+                <li>
+                  <span class="font-bold">Alex Pan / Co-CEO:</span>
+                  <span class="font-light"
+                    >ML engineering and product. Authored VLO, the first
+                    synthetic benchmark for verifiable mixed logic reasoning and
+                    state management (with Prof. Dacheng Tao and Prof. Mary-Anne
+                    Williams). Founded Storipress. Forbes 30 Under 30.</span
+                  >
+                </li>
+                <li>
+                  <span class="font-bold">Chris Bach / Co-CEO:</span>
+                  <span class="font-light"
+                    >GTM, fundraising and product. Serial entrepreneur,
+                    co-founder of Netlify ($2B+ Unicorn w 9M+ developers
+                    powering 90M+ apps and sites). Pioneered Jamstack movement
+                    and the category for the decoupled web, vast experience from
+                    a large number executive and advisory boards of private and
+                    public institutions.</span
+                  >
+                </li>
+                <li>
+                  <span class="font-bold">Athon Millane / CTO:</span>
+                  <span class="font-light"
+                    >Data scientist. Built DLFinLab—the deep learning
+                    algotrading system that powers today's quant funds. Leads AI
+                    at The Network State. Deep understanding of both production
+                    ML and market microstructure.</span
+                  >
+                </li>
+              </ul>
+              <h2 class="mt-12 mb-4 text-3xl font-semibold lg:text-xl">
+                Advisors
+              </h2>
+              <ul class="space-y-4 text-xl lg:text-base">
+                <li>
+                  <span class="font-bold">Ming Jin, PhD:</span>
+                  <span class="font-light"
+                    >Time Series Researcher, Griffith University.</span
+                  >
+                </li>
+                <li>
+                  <span class="font-bold">Andy Huang, PhD:</span>
+                  <span class="font-light"
+                    >Graph Researcher, Oxford University.</span
+                  >
+                </li>
+                <li>
+                  <span class="font-bold">Flora Salim, PhD:</span>
+                  <span class="font-light"
+                    >Time Series Researcher, University of New South
+                    Wales.</span
+                  >
+                </li>
+              </ul>
+            </div>
+          </section>
         </div>
       </div>
     </main>
