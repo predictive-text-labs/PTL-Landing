@@ -127,10 +127,17 @@
       html,
       body {
         margin: 0; /* avoid UA 8px body margin CLS */
+        overscroll-behavior: contain !important; /* Contained overscroll */
+        overscroll-behavior-y: contain !important;
       }
       /* Reserve scrollbar gutter to prevent width jumps on first layout */
       html {
         scrollbar-gutter: stable both-edges;
+        font-size: 85%; /* Scale everything to 80% */
+      }
+      body {
+        overscroll-behavior: contain !important;
+        overscroll-behavior-y: contain !important;
       }
       /* Preapply final metrics for the hero <h1> to avoid CLS */
       h1[data-hero] {
@@ -232,6 +239,24 @@
         /* omit margin-top so utility classes control spacing */
         margin-bottom: 1rem;
       }
+      /* Founders section spacing */
+      @media (min-width: 1024px) {
+        .founders-section {
+          margin-top: 9.5rem;
+        }
+        .mobile-separator {
+          display: none !important;
+        }
+        /* Fade main content when hovering over sidebar */
+        .founders-section:hover ~ .main-content,
+        .content-wrapper:has(.founders-section:hover) .main-content {
+          opacity: 0.75;
+          transition: opacity 0.2s ease;
+        }
+        .main-content {
+          transition: opacity 0.2s ease;
+        }
+      }
     </style>
   </head>
 
@@ -253,58 +278,81 @@
     ></div>
     <!-- Main Content -->
     <main
-      class="flex min-h-[100dvh] min-h-[100svh] min-h-screen flex-col items-start justify-start gap-8 px-1 pt-16 pb-12 md:px-4 lg:flex-row lg:gap-12 lg:pt-16 lg:pt-[6rem] lg:pb-36"
+      class="flex flex-col items-start justify-start gap-8 px-1 pt-16 pb-6 md:px-4 lg:flex-row lg:gap-12 lg:pb-18"
     >
       <div
-        class="mx-auto mb-8 w-full max-w-screen-xl px-6 lg:max-w-[62rem] lg:px-0"
+        class="mx-auto mb-8 w-full max-w-screen-xl px-6 lg:max-w-[66rem] lg:px-0"
       >
         <div
-          class="flex w-full flex-col items-start gap-14 text-xl lg:mt-12 lg:grid lg:max-w-none lg:grid-cols-[36rem_20rem] lg:justify-center lg:gap-16 lg:gap-x-24 lg:gap-y-12"
+          class="content-wrapper flex w-full flex-col items-start gap-8 text-xl lg:mt-12 lg:grid lg:max-w-none lg:grid-cols-[40rem_20rem] lg:justify-center lg:gap-x-24"
         >
-          <header class="max-w-[36rem] lg:col-start-1">
-            <h1
-              class="mb-1 text-6xl font-medium tracking-wider text-stone-700 lg:mb-3 lg:text-8xl"
-              data-hero
+          <div class="main-content max-w-[40rem] lg:col-start-1">
+            <header>
+              <h1
+                class="mb-1 text-6xl font-medium tracking-wider text-stone-700 lg:mb-3 lg:text-8xl"
+                data-hero
+              >
+                Predictive
+              </h1>
+              <p
+                class="text-3xl font-light text-stone-600 italic lg:mb-4 lg:text-5xl"
+              >
+                Text Labs.
+              </p>
+            </header>
+            <section
+              class="mt-10 flex-1 text-[1.625rem] text-stone-700 lg:mt-12 lg:text-[1.625rem]"
             >
-              Predictive
-            </h1>
-            <p
-              class="text-3xl font-light text-stone-600 italic lg:mb-4 lg:text-5xl"
-            >
-              Text Labs.
-            </p>
-          </header>
-          <section class="max-w-[36rem] flex-1 text-stone-500 lg:col-start-1">
-            <p class="mb-4">
-              The underlying insight driving Predictive Text Labs is that when
-              leaders ask “what should I do?”, they want an actionable answer,
-              not another chart. Anyone who's worked with a CEO knows that
-              actionable answers start with a prediction.
-            </p>
-            <p class="mb-4">
-              LLMs are powerful; trained on billions of articles, books, and
-              websites, they summarize the past brilliantly. But we still don’t
-              trust them to forecast. That's because reasoning to predict events
-              is fundamentally different from predicting the next token. Real
-              forecasting requires seeing how events cascade, why patterns
-              repeat, and which signals matter.
-            </p>
-            <p class="mb-4">
-              We believe temporal reasoning isn’t just another AI
-              capability—it’s the core primitive that turns LLMs from search
-              engines into decision-making partners. Without it, AI can analyze
-              the past but never predict the future.
-            </p>
-            <p class="mb-4">
-              This gap limits every organization trying to leverage AI to drive
-              decisions.
-            </p>
-            <p>Our mission is to close it.</p>
-          </section>
+              <p class="mb-4">
+                The underlying insight driving Predictive Text Labs is that when
+                leaders ask “what should I do?”, they want an actionable answer,
+                not another chart. Anyone who's worked with a CEO knows that
+                actionable answers start with a prediction.
+              </p>
+              <p class="mb-4">
+                LLMs are powerful; trained on billions of articles, books, and
+                websites, they summarize the past brilliantly. But we still
+                don’t trust them to forecast. That's because reasoning to
+                predict events is fundamentally different from predicting the
+                next token. Real forecasting requires seeing how events cascade,
+                why patterns repeat, and which signals matter.
+              </p>
+              <p class="mb-4">
+                We believe temporal reasoning isn’t just another AI capability.
+                It’s the core primitive that turns LLMs from search engines into
+                decision-making partners. Without it, AI can analyze the past
+                but never predict the future.
+              </p>
+              <p class="mb-4">
+                This gap limits every organization trying to leverage AI to
+                drive decisions.
+              </p>
+              <p>Our mission is to close it.</p>
+
+              <h2 class="mt-12 mb-4 text-3xl font-semibold">Join us</h2>
+              <p class="mb-4">
+                Our team consists of researchers, developers, and builders, and
+                we are behind leading ML tools and platforms like DLFinLab and
+                Netlify. Our researchers have tens of thousands of citations.
+              </p>
+
+              <p class="mb-4">
+                We build large language models that predict the future. If
+                you're world‑class in research, graphs, time series, ML
+                engineering, or product and want to ship with velocity, we'd
+                love to talk.
+              </p>
+            </section>
+          </div>
+
+          <!-- Mobile separator -->
+          <div class="mobile-separator my-8 w-full text-center text-stone-400">
+            ⁂
+          </div>
 
           <!-- Our team: text-only list -->
           <section
-            class="mt-0 w-full max-w-[36rem] shrink-0 text-stone-500 lg:sticky lg:top-12 lg:col-start-2 lg:row-start-2 lg:w-[18.5rem] lg:max-w-none lg:text-stone-700"
+            class="founders-section w-full max-w-[36rem] shrink-0 pb-24 text-stone-700 lg:col-start-2 lg:w-[18rem] lg:max-w-none lg:pb-0 lg:opacity-75 lg:hover:opacity-100"
           >
             <h2 class="mt-12 mb-4 text-3xl font-semibold lg:mt-0 lg:text-xl">
               Founders
@@ -361,27 +409,6 @@
               </li>
             </ul>
           </section>
-
-          <!-- Join us: placed in same grid to extend sticky bounds -->
-          <div
-            class="mt-16 flex flex-col items-start gap-4 lg:col-start-1 lg:mt-0"
-          >
-            <div class="max-w-[36rem] flex-1 text-xl text-stone-500">
-              <h2 class="mb-4 text-3xl font-semibold lg:mt-10">Join us</h2>
-              <p class="mb-4">
-                Our team consists of researchers, developers, and builders, and
-                are behind leading ML tools and platforms like as MLFinLab and
-                Netlify. Our researchers have tens of thousands of citations.
-              </p>
-
-              <p class="mb-4">
-                We build large language models that predict the future. If
-                you’re world‑class in research, graphs, time series, ML
-                engineering, or product and want to ship with velocity, we’d
-                love to talk.
-              </p>
-            </div>
-          </div>
         </div>
       </div>
     </main>
@@ -389,7 +416,7 @@
     <footer
       class="pointer-events-none fixed inset-x-0 bottom-4 z-10 text-center text-stone-500"
     >
-      <div class="text-sm">© 2025 Predictive Text Labs</div>
+      <div class="text-[1.125rem]">© 2025 Predictive Text Labs</div>
     </footer>
   </body>
 </html>
