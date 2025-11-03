@@ -127,11 +127,17 @@
       html,
       body {
         margin: 0; /* avoid UA 8px body margin CLS */
+        overscroll-behavior: contain !important; /* Contained overscroll */
+        overscroll-behavior-y: contain !important;
       }
       /* Reserve scrollbar gutter to prevent width jumps on first layout */
       html {
         scrollbar-gutter: stable both-edges;
         font-size: 80%; /* Scale everything to 80% */
+      }
+      body {
+        overscroll-behavior: contain !important;
+        overscroll-behavior-y: contain !important;
       }
       /* Preapply final metrics for the hero <h1> to avoid CLS */
       h1[data-hero] {
@@ -236,7 +242,10 @@
       /* Founders section spacing */
       @media (min-width: 1024px) {
         .founders-section {
-          margin-top: 7rem;
+          margin-top: 9rem;
+        }
+        .mobile-separator {
+          display: none !important;
         }
       }
     </style>
@@ -260,7 +269,7 @@
     ></div>
     <!-- Main Content -->
     <main
-      class="flex min-h-[100dvh] min-h-[100svh] min-h-screen flex-col items-start justify-start gap-8 px-1 pt-16 pb-12 md:px-4 lg:flex-row lg:gap-12 lg:pt-16 lg:pt-[6rem] lg:pb-36"
+      class="flex flex-col items-start justify-start gap-8 px-1 pt-16 pb-12 md:px-4 lg:flex-row lg:gap-12 lg:pb-36"
     >
       <div
         class="mx-auto mb-8 w-full max-w-screen-xl px-6 lg:max-w-[62rem] lg:px-0"
@@ -325,14 +334,17 @@
             </section>
           </div>
 
+          <!-- Mobile separator -->
+          <div class="mobile-separator my-8 w-full text-center text-stone-400">
+            ⁂
+          </div>
+
           <!-- Our team: text-only list -->
           <section
             class="founders-section w-full max-w-[36rem] shrink-0 text-stone-500 lg:col-start-2 lg:w-[18.5rem] lg:max-w-none lg:text-stone-700"
           >
             <div class="lg:sticky lg:top-12">
-              <h2 class="mt-12 mb-4 text-3xl font-semibold lg:mt-0 lg:text-xl">
-                Founders
-              </h2>
+              <h2 class="mb-4 text-3xl font-semibold lg:text-xl">Founders</h2>
               <ul class="space-y-4 text-xl lg:text-base">
                 <li>
                   <span class="font-bold">Alex Pan / Co-CEO:</span>
