@@ -247,6 +247,15 @@
         .mobile-separator {
           display: none !important;
         }
+        /* Fade main content when hovering over sidebar */
+        .founders-section:hover ~ .main-content,
+        .content-wrapper:has(.founders-section:hover) .main-content {
+          opacity: 0.75;
+          transition: opacity 0.2s ease;
+        }
+        .main-content {
+          transition: opacity 0.2s ease;
+        }
       }
     </style>
   </head>
@@ -275,9 +284,9 @@
         class="mx-auto mb-8 w-full max-w-screen-xl px-6 lg:max-w-[66rem] lg:px-0"
       >
         <div
-          class="flex w-full flex-col items-start gap-8 text-xl lg:mt-12 lg:grid lg:max-w-none lg:grid-cols-[40rem_20rem] lg:justify-center lg:gap-x-24"
+          class="content-wrapper flex w-full flex-col items-start gap-8 text-xl lg:mt-12 lg:grid lg:max-w-none lg:grid-cols-[40rem_20rem] lg:justify-center lg:gap-x-24"
         >
-          <div class="max-w-[40rem] lg:col-start-1">
+          <div class="main-content max-w-[40rem] lg:col-start-1">
             <header>
               <h1
                 class="mb-1 text-6xl font-medium tracking-wider text-stone-700 lg:mb-3 lg:text-8xl"
@@ -292,7 +301,7 @@
               </p>
             </header>
             <section
-              class="mt-10 flex-1 text-[1.625rem] text-stone-500 lg:mt-12 lg:text-[1.625rem]"
+              class="mt-10 flex-1 text-[1.625rem] text-stone-700 lg:mt-12 lg:text-[1.625rem]"
             >
               <p class="mb-4">
                 The underlying insight driving Predictive Text Labs is that when
@@ -343,11 +352,11 @@
 
           <!-- Our team: text-only list -->
           <section
-            class="founders-section w-full max-w-[36rem] shrink-0 text-stone-500 lg:col-start-2 lg:w-[17rem] lg:max-w-none lg:text-stone-700"
+            class="founders-section w-full max-w-[36rem] shrink-0 pb-24 text-stone-700 lg:col-start-2 lg:w-[18rem] lg:max-w-none lg:pb-0 lg:opacity-75 lg:hover:opacity-100"
           >
             <div class="lg:sticky lg:top-12">
               <h2 class="mb-4 text-3xl font-semibold lg:text-lg">Founders</h2>
-              <ul class="space-y-4 text-lg lg:text-sm">
+              <ul class="space-y-4 text-lg lg:text-[0.95rem] lg:leading-[1.4]">
                 <li>
                   <span class="font-bold">Alex Pan / Co-CEO:</span>
                   <span class="font-light"
@@ -381,7 +390,7 @@
               <h2 class="mt-12 mb-4 text-3xl font-semibold lg:text-lg">
                 Advisors
               </h2>
-              <ul class="space-y-4 text-lg lg:text-sm">
+              <ul class="space-y-4 text-lg lg:text-[0.95rem] lg:leading-[1.4]">
                 <li>
                   <span class="font-bold">Ming Jin, PhD:</span>
                   <span class="font-light"
