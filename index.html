@@ -243,6 +243,7 @@
       @media (min-width: 1024px) {
         .founders-section {
           margin-top: 9.5rem;
+          transition: opacity 0.2s ease;
         }
         .mobile-separator {
           display: none !important;
@@ -251,7 +252,6 @@
         .founders-section:hover ~ .main-content,
         .content-wrapper:has(.founders-section:hover) .main-content {
           opacity: 0.75;
-          transition: opacity 0.2s ease;
         }
         .main-content {
           transition: opacity 0.2s ease;
@@ -286,7 +286,7 @@
         <div
           class="content-wrapper flex w-full flex-col items-start gap-8 text-xl lg:mt-12 lg:grid lg:max-w-none lg:grid-cols-[40rem_20rem] lg:justify-center lg:gap-x-24"
         >
-          <div class="main-content max-w-[40rem] lg:col-start-1">
+          <div class="main-content max-w-[40rem] transition-opacity duration-200 lg:col-start-1">
             <header>
               <h1
                 class="mb-1 text-6xl font-medium tracking-wider text-stone-700 lg:mb-3 lg:text-8xl"
@@ -352,7 +352,7 @@
 
           <!-- Our team: text-only list -->
           <section
-            class="founders-section w-full max-w-[36rem] shrink-0 pb-24 text-stone-700 lg:col-start-2 lg:w-[18rem] lg:max-w-none lg:pb-0 lg:opacity-75 lg:hover:opacity-100"
+            class="founders-section w-full max-w-[36rem] shrink-0 pb-24 text-stone-700 transition-opacity duration-200 lg:col-start-2 lg:w-[18rem] lg:max-w-none lg:pb-0 lg:opacity-75 lg:hover:opacity-100"
           >
             <div class="lg:sticky lg:top-12">
               <h2 class="mb-4 text-3xl font-semibold lg:text-lg">Founders</h2>
