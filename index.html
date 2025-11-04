@@ -46,10 +46,7 @@
       property="og:description"
       content="Predictive Text Labs builds temporal AI that understands time series and forecasts the future."
     />
-    <meta
-      property="og:image"
-      content="https://ptl.inc/favicon.ico"
-    />
+    <meta property="og:image" content="https://ptl.inc/favicon.ico" />
     <meta property="og:image:alt" content="Predictive Text Labs logo" />
 
     <!-- Twitter -->
@@ -63,10 +60,7 @@
       name="twitter:description"
       content="Predictive Text Labs builds temporal AI that understands time series and forecasts the future."
     />
-    <meta
-      name="twitter:image"
-      content="https://ptl.inc/favicon.ico"
-    />
+    <meta name="twitter:image" content="https://ptl.inc/favicon.ico" />
     <meta name="twitter:image:alt" content="Predictive Text Labs logo" />
     <meta name="twitter:site" content="@PredictiveTextLabs" />
     <meta name="twitter:creator" content="@PredictiveTextLabs" />
@@ -166,6 +160,29 @@
           --oval-ry: 12rem; /* desktop visible height */
         }
       }
+
+      /* Robust footer glow: render gradient within footer stacking context */
+      footer {
+        isolation: isolate; /* ensure ::before sits behind text only */
+      }
+      footer::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: -0.25rem; /* nudge so ellipse center aligns at page bottom */
+        height: var(--oval-ry);
+        pointer-events: none;
+        z-index: -1;
+        background: radial-gradient(
+          ellipse var(--oval-rx) var(--oval-ry) at 50% 100%,
+          rgba(255, 255, 255, 1) 0%,
+          rgba(255, 255, 255, 0.9) 45%,
+          rgba(255, 255, 255, 0.5) 65%,
+          rgba(255, 255, 255, 0.2) 82%,
+          rgba(255, 255, 255, 0) 100%
+        );
+      }
     </style>
     <!-- Preload Tailwind to reduce time-to-style and further cut CLS -->
     <link
@@ -249,11 +266,11 @@
           display: none !important;
         }
         /* Fade main content when hovering over sidebar */
-        .founders-section:hover ~ .main-content,
-        .content-wrapper:has(.founders-section:hover) .main-content {
+        .founders-section:hover ~ .main-content .main-content-section,
+        .content-wrapper:has(.founders-section:hover) .main-content-section {
           opacity: 0.75;
         }
-        .main-content {
+        .main-content-section {
           transition: opacity 0.2s ease;
         }
       }
@@ -278,7 +295,7 @@
     ></div>
     <!-- Main Content -->
     <main
-      class="flex flex-col items-start justify-start gap-8 px-1 pt-16 pb-6 md:px-4 lg:flex-row lg:gap-12 lg:pb-18"
+      class="relative z-[1] flex flex-col items-start justify-start gap-8 px-1 pt-16 pb-6 md:px-4 lg:flex-row lg:gap-12 lg:pb-18"
     >
       <div
         class="mx-auto mb-8 w-full max-w-screen-xl px-6 lg:max-w-[66rem] lg:px-0"
@@ -286,7 +303,7 @@
         <div
           class="content-wrapper flex w-full flex-col items-start gap-8 text-xl lg:mt-12 lg:grid lg:max-w-none lg:grid-cols-[40rem_20rem] lg:justify-center lg:gap-x-24"
         >
-          <div class="main-content max-w-[40rem] transition-opacity duration-200 lg:col-start-1">
+          <div class="main-content max-w-[40rem] lg:col-start-1">
             <header>
               <h1
                 class="mb-1 text-6xl font-medium tracking-wider text-stone-700 lg:mb-3 lg:text-8xl"
@@ -301,7 +318,7 @@
               </p>
             </header>
             <section
-              class="mt-10 flex-1 text-[1.625rem] text-stone-700 lg:mt-12 lg:text-[1.625rem]"
+              class="main-content-section mt-10 flex-1 text-[1.625rem] text-stone-700 transition-opacity duration-200 lg:mt-12 lg:text-[1.625rem]"
             >
               <p class="mb-4">
                 The underlying insight driving Predictive Text Labs is that when
@@ -357,55 +374,56 @@
             <div class="lg:sticky lg:top-12">
               <h2 class="mb-4 text-3xl font-semibold lg:text-lg">Founders</h2>
               <ul class="space-y-4 text-lg lg:text-[0.95rem] lg:leading-[1.4]">
-              <li>
-                <span class="font-bold">Alex Pan / Co-CEO:</span>
-                <span class="font-light"
-                  >MLE and product. Authored VLO, the first synthetic benchmark
-                  for verifiable mixed logic reasoning and state management
-                  (with Profs. Dacheng Tao and Mary-Anne Williams). Founded
-                  Storipress. Forbes 30 Under 30.</span
-                >
-              </li>
-              <li>
-                <span class="font-bold">Chris Bach / Co-CEO:</span>
-                <span class="font-light"
-                  >Serial entrepreneur, co-founder of Netlify, powering 90M+
-                  sites. Pioneered the Jamstack movement and the decoupled
-                  web.</span
-                >
-              </li>
-              <li>
-                <span class="font-bold">Athon Millane / CTO:</span>
-                <span class="font-light"
-                  >Data scientist. Built DLFinLab—the deep learning algotrading
-                  system powering today's quant funds. Founding Team at The
-                  Network State. Deep understanding of both production ML and
-                  market microstructure.</span
-                >
-              </li>
+                <li>
+                  <span class="font-bold">Alex Pan / Co-CEO:</span>
+                  <span class="font-light"
+                    >MLE, researcher, and product. Authored VLO, the first
+                    synthetic benchmark for verifiable mixed logic reasoning and
+                    state management (with Profs. Dacheng Tao and Mary-Anne
+                    Williams). Founded Storipress. Forbes 30 Under 30.</span
+                  >
+                </li>
+                <li>
+                  <span class="font-bold">Chris Bach / Co-CEO:</span>
+                  <span class="font-light"
+                    >Serial entrepreneur, co-founder of Netlify, powering 90M+
+                    sites. Pioneered the Jamstack movement and the decoupled
+                    web.</span
+                  >
+                </li>
+                <li>
+                  <span class="font-bold">Athon Millane / CTO:</span>
+                  <span class="font-light"
+                    >Data scientist. Built DLFinLab—the deep learning
+                    algotrading system powering today's quant funds. Founding
+                    Team at The Network State. Deep understanding of both
+                    production ML and market microstructure.</span
+                  >
+                </li>
               </ul>
               <h2 class="mt-12 mb-4 text-3xl font-semibold lg:text-lg">
                 Advisors
               </h2>
               <ul class="space-y-4 text-lg lg:text-[0.95rem] lg:leading-[1.4]">
-              <li>
-                <span class="font-bold">Ming Jin, PhD:</span>
-                <span class="font-light"
-                  >Time Series Researcher, Griffith University.</span
-                >
-              </li>
-              <li>
-                <span class="font-bold">Andy Huang, PhD:</span>
-                <span class="font-light"
-                  >Graph Researcher, Oxford University.</span
-                >
-              </li>
-              <li>
-                <span class="font-bold">Flora Salim, PhD:</span>
-                <span class="font-light"
-                  >Time Series Researcher, University of New South Wales.</span
-                >
-              </li>
+                <li>
+                  <span class="font-bold">Ming Jin, PhD:</span>
+                  <span class="font-light"
+                    >Time Series Researcher, Griffith University.</span
+                  >
+                </li>
+                <li>
+                  <span class="font-bold">Andy Huang, PhD:</span>
+                  <span class="font-light"
+                    >Graph Researcher, Oxford University.</span
+                  >
+                </li>
+                <li>
+                  <span class="font-bold">Flora Salim, PhD:</span>
+                  <span class="font-light"
+                    >Time Series Researcher, University of New South
+                    Wales.</span
+                  >
+                </li>
               </ul>
             </div>
           </section>
@@ -414,7 +432,8 @@
     </main>
     <!-- Footer -->
     <footer
-      class="pointer-events-none fixed inset-x-0 bottom-4 z-10 text-center text-stone-500"
+      class="pointer-events-none fixed inset-x-0 text-center text-stone-500"
+      style="position: fixed; z-index: 9999; isolation: isolate; bottom: 0; padding-bottom: 0.5rem; padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));"
     >
       <div class="text-[1.125rem]">© 2025 Predictive Text Labs</div>
     </footer>
