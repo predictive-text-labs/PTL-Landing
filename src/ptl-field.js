@@ -84,6 +84,8 @@
   uniform vec3      uPaper;     // the ground
   uniform vec2      uMouse;     // pointer, in the same uv space as the field
   uniform float     uAct;       // 0..1 — how much the pointer is allowed to act
+  uniform float     uTime;      // seconds — the ambient clock, which scroll speeds up
+  uniform float     uAmb;       // 0..1 — how much ambient motion is allowed
 
   float hash(vec2 p){ return fract(sin(dot(p, vec2(41.3, 289.1))) * 43758.5453); }
 
@@ -392,7 +394,31 @@
 
     float s = sqrt(clamp(lum, 0.0, 1.0));
     vec2 f = abs(fract(gl_FragCoord.xy / uCell) - 0.5) * 2.0;
-    float mark = step(max(f.x, f.y), s * (1.0 - uGap));
+
+    /* THE FIELD BREATHES.
+       --------------------------------------------------------------------
+       Applied to the mark's SIZE and not to the luminance behind it, which
+       matters: the bright core of the form is saturated, so modulating lum
+       there is swallowed by the clamp and only the falloff would move. Size
+       is the one channel every cell still has room in — a saturated cell can
+       always get smaller — so the whole field moves, core included, which is
+       what makes it read as a printed screen with a pulse rather than as a
+       soft edge wobbling.
+
+       Two sines at unrelated rates and unrelated directions. One alone is a
+       metronome sweeping the screen; summed, they never repeat inside any
+       time a reader will spend here, and the beat between them is what makes
+       it read as breathing rather than as a loop.
+
+       It dies as the form closes, on exactly the closing track's window: the
+       last frame of the page is meant to be still, and a mark that is still
+       pulsing under the closing claim is a film that has not ended. */
+    float wave = sin(uTime * 0.55 + uv.x * 2.3 + uv.y * 1.7)
+               + sin(uTime * 0.37 - uv.x * 1.6 + uv.y * 2.9) * 0.7;
+    float amb  = uAmb * (1.0 - smoothstep(0.86, 0.965, uG));
+    float breathe = 1.0 + amb * 0.060 * wave;
+
+    float mark = step(max(f.x, f.y), s * (1.0 - uGap) * breathe);
     /* Still one bit per cell — every pixel is either ink or paper, never a
        blend. Which two colours those are is the page's business, not the
        renderer's.
@@ -483,7 +509,7 @@
 
       u = {};
       for (const n of ['uRes', 'uT', 'uG', 'uCell', 'uGap', 'uGain', 'uMode',
-                       'uSection', 'uTex', 'uFov', 'uMouse', 'uAct',
+                       'uSection', 'uTex', 'uFov', 'uMouse', 'uAct', 'uTime', 'uAmb',
                        'uInk', 'uInk2', 'uPaper']) {
         u[n] = gl.getUniformLocation(prog, n);
       }
@@ -578,6 +604,8 @@
       const m = o.mouse || [0, 0];
       gl.uniform2f(u.uMouse, m[0], m[1]);
       gl.uniform1f(u.uAct, o.act != null ? o.act : 0);
+      gl.uniform1f(u.uTime, o.time != null ? o.time : 0);
+      gl.uniform1f(u.uAmb, o.amb != null ? o.amb : 0);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     }
 

@@ -290,10 +290,17 @@
      and the padding adds it straight back), so the measured gap down to the
      body is exactly what it was.
 
-     Bottom only: the ascenders were measured and they do not overflow. Top
-     padding would also shift the border-box origin, and the 12px lattice is
-     laid from that corner — it would re-phase the halftone for no reason. */
+     The top needs it too, but only on the headline and only sometimes: at the
+     landscape-phone measure the Cormorant ascenders overflow upward and
+     Chromium was shaving 68 device px off them, where WebKit and Firefox laid
+     them out just inside. It gets padding with no compensating margin, because
+     .blk is anchored to its BOTTOM — the block simply grows upward and not one
+     glyph moves. That does shift the border-box origin the 12px lattice is
+     laid from, which re-phases the halftone by a fraction of a cell; the
+     lattice is a dissolve texture with no registration to anything, so that
+     costs nothing, and a cropped ascender is not nothing. */
   .blk h1,.blk p{padding-bottom:.18em;margin-bottom:-.18em}
+  .blk h1{padding-top:.32em}
   .blk h1{font:300 clamp(1.9rem,3.5vw,3.2rem)/1.14 Cormorant,serif;
     letter-spacing:-.012em;text-wrap:balance}
   /* `balance` sets the paragraph at the narrowest measure that still holds its
@@ -327,17 +334,36 @@
      making itself: the mark has closed, the claim has come to rest, and the
      film is holding still. Then this.
 
-     Filled and square: the same block as the caret that ends the claim, grown
-     to hold a label, and drawn in the inversion the whole page is built on —
-     ink ground, paper letters. That is why it is --ink and not a literal
-     black. On the dark variation "a black button" would be a hole. */
-  .cta{display:inline-block;padding:1.25rem 2.2rem;
-    background:var(--ink);color:var(--paper);text-decoration:none;
-    font:500 .70rem/1 "Geist Mono",monospace;
-    letter-spacing:.30em;text-indent:.30em;text-transform:uppercase;
-    transition:background .18s ease,color .18s ease,box-shadow .18s ease}
-  .cta:hover,.cta:focus-visible{background:var(--paper);color:var(--ink);
-    box-shadow:inset 0 0 0 1px var(--ink);outline:none}
+     Set as text, not as a filled block. The block was the loudest object on
+     the page by a distance — the only solid shape in a composition made of
+     marks and thin type — and it read as a product page's button dropped onto
+     the end of an essay. As a rule the same as the chrome's, in the same face
+     and tracking, it is legible as an action without claiming to be the point.
+
+     Set in Cormorant, which is the brand's own face and the one the lockup
+     above opens with — so the last thing on the page is in the same voice as
+     the first, rather than in the chrome's mono, which is the register the
+     page uses for labels and machinery. Sentence case, untracked: a tracked
+     uppercase line here would read as a second headline arguing with the
+     claim two lines above it.
+
+     No rule at rest. It carries none of the mono's letter-spacing now, so
+     text-decoration hugs the glyphs and there is no trailing space to throw
+     the rule off centre — and because text-decoration is not layout, the
+     underline can appear on hover without anything moving.
+
+     Deliberately NOT .fade. The lockup's lines arrive through a mask wipe
+     because they are type resolving out of the field; this is not part of the
+     argument, it is what is offered once the argument is over, and a wipe read
+     as one more piece of choreography. It just rises and fades — see
+     floatCta(). */
+  .cta{display:inline-block;padding:.4rem .3rem;will-change:opacity,transform;
+    color:var(--ink);text-decoration:none;
+    font:300 1rem/1.15 Cormorant,serif;
+    letter-spacing:.005em;
+    text-underline-offset:.19em;text-decoration-thickness:1px;
+    transition:opacity .18s ease}
+  .cta:hover,.cta:focus-visible{text-decoration:underline;outline:none}
   @media (prefers-reduced-motion:reduce){.cta{transition:none}}
 
   .l1{font:italic 300 clamp(2.4rem,4.6vw,4.2rem)/1.16 Cormorant,serif;
@@ -481,7 +507,7 @@
            aria-hidden content is a trap — reachable by keyboard, invisible to
            a screen reader. The chrome's ABOUT link is the same destination and
            is announced properly, so this one is for the mouse. -->
-      <div class="fin-c" id="finC"><a class="cta fade" id="cta" href="/about.html" tabindex="-1">About PTL</a></div>
+      <div class="fin-c" id="finC"><a class="cta" id="cta" href="/about.html" tabindex="-1">about ptl.</a></div>
     </div>
   </div>
 

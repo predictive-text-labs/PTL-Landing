@@ -2,9 +2,17 @@
    PTL — the page
    ----------------------------------------------------------------------------
    Six beats of an argument, choreographed against scroll over a field drawn by
-   ptl-field.js. Scroll is the only clock: every position on this page is a pure
-   function of scrollY, so there is nothing to seek, buffer or decode, and
-   dragging the scrollbar backwards runs the film backwards exactly.
+   ptl-field.js. Scroll is the only clock the ARGUMENT runs on: every position
+   on this page is a pure function of scrollY, so there is nothing to seek,
+   buffer or decode, and dragging the scrollbar backwards runs the film
+   backwards exactly.
+
+   There is a second clock, and it drives texture only. The field breathes on a
+   real-time clock so that a page nobody is touching is alive rather than a
+   screenshot, and scrolling makes that clock run faster. It reaches exactly one
+   thing — the size of the halftone marks — and nothing that decides where a
+   word sits can read it, so the two clocks cannot disagree about anything that
+   matters. See "the ambient clock" below.
 
    The copy is NOT held here. It lives in index.html as ordinary semantic HTML
    and is read out of the DOM below, so a crawler, a link preview and a screen
@@ -165,10 +173,19 @@
     OUT: [[0.28, 0.12], [0.30, 0.12]],
     /* The button waits for the film to be over. The mark stops closing at
        g = 0.965, which is t = 0.79 of this section, and the claim stops being
-       pushed at the same instant — so 0.80 is the first moment there is a
-       still frame to arrive into. Done by 0.92, which leaves the last 8% as
-       the held end card it was always meant to be. */
-    CTA: [0.80, 0.12],
+       pushed at the same instant — so that is the first moment there is a
+       still frame to arrive into. It then takes almost all of the remaining
+       scroll: this is the one thing on the page with nowhere to be, and a
+       short window made it pop rather than surface. */
+    /* The claim stops dead at t = 0.79 — that is the instant the mark finishes
+       closing and stops pushing it, and the clamp that holds it is a hard max()
+       with nothing easing it in. What was missing was the BEAT afterwards: the
+       button used to start arriving at 0.79 exactly, so the claim's stop and
+       the button's entrance were the same event and neither read. Now there is
+       a stretch of scroll where the claim has hit its wall and nothing else
+       happens — about 200px of it — and only then does the button begin. */
+    CTA: [0.90, 0.095],
+    CTA_RISE: 0.042,      // how far it floats up, as a fraction of the frame
     CTA_GAP: 1.7,         // below the claim, in rem, capped against short frames
   };
   const easeIn = u => u * u;             // accelerates out of frame
@@ -239,7 +256,11 @@
       finA.style.transform = `translate(-50%,${(rY - gap - ha).toFixed(1)}px)`;
       finC.style.transform =
         `translate(-50%,${(rY + finB.offsetHeight + ctaGap).toFixed(1)}px)`;
-      for (const el of [b.l1, b.l2, b.l3, cta]) fadeLine(el, 1, 0, H);
+      for (const el of [b.l1, b.l2, b.l3]) fadeLine(el, 1, 0, H);
+      /* The button is simply present: its arrival IS the motion. */
+      cta.style.opacity = '1';
+      cta.style.transform = 'none';
+      cta.style.pointerEvents = 'auto';
       return;
     }
     const ins = FIN.IN, out = FIN.OUT;
@@ -248,7 +269,21 @@
     fadeLine(b.l2, outCubic(clamp((t - ins[1][0]) / ins[1][1])),
                    inQuad  (clamp((t - out[1][0]) / out[1][1])), H);
     fadeLine(b.l3, outCubic(clamp((t - ins[2][0]) / ins[2][1])), 0, H);
-    fadeLine(cta, outCubic(clamp((t - FIN.CTA[0]) / FIN.CTA[1])), 0, H);
+    floatCta(t, H);
+  }
+
+  /* The button's own arrival, which is not fadeLine's. The lockup's lines come
+     in through a mask wipe because they are type resolving out of the field;
+     the button is an object that appears once the argument is over, and a wipe
+     read as one more flourish on a frame that is supposed to have stopped
+     moving. Opacity and a rise, on a smoothstep so it is gentle at both ends
+     rather than launching and braking. */
+  function floatCta(t, H) {
+    if (!cta) return;
+    const u = smooth(FIN.CTA[0], FIN.CTA[0] + FIN.CTA[1], t);
+    cta.style.opacity = u.toFixed(3);
+    cta.style.transform = `translateY(${((1 - u) * H * FIN.CTA_RISE).toFixed(1)}px)`;
+    cta.style.pointerEvents = u > 0.05 ? 'auto' : 'none';
   }
 
   /* One line's arrival and departure: mask, opacity and a small travel of its
@@ -298,14 +333,49 @@
     if (act > 0.001) tick();
   }, { passive: true });
 
-  /* A frame loop that exists only while the light is still moving. Scroll and
-     resize drive everything else, so there is no reason to hold the compositor
-     open the rest of the time. */
+  /* ---- the ambient clock -------------------------------------------------
+     Scroll is no longer the ONLY clock. It is still the only thing that moves
+     the argument — every position, every beat, the whole composition remains a
+     pure function of scrollY, and that has not changed — but the field now
+     breathes on its own underneath it, so a page nobody is touching is alive
+     rather than a screenshot.
+
+     The two clocks are deliberately different KINDS of thing. Scroll drives
+     structure and is exact and reversible; this drives texture only (mark size,
+     nothing else — see the shader) and is monotonic. Nothing that decides where
+     a word sits reads it, which is why it cannot desynchronise anything: at
+     worst the halftone is a few frames further through a sine.
+
+     Scrolling makes it run faster. `vel` is scroll distance in viewport-heights
+     accumulated since the last frame and decayed continuously, so the rate
+     answers to how hard you are moving rather than to whether an event fired —
+     it stays lifted through a flick and settles back on its own. */
+  const AMB_IDLE = 1.0;    // clock seconds per real second, untouched
+  const AMB_GAIN = 5.5;    // extra, at full scroll speed
+  const AMB_DECAY = 0.86;  // how fast the boost bleeds off, per frame
+  let clock = 0, lastTs = 0, vel = 0, lastY = 0;
+  /* Ambient motion is motion, so prefers-reduced-motion turns it off outright
+     and the page goes back to being driven by scroll alone. */
+  const ambient = () => (reduce ? 0 : 1);
+
+  /* One frame loop, for everything that is not scroll position: the ambient
+     clock and the pointer light easing toward the cursor. It runs continuously
+     while there is ambient motion to draw, and otherwise only while the light
+     is still settling — a page with reduced motion and no pointer holds the
+     compositor open exactly as little as it did before. */
   let ticking = 0;
   function tick() {
     if (ticking) return;
-    ticking = requestAnimationFrame(function step() {
+    ticking = requestAnimationFrame(function step(ts) {
       ticking = 0;
+      /* Clamped, because a backgrounded tab hands back one enormous delta on
+         return and the field would jump a second and a half of sine. */
+      const dt = lastTs ? Math.min((ts - lastTs) / 1000, 0.05) : 0.016;
+      lastTs = ts;
+      if (ambient()) {
+        vel *= AMB_DECAY;
+        clock += dt * (AMB_IDLE + AMB_GAIN * Math.min(vel, 1.4));
+      }
       const dx = tgt[0] - cur[0], dy = tgt[1] - cur[1];
       /* The chase rate eases on distance too: near the mark the light is
          attentive, far from it the light is lazy. Same idea as the shader's
@@ -316,9 +386,20 @@
       cur[0] += dx * rate;
       cur[1] += dy * rate;
       render();
-      if (act > 0.001 && (Math.abs(dx) > 0.0004 || Math.abs(dy) > 0.0004)) tick();
+      const settling = act > 0.001 && (Math.abs(dx) > 0.0004 || Math.abs(dy) > 0.0004);
+      /* document.hidden: a hidden tab gets no frames anyway in every current
+         browser, but asking for them is still a promise to burn a core if one
+         ever obliges. */
+      if ((ambient() && !document.hidden) || settling) tick();
     });
   }
+  /* Restart the loop when the tab comes back, and reset the timestamp so the
+     first frame after does not carry the whole absence as one delta. */
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) return;
+    lastTs = 0;
+    tick();
+  });
 
   /* ---- the frame ---------------------------------------------------------
      `typeof`, not a truthiness check: if the request for ptl-field.js failed,
@@ -385,6 +466,7 @@
       g: p, section: idx, word: S[idx].key,
       cell: 12, gap: 0.12, gain: 1.0, fov: 0.70,
       mouse: cur, act, ink: INK, ink2: INK2, paper: PAPER,
+      time: clock, amb: ambient(),
     });
   }
 
@@ -395,8 +477,17 @@
     if (act > 0.001) tick();
   }
 
-  addEventListener('scroll', () => { if (!raf) raf = requestAnimationFrame(frame); },
-                   { passive: true });
+  addEventListener('scroll', () => {
+    /* Distance, not events: a trackpad fires far more scroll events per pixel
+       than a wheel does, and rating the boost by event count would make the
+       same gesture mean different things on different hardware. */
+    vel += Math.abs(window.scrollY - lastY) / Math.max(innerHeight, 1);
+    lastY = window.scrollY;
+    /* When the ambient loop is running it is already drawing every frame, so
+       scheduling the scroll slot as well would render the same frame twice. */
+    if (ambient()) { tick(); return; }
+    if (!raf) raf = requestAnimationFrame(frame);
+  }, { passive: true });
   /* Coalesced through the same rAF slot as scroll. Dragging a window edge
      fires resize continuously, and each one used to force a synchronous
      measure — two forced layouts — plus a full GL draw, while also clearing
@@ -422,7 +513,9 @@
      would have given it, which is only knowable once Cormorant has loaded. */
   document.fonts.ready.then(() => { measure(); frame(); });
   measure();
+  lastY = window.scrollY;
   frame();
+  tick();          // and the field starts breathing, with nobody having done anything
 
   /* Deterministic seeking, for tests and for screenshots. */
   window.AT = (i, t) => {

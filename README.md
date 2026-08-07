@@ -7,9 +7,17 @@ that is **drawn, not filmed**.
 
 No video, no image sequence, no animation library, no framework, no build step.
 The whole film is one WebGL2 fragment shader — `src/ptl-field.js` — and scroll
-is its only clock. Every position on the page is a pure function of `scrollY`,
-so there is nothing to seek, buffer or decode; dragging the scrollbar backwards
-runs the film backwards exactly.
+is the clock the argument runs on. Every position on the page is a pure
+function of `scrollY`, so there is nothing to seek, buffer or decode; dragging
+the scrollbar backwards runs the film backwards exactly.
+
+The field also breathes on a real-time clock, so a page nobody is touching is
+alive rather than a screenshot, and scrolling makes that clock run faster
+(measured: 1× idle, ~2× under a steady scroll, up to ~8.7× on a hard flick,
+decaying back on its own). It reaches exactly one thing — the size of the
+halftone marks — so it cannot move the composition or desynchronise the copy,
+and it fades out entirely as the closing mark lands, because the last frame is
+meant to be still. `prefers-reduced-motion` turns it off.
 
 The reason is in the shader's own header: the reference set this was art
 directed against (Algolia, Pulse, 1-bit posters) is *graphic*, not
