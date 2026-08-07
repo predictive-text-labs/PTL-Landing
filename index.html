@@ -239,10 +239,19 @@
      actually sits and where a hard mark would be unreadable. This handles
      everything that merely drifts NEAR the copy — the arch's legs, the outer
      ring of the lattice — which the keep-out deliberately leaves sharp. */
+  /* saturate(0) so the defocus carries VALUE and not HUE. The wash is already
+     the paper colour, but it is translucent on purpose — a defocus, not an
+     eraser — and the ~28% of the field still showing through arrives with its
+     own colour. On variation 3 that is blue, so the dome behind the copy came
+     out lavender: a third colour, on a page that has two. Desaturating the
+     backdrop first means what bleeds through is only light and dark, and the
+     dome reads as the paper defocused. Measured: haze chroma 17 -> 8, against
+     the paper's own 10. A no-op on the other two variations, whose ink is
+     already neutral, so it does not need scoping to v3. */
   .veil{position:absolute;inset:0;z-index:1;pointer-events:none;
     background:var(--wash);
-    backdrop-filter:blur(28px);
-    -webkit-backdrop-filter:blur(28px);
+    backdrop-filter:blur(28px) saturate(0);
+    -webkit-backdrop-filter:blur(28px) saturate(0);
     -webkit-mask-image:radial-gradient(ellipse 82% 68% at 50% 100%,#000 0%,#000 46%,transparent 100%);
     mask-image:radial-gradient(ellipse 82% 68% at 50% 100%,#000 0%,#000 46%,transparent 100%)}
 
@@ -493,7 +502,7 @@
     </section>
     <section data-key="COMMIT">
       <h1>A machine earns this right through a track record of committing scarce resources into the world.</h1>
-      <p>It must bear the consequences of being wrong and improve itself when the outcome arrives. Today, AI models are built in a vacuum and graded after the fact — never against a decision that cost anything.</p>
+      <p>It must feel the consequences of being wrong and learn when the results land. Today, AI models are built in a vacuum and graded after the fact — never against a decision that cost anything.</p>
     </section>
     <section data-key="PRICE">
       <h1>Predictive Text Labs teaches machines to price uncertainty so they can commit to decisions that matter.</h1>

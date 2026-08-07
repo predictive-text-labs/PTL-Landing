@@ -169,7 +169,7 @@
        still frame to arrive into. Done by 0.92, which leaves the last 8% as
        the held end card it was always meant to be. */
     CTA: [0.80, 0.12],
-    CTA_GAP: 3.4,         // below the claim, in rem, capped against short frames
+    CTA_GAP: 1.7,         // below the claim, in rem, capped against short frames
   };
   const easeIn = u => u * u;             // accelerates out of frame
 
@@ -182,7 +182,7 @@
     /* Capped against the viewport as well as set in rem: on a landscape phone
        a fixed 3.4rem below the claim is a large share of the whole frame, and
        the button has to fit under it without the pair being crushed. */
-    ctaGap = Math.min(FIN.CTA_GAP * rem, innerHeight * 0.075);
+    ctaGap = Math.min(FIN.CTA_GAP * rem, innerHeight * 0.0375);
   };
 
   /* The mark's lower edge in screen px — the same arithmetic as form()'s
