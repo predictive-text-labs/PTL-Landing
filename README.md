@@ -35,8 +35,25 @@ crawler, a link preview and a screen reader with a page containing no words at
 all. So the argument lives in `#story` as ordinary semantic HTML and the script
 reads it out of the DOM. One source of truth. Edit the copy there.
 
+## Variations
+
+Three colourways, selected with a query parameter; `?v=` anything else is
+variation 1.
+
+    /               1  white mark on black — the original
+    /?v=2           2  inverted onto stone-300, the old site's own warm paper
+    /?v=3           3  the same paper and black type, with the blue confined
+                       to the FILM, resolving to black as the mark closes
+
+Every colour, including the two the shader resolves its 1-bit output to, comes
+from the `:root` blocks at the top of `index.html`; the renderer is handed
+`--field` and `--paper` at draw time, so the film and the type cannot disagree
+about the ground they are on. Once one is chosen, the other two blocks and the
+switch come out.
+
 ## Develop
 
+    pnpm install        oxlint, knip, jscpd (lint only — nothing ships from here)
     pnpm dev            serve at http://localhost:8777
     pnpm verify         oxlint + knip + jscpd
 
@@ -44,8 +61,12 @@ reads it out of the DOM. One source of truth. Edit the copy there.
 
 Static, published from the repository root. Both `netlify.toml` and
 `vercel.json` set an empty build command — there is nothing to compile, so
-there is nothing that can fail at deploy time. Fonts are served immutable for a
-year.
+there is nothing that can fail at deploy time.
+
+Caching follows from there. With no build step the filenames are not
+content-hashed, so nothing is served `immutable`: fonts get thirty days, and
+the scripts — which share no version with the HTML that loads them — are
+revalidated on every visit.
 
 ## Accessibility
 

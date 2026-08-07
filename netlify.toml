@@ -5,15 +5,24 @@
   publish = "."
   command = ""
 
+# The filenames are stable, not content-hashed — there is no build step here to
+# rewrite them — so `immutable` for a year would be a promise this repo cannot
+# keep: replacing a subset would leave a year of clients on the old face with no
+# way to revalidate. Thirty days keeps repeat visits free (font-display:block
+# means an uncached face renders nothing until it arrives) while bounding how
+# long a swapped file can stay stale.
 [[headers]]
   for = "/fonts/*"
   [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable"
+    Cache-Control = "public, max-age=2592000"
 
+# The scripts are the page's behaviour and share no version with the HTML that
+# loads them, which Netlify serves revalidated. An hour of skew meant new markup
+# could meet old JS; revalidating costs one 304.
 [[headers]]
   for = "/src/*"
   [headers.values]
-    Cache-Control = "public, max-age=3600"
+    Cache-Control = "public, max-age=0, must-revalidate"
 
 [[headers]]
   for = "/*"

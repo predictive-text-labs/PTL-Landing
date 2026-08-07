@@ -9,6 +9,12 @@
 <link rel="canonical" href="https://ptl.inc/about.html">
 <meta name="theme-color" content="#000000">
 <meta name="color-scheme" content="dark">
+<script>
+  {
+    const v = new URLSearchParams(location.search).get('v');
+    if (v === '2' || v === '3') document.documentElement.dataset.v = v;
+  }
+</script>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <meta property="og:type" content="website">
@@ -25,22 +31,41 @@
   @font-face{font-family:Cormorant;src:url("/fonts/Cormorant-Italic.woff2") format("woff2");font-weight:300 700;font-style:italic;font-display:block}
   @font-face{font-family:"Geist Mono";src:url("/fonts/GeistMono.woff2") format("woff2");font-weight:100 900;font-display:block}
 
+  /* THE PALETTE — mirrored from index.html, which is the source. There is no
+     build step and no shared stylesheet (the film's CSS is inlined so the first
+     paint costs no extra request), so the tokens this page actually uses are
+     restated here. Two of the three blocks come out once a variation is chosen.
+     Only the tokens below are used; the field-only ones are not repeated. */
+  :root{
+    --paper:#000000; --ink:#ffffff;
+    --dim:#7C7C7C; --mid:#8A8A8A; --rule:#333333;
+  }
+  :root[data-v="2"]{
+    --paper:#D6D3D1; --ink:#0C0A09;
+    --dim:#57534E; --mid:#44403C; --rule:#9C9691;
+  }
+  :root[data-v="3"]{
+    --paper:#A8A29E; --ink:#0C0A09;
+    --dim:#3B3735; --mid:#292524; --rule:#6F6864;
+  }
+
   *{margin:0;padding:0;box-sizing:border-box}
-  html{height:100%}
-  body{min-height:100%;background:#000;color:#fff;-webkit-font-smoothing:antialiased;
+  html{height:100%;background:var(--paper)}
+  body{min-height:100%;background:var(--paper);color:var(--ink);
+    -webkit-font-smoothing:antialiased;
     display:flex;flex-direction:column}
 
   /* The same chrome as the film, so this reads as the same site rather than a
      page that happens to be black too. */
   .chrome{position:fixed;top:0;left:0;right:0;z-index:3;
     display:flex;align-items:center;justify-content:space-between;
-    padding:2.4rem;font:400 .68rem/1 "Geist Mono",monospace;color:#7C7C7C}
-  .chrome .wm{letter-spacing:.34em;color:#7C7C7C;text-decoration:none;
+    padding:2.4rem;font:400 .68rem/1 "Geist Mono",monospace;color:var(--dim)}
+  .chrome .wm{letter-spacing:.34em;color:var(--dim);text-decoration:none;
     transition:color .16s ease}
-  .chrome .wm:hover,.chrome .wm:focus-visible{color:#fff}
+  .chrome .wm:hover,.chrome .wm:focus-visible{color:var(--ink)}
   .nav{display:flex;align-items:center;gap:.9em;letter-spacing:.24em}
-  .nav i{width:2.2em;height:1px;background:#333;font-style:normal}
-  .nav .here{color:#fff}
+  .nav i{width:2.2em;height:1px;background:var(--rule);font-style:normal}
+  .nav .here{color:var(--ink)}
   .chrome a:focus-visible{outline:none;text-decoration:underline;
     text-underline-offset:.45em;text-decoration-thickness:1px}
   .chrome .wm,.nav{white-space:nowrap}
@@ -61,11 +86,11 @@
     padding:9rem 2.4rem 6rem;text-align:center}
   h1{font:italic 300 clamp(2.4rem,5vw,4rem)/1.1 Cormorant,serif;letter-spacing:-.008em}
   .soon{margin-top:2.4rem;font:400 .74rem/1.9 "Geist Mono",monospace;
-    letter-spacing:.24em;text-transform:uppercase;color:#8A8A8A}
+    letter-spacing:.24em;text-transform:uppercase;color:var(--mid)}
   /* The caret from the closing frame, kept: this page is the sentence that has
      not been typed yet, and the same block is what says so. */
   .cur{display:inline-block;vertical-align:baseline;width:.62em;height:.95em;
-    margin-left:.34em;margin-bottom:-.1015em;background:#8A8A8A;
+    margin-left:.34em;margin-bottom:-.1015em;background:var(--mid);
     animation:caret 1.06s step-end infinite}
   @keyframes caret{0%{opacity:1}50%{opacity:0}}
   @media (prefers-reduced-motion:reduce){.cur{animation:none}}
@@ -73,7 +98,7 @@
 </head>
 <body>
   <header class="chrome">
-    <a class="wm" href="/">PREDICTIVE <br>TEXT LABS</a>
+    <a class="wm" id="home" href="/">PREDICTIVE <br>TEXT LABS</a>
     <nav class="nav"><i></i><span class="here">ABOUT</span></nav>
   </header>
 
@@ -83,5 +108,23 @@
       <p class="soon">More soon<i class="cur"></i></p>
     </div>
   </main>
+
+<script>
+  /* The other half of the switch, matching index.html: the browser chrome is
+     derived from the resolved paper rather than restated, and the way back
+     carries the variation with it. */
+  {
+    const paper = getComputedStyle(document.documentElement)
+      .getPropertyValue('--paper').trim();
+    const n = paper.replace('#', '');
+    const [r, g, b] = [0, 2, 4].map(i => parseInt(n.slice(i, i + 2), 16) / 255);
+    document.querySelector('meta[name=theme-color]').content = paper;
+    document.querySelector('meta[name=color-scheme]').content =
+      (0.2126 * r + 0.7152 * g + 0.0722 * b) > 0.5 ? 'light' : 'dark';
+
+    const v = document.documentElement.dataset.v;
+    if (v) document.getElementById('home').href = '/?v=' + v;
+  }
+</script>
 </body>
 </html>

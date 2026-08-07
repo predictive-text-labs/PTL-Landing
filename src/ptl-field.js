@@ -35,6 +35,30 @@
 (function (root) {
   'use strict';
 
+  /* WHERE THE MARK ENDS UP.
+     ------------------------------------------------------------------------
+     The page needs to know the closing mark's geometry in order to keep the
+     final line of type clear of it, and the shader is a string — it cannot
+     read a JS constant, and JS cannot read its literals. So the numbers are
+     named here and the two readers are kept adjacent: form()'s closing tracks
+     below, and PTLField.CLOSE, which ptl-page.js resolves into screen pixels.
+
+     They already came apart once. Retiming the close from 0.88→1.00 to
+     0.86→0.965 to buy a held end frame moved the mark out from under the
+     claim, and the claim's own arithmetic had to be chased separately. If you
+     retune a track below, retune the matching field here in the same edit.
+
+     R and CY are END values — the sums the radius and centre tracks arrive at
+     once every earlier track has run out — not any single track's argument. */
+  const CLOSE = {
+    FROM: 0.86, TO: 0.965,   // the closing track's window in global scroll
+    R:    0.27,              // radius at 0.86, before the close
+    DR:   0.24,              // how much of it the close takes away
+    CY:   0.02,              // centre height at rest, in uv
+    BW:   0.045,             // half the band's width at rest
+    ASPECT: 1.78,            // the long-side normalisation, uRes.x / 1.78
+  };
+
   const VERT = `#version 300 es
   void main(){
     vec2 p = vec2((gl_VertexID << 1) & 2, gl_VertexID & 2);
@@ -109,7 +133,9 @@
     vec2 lean = uMouse * 0.015 * uAct;
     uv -= lean;
 
-    float cy = track(g, 0.00, 0.30, -0.80, 0.02);
+    /* The end values of these two tracks, and of bw below, are mirrored in
+       CLOSE at the top of this file — see the note there before retuning. */
+    float cy = track(g, 0.00, 0.30, -0.80, 0.02);   // CLOSE.CY
     float r  = track(g, 0.00, 0.30,  1.12, 0.34)
              - track(g, 0.30, 0.50,  0.00, 0.07)      // WHEN: tightens
              + track(g, 0.52, 0.66,  0.00, 0.05)      // COMMIT: breathes out
@@ -120,7 +146,8 @@
                 the closing statement had nothing steady to sit under. Landing
                 early buys a held end card — the last ~3% of the page is one
                 still frame: the mark, and the claim beneath it. */
-             - track(g, 0.86, 0.965, 0.00, 0.24);
+             - track(g, 0.86, 0.965, 0.00, 0.24);   // CLOSE.FROM/TO/DR; the
+                                                    // sum above it is CLOSE.R
     vec2  c  = vec2(0.0, cy);
     float len = length(uv - c);
 
@@ -131,7 +158,7 @@
        centre and radius, the WEIGHT comes from here, and fattening the band
        turned a drawn edge into a slab. Height and thickness are independent —
        change the one you actually mean. */
-    float bw = track(g, 0.00, 0.30, 0.13, 0.045);
+    float bw = track(g, 0.00, 0.30, 0.13, 0.045);   // CLOSE.BW
 
     float ring = 1.0 - smoothstep(0.0, bw, abs(len - r));
 
@@ -388,7 +415,9 @@
     const s = gl.createShader(type);
     gl.shaderSource(s, src); gl.compileShader(s);
     if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
-      throw new Error(gl.getShaderInfoLog(s) || 'shader compile failed');
+      const log = gl.getShaderInfoLog(s) || 'shader compile failed';
+      gl.deleteShader(s);               // the failure path leaked it too
+      throw new Error(log);
     }
     return s;
   }
@@ -410,14 +439,45 @@
        stay blank for the rest of the session while the type kept choreographing
        over nothing. */
     let prog = null, u = {}, tex = null, drawn = null, lost = false;
+    /* The drawing-buffer size last handed to gl.viewport(). Declared up here so
+       build() can clear it: after a restore the GL state is back at its
+       defaults, and leaving the cache populated would let size() decide there
+       was nothing to re-apply. */
+    let w = 0, h = 0;
+    /* Set only if a REBUILD fails — the context came back and would not take
+       the program. Nothing can be drawn again after that, so the page stops
+       asking rather than calling draw() on every scroll frame forever. */
+    let dead = false;
 
     function build() {
+      /* On a restore these handles name objects the driver has already
+         destroyed, so deleting them is a formality — but build() is the one
+         place that makes them, and it should be the one place that lets them
+         go. */
+      if (prog) gl.deleteProgram(prog);
+      if (tex) gl.deleteTexture(tex);
+
+      const vs = compile(gl, gl.VERTEX_SHADER, VERT);
+      let fs;
+      try {
+        fs = compile(gl, gl.FRAGMENT_SHADER, FRAG);
+      } catch (e) {
+        gl.deleteShader(vs);
+        throw e;
+      }
       prog = gl.createProgram();
-      gl.attachShader(prog, compile(gl, gl.VERTEX_SHADER, VERT));
-      gl.attachShader(prog, compile(gl, gl.FRAGMENT_SHADER, FRAG));
+      gl.attachShader(prog, vs);
+      gl.attachShader(prog, fs);
       gl.linkProgram(prog);
+      /* Linked or not, the shader objects have served their purpose: the
+         program holds everything it needs. Left attached they stay resident
+         for the life of the page. */
+      gl.detachShader(prog, vs); gl.deleteShader(vs);
+      gl.detachShader(prog, fs); gl.deleteShader(fs);
       if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
-        throw new Error(gl.getProgramInfoLog(prog) || 'link failed');
+        const log = gl.getProgramInfoLog(prog) || 'link failed';
+        gl.deleteProgram(prog); prog = null;
+        throw new Error(log);
       }
       gl.useProgram(prog);
 
@@ -437,11 +497,24 @@
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE,
                     new Uint8Array([0, 0, 0, 255]));
       drawn = null;                     // the TYPE texture went with the context
+      w = h = 0;                        // and so did the viewport
     }
     build();
 
     canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); lost = true; });
-    canvas.addEventListener('webglcontextrestored', () => { build(); lost = false; });
+    canvas.addEventListener('webglcontextrestored', () => {
+      /* An exception thrown here would escape into an event handler, where
+         nothing is waiting for it, and leave `lost` true forever — the picture
+         gone with no record of why. Catch it, say so once, and mark the field
+         dead so the page can stop driving it. */
+      try {
+        build();
+        lost = false;
+      } catch (e) {
+        dead = true;
+        console.error('PTLField: could not rebuild after context restore', e);
+      }
+    });
 
     /* The TYPE texture. Drawn on a 2D canvas rather than shaped in the shader
        because it has to be Cormorant — the mandated face — and an SDF cannot be
@@ -468,7 +541,6 @@
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, pad);
     }
 
-    let w = 0, h = 0;
     function size() {
       const dpr = Math.min(root.devicePixelRatio || 1, 2);
       const nw = Math.round(canvas.clientWidth * dpr);
@@ -479,7 +551,7 @@
     }
 
     function draw(t, o) {
-      if (lost) return;
+      if (lost || dead) return;
       o = o || {};
       size();
       const dpr = Math.min(root.devicePixelRatio || 1, 2);
@@ -509,8 +581,8 @@
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     }
 
-    return { draw, setWord, gl, canvas };
+    return { draw, setWord, gl, canvas, isDead: () => dead };
   }
 
-  root.PTLField = { mount };
+  root.PTLField = { mount, CLOSE };
 })(window);

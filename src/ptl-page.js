@@ -37,7 +37,6 @@
   });
 
   const PER = 2.0;                       // viewport-heights of scroll per section
-  document.body.style.height = (S.length * PER * 100) + 'vh';
 
   const clamp    = v => (v < 0 ? 0 : v > 1 ? 1 : v);
   const outCubic = v => 1 - Math.pow(1 - v, 3);
@@ -65,12 +64,25 @@
     PAPER = hex3(cs.getPropertyValue('--paper') || '#000000');
   };
 
-  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  /* Both preferences are live, not read once at load. Reduced motion in
+     particular is a system-wide switch people flip while a page is open —
+     often BECAUSE a page is moving — and a preference that only takes effect
+     on the next reload is not much of a preference. The query objects are kept
+     so they can be listened to; see the listeners further down, which sit
+     below frame(). */
+  const mqReduce  = matchMedia('(prefers-reduced-motion: reduce)');
+  const mqPointer = matchMedia('(hover: hover) and (pointer: fine)');
+  let reduce = mqReduce.matches;
   const copy   = document.getElementById('copy');
   const finEl  = document.getElementById('finale');
   const finA   = document.getElementById('finA');
   const finB   = document.getElementById('finB');
   const counter = document.getElementById('bn');
+  /* The denominator was the last number on the page still written by hand,
+     which meant adding a beat to the argument left the chrome quietly
+     miscounting it. Same source as everything else now: the sections. */
+  const total = document.getElementById('bt');
+  if (total) total.textContent = String(S.length).padStart(2, '0');
 
   const line = (cls, text) => {
     const d = document.createElement('div');
@@ -161,11 +173,19 @@
 
   /* The mark's lower edge in screen px — the same arithmetic as form()'s
      radius track, restricted to the last section, where every track but the
-     closing one has already reached its end value. */
+     closing one has already reached its end value.
+
+     The constants are the field's, not this file's: it owns the geometry and
+     publishes the end state as PTLField.CLOSE, so retuning the close there
+     moves the line that has to stay clear of it. The fallback only matters if
+     ptl-field.js failed to load, in which case there is no mark to clear and
+     the value is unused. */
+  const C = (typeof PTLField !== 'undefined' && PTLField.CLOSE) ||
+            { FROM: 0.86, TO: 0.965, R: 0.27, DR: 0.24, CY: 0.02, BW: 0.045, ASPECT: 1.78 };
   function markBottom(g, H) {
-    const base = Math.max(H, innerWidth / 1.78);
-    const r = 0.27 - 0.24 * smooth(0.86, 0.965, g);
-    return 0.5 * H - 0.02 * base + (r + 0.045) * base;
+    const base = Math.max(H, innerWidth / C.ASPECT);
+    const r = C.R - C.DR * smooth(C.FROM, C.TO, g);
+    return 0.5 * H - C.CY * base + (r + C.BW) * base;
   }
 
   function finale(b, t, H) {
@@ -228,19 +248,22 @@
      Disabled outright under prefers-reduced-motion and on devices with no
      hovering pointer, where there is nothing to answer and the mark should
      simply be lit head-on. */
-  const POINTER = !reduce && matchMedia('(hover: hover) and (pointer: fine)').matches;
+  let POINTER = !reduce && mqPointer.matches;
   const tgt = [0, 0], cur = [0, 0];
   const clampAxis = v => (v < -0.9 ? -0.9 : v > 0.9 ? 0.9 : v);
   let act = 0;
 
-  if (POINTER) {
-    addEventListener('pointermove', e => {
-      const base = Math.max(innerHeight, innerWidth / 1.78);
-      tgt[0] = clampAxis((e.clientX - innerWidth  * 0.5) / base);
-      tgt[1] = clampAxis((innerHeight * 0.5 - e.clientY) / base);
-      if (act > 0.001) tick();
-    }, { passive: true });
-  }
+  /* Registered unconditionally and gated inside, because POINTER can turn on
+     later — a tablet gains a mouse, or reduced motion is switched off — and a
+     listener that was never attached cannot be attached retroactively from the
+     media query's own handler without more bookkeeping than the check costs. */
+  addEventListener('pointermove', e => {
+    if (!POINTER) return;
+    const base = Math.max(innerHeight, innerWidth / C.ASPECT);
+    tgt[0] = clampAxis((e.clientX - innerWidth  * 0.5) / base);
+    tgt[1] = clampAxis((innerHeight * 0.5 - e.clientY) / base);
+    if (act > 0.001) tick();
+  }, { passive: true });
 
   /* A frame loop that exists only while the light is still moving. Scroll and
      resize drive everything else, so there is no reason to hold the compositor
@@ -264,15 +287,25 @@
     });
   }
 
-  /* ---- the frame --------------------------------------------------------- */
-  const field = PTLField && PTLField.mount(document.getElementById('c'), { mode: 'form' });
-  /* The no-JS document is not discarded until there is something to replace it
-     with. It used to be dropped on the first line of this file, so a failed
-     request for ptl-field.js — or a browser with no WebGL2 — shipped a page
-     with no picture AND no words, which is strictly worse than the fallback it
-     threw away. */
+  /* ---- the frame ---------------------------------------------------------
+     `typeof`, not a truthiness check: if the request for ptl-field.js failed,
+     PTLField is not a global holding undefined, it is an undeclared name, and
+     `PTLField && …` throws a ReferenceError rather than short-circuiting. It
+     threw here, mid-file, which is survivable — the no-js document was still
+     in place — except that the body had already been stretched to twelve
+     viewport-heights on the way past, leaving the fallback as one screen of
+     words at the top of a very long empty page. Nothing is committed to now
+     until the mount has been attempted. */
+  const field = typeof PTLField !== 'undefined'
+    ? PTLField.mount(document.getElementById('c'), { mode: 'form' })
+    : null;
+  /* A null field is not a failure worth falling back over: it means WebGL2 is
+     unavailable (or the script is missing), and the choreographed type carries
+     the whole argument on its own against a plain ground. What the fallback
+     document exists for is the case where none of THIS runs. */
   document.body.classList.remove('no-js');
-  let raf = 0, shown = -1;
+  document.body.style.height = (S.length * PER * 100) + 'vh';
+  let raf = 0, shown = -1, remeasure = false;
 
   function render() {
     const max  = document.documentElement.scrollHeight - innerHeight;
@@ -312,18 +345,46 @@
        would be lighting a diagram. */
     act = POINTER ? smooth(0.88, 0.955, p) : 0;
 
-    if (field) field.draw(t, {
+    /* isDead() means the context came back and would not take the program —
+       draw() would return immediately anyway, but there is no reason to build
+       it an options object sixty times a second to be ignored. */
+    if (field && !field.isDead()) field.draw(t, {
       g: p, section: idx, word: S[idx].key,
       cell: 12, gap: 0.12, gain: 1.0, fov: 0.70,
       mouse: cur, act, ink: INK, ink2: INK2, paper: PAPER,
     });
   }
 
-  function frame() { raf = 0; render(); if (act > 0.001) tick(); }
+  function frame() {
+    raf = 0;
+    if (remeasure) { remeasure = false; measure(); }
+    render();
+    if (act > 0.001) tick();
+  }
 
   addEventListener('scroll', () => { if (!raf) raf = requestAnimationFrame(frame); },
                    { passive: true });
-  addEventListener('resize', () => { measure(); frame(); });
+  /* Coalesced through the same rAF slot as scroll. Dragging a window edge
+     fires resize continuously, and each one used to force a synchronous
+     measure — two forced layouts — plus a full GL draw, while also clearing
+     `raf` out from under a scroll frame that was already scheduled. The flag
+     is what keeps the measurement from being lost when that slot is taken. */
+  addEventListener('resize', () => {
+    remeasure = true;
+    if (!raf) raf = requestAnimationFrame(frame);
+  });
+
+  /* Live preferences. Recomputing POINTER from the query rather than caching
+     its `.matches` keeps the two in step: reduced motion turns the pointer
+     light off regardless of what hardware is attached. */
+  const prefs = () => {
+    reduce  = mqReduce.matches;
+    POINTER = !reduce && mqPointer.matches;
+    if (!POINTER) { tgt[0] = tgt[1] = cur[0] = cur[1] = 0; }
+    frame();
+  };
+  mqReduce.addEventListener('change', prefs);
+  mqPointer.addEventListener('change', prefs);
   /* Measured, not assumed: the lockup's joined spacing is whatever normal flow
      would have given it, which is only knowable once Cormorant has loaded. */
   document.fonts.ready.then(() => { measure(); frame(); });

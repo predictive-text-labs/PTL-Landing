@@ -14,6 +14,18 @@
 <meta name="theme-color" content="#000000">
 <meta name="color-scheme" content="dark">
 <meta name="format-detection" content="telephone=no">
+
+<!-- The palette switch, resolved in the HEAD so it lands before the first
+     paint. It used to sit with the other scripts at the end of the body, which
+     is after the browser is entitled to have painted the background once
+     already — long enough for ?v=2 to flash black before turning stone. Only
+     the attribute is set here; the stylesheet below reads it. -->
+<script>
+  {
+    const v = new URLSearchParams(location.search).get('v');
+    if (v === '2' || v === '3') document.documentElement.dataset.v = v;
+  }
+</script>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon.ico" sizes="any">
 
@@ -388,7 +400,7 @@
 
   <header class="chrome">
     <span class="wm">PREDICTIVE <br>TEXT LABS</span>
-    <nav class="nav"><span class="count"><b id="bn">01</b> / 06</span><i></i><a href="/about.html">ABOUT</a></nav>
+    <nav class="nav"><span class="count"><b id="bn">01</b> / <span id="bt">06</span></span><i></i><a id="about" href="/about.html">ABOUT</a></nav>
   </header>
 
   <div class="stage" aria-hidden="true">
@@ -437,10 +449,26 @@
   </main>
 
 <script>
-  /* Palette switch, read before first paint so there is no flash of variation 1. */
+  /* The rest of the switch, which needs the stylesheet parsed and the body
+     present. Both the browser chrome and the link out are derived from the
+     resolved palette rather than restated: the hexes live in one place. */
   {
-    const v = new URLSearchParams(location.search).get('v');
-    if (v === '2' || v === '3') document.documentElement.dataset.v = v;
+    const paper = getComputedStyle(document.documentElement)
+      .getPropertyValue('--paper').trim();
+    const n = paper.replace('#', '');
+    const [r, g, b] = [0, 2, 4].map(i => parseInt(n.slice(i, i + 2), 16) / 255);
+    document.querySelector('meta[name=theme-color]').content = paper;
+    /* Which end of the range the paper sits at is what `color-scheme` is for —
+       it is what the scrollbar and any UA widget are drawn against. Variations
+       2 and 3 are light grounds; announcing them as dark drew a dark scrollbar
+       down the side of a stone page. */
+    document.querySelector('meta[name=color-scheme]').content =
+      (0.2126 * r + 0.7152 * g + 0.0722 * b) > 0.5 ? 'light' : 'dark';
+
+    /* Carry the variation across to the about page, so following the link does
+       not silently drop you back into variation 1. */
+    const v = document.documentElement.dataset.v;
+    if (v) document.getElementById('about').href = '/about.html?v=' + v;
   }
 </script>
 <script src="/src/ptl-field.js"></script>
