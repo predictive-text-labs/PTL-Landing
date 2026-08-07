@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>About — Predictive Text Labs</title>
+<meta name="description" content="Predictive Text Labs is an AI research lab teaching machines to price uncertainty so they can commit to decisions that matter.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://ptl.inc/about.html">
+<meta name="theme-color" content="#000000">
+<meta name="color-scheme" content="dark">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://ptl.inc/about.html">
+<meta property="og:site_name" content="Predictive Text Labs">
+<meta property="og:title" content="About — Predictive Text Labs">
+<meta property="og:description" content="Teaching machines to price uncertainty, so they can commit to decisions that matter.">
+<meta property="og:image" content="https://ptl.inc/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preload" href="/fonts/Cormorant-Italic.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/GeistMono.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+  @font-face{font-family:Cormorant;src:url("/fonts/Cormorant.woff2") format("woff2");font-weight:300 700;font-display:block}
+  @font-face{font-family:Cormorant;src:url("/fonts/Cormorant-Italic.woff2") format("woff2");font-weight:300 700;font-style:italic;font-display:block}
+  @font-face{font-family:"Geist Mono";src:url("/fonts/GeistMono.woff2") format("woff2");font-weight:100 900;font-display:block}
+
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{height:100%}
+  body{min-height:100%;background:#000;color:#fff;-webkit-font-smoothing:antialiased;
+    display:flex;flex-direction:column}
+
+  /* The same chrome as the film, so this reads as the same site rather than a
+     page that happens to be black too. */
+  .chrome{position:fixed;top:0;left:0;right:0;z-index:3;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:2.4rem;font:400 .68rem/1 "Geist Mono",monospace;color:#7C7C7C}
+  .chrome .wm{letter-spacing:.34em;color:#7C7C7C;text-decoration:none;
+    transition:color .16s ease}
+  .chrome .wm:hover,.chrome .wm:focus-visible{color:#fff}
+  .nav{display:flex;align-items:center;gap:.9em;letter-spacing:.24em}
+  .nav i{width:2.2em;height:1px;background:#333;font-style:normal}
+  .nav .here{color:#fff}
+  .chrome a:focus-visible{outline:none;text-decoration:underline;
+    text-underline-offset:.45em;text-decoration-thickness:1px}
+  .chrome .wm,.nav{white-space:nowrap}
+  .chrome{padding-left:max(2.4rem,env(safe-area-inset-left));
+    padding-right:max(2.4rem,env(safe-area-inset-right));
+    padding-top:max(2.4rem,env(safe-area-inset-top))}
+  .wm br{display:none}
+  @media (max-width:560px){
+    .chrome{padding:1.5rem 1.2rem;align-items:center;
+      padding-left:max(1.2rem,env(safe-area-inset-left));
+      padding-right:max(1.2rem,env(safe-area-inset-right))}
+    .nav i{display:none}
+    .wm br{display:inline}
+    .chrome .wm{line-height:1.62}
+  }
+
+  main{flex:1;display:flex;align-items:center;justify-content:center;
+    padding:9rem 2.4rem 6rem;text-align:center}
+  h1{font:italic 300 clamp(2.4rem,5vw,4rem)/1.1 Cormorant,serif;letter-spacing:-.008em}
+  .soon{margin-top:2.4rem;font:400 .74rem/1.9 "Geist Mono",monospace;
+    letter-spacing:.24em;text-transform:uppercase;color:#8A8A8A}
+  /* The caret from the closing frame, kept: this page is the sentence that has
+     not been typed yet, and the same block is what says so. */
+  .cur{display:inline-block;vertical-align:baseline;width:.62em;height:.95em;
+    margin-left:.34em;margin-bottom:-.1015em;background:#8A8A8A;
+    animation:caret 1.06s step-end infinite}
+  @keyframes caret{0%{opacity:1}50%{opacity:0}}
+  @media (prefers-reduced-motion:reduce){.cur{animation:none}}
+</style>
+</head>
+<body>
+  <header class="chrome">
+    <a class="wm" href="/">PREDICTIVE <br>TEXT LABS</a>
+    <nav class="nav"><i></i><span class="here">ABOUT</span></nav>
+  </header>
+
+  <main>
+    <div>
+      <h1>Predictive Text Labs.</h1>
+      <p class="soon">More soon<i class="cur"></i></p>
+    </div>
+  </main>
+</body>
+</html>

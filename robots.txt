@@ -1,3 +1,5 @@
+Sitemap: https://ptl.inc/sitemap.xml
+
 User-agent: Googlebot
 Allow: /
 

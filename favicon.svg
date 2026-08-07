@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+<rect width="32" height="32" fill="#000"/>
+<g fill="#fff">
+<rect x="11.23" y="2.08" width="0.40" height="0.40"/>
+<rect x="15.56" y="1.84" width="0.89" height="0.89"/>
+<rect x="20.37" y="2.08" width="0.40" height="0.40"/>
+<rect x="6.17" y="6.17" width="1.37" height="1.37"/>
+<rect x="10.04" y="5.47" width="2.78" height="2.78"/>
+<rect x="14.39" y="5.25" width="3.22" height="3.22"/>
+<rect x="19.18" y="5.47" width="2.78" height="2.78"/>
+<rect x="24.46" y="6.17" width="1.37" height="1.37"/>
+<rect x="2.08" y="11.23" width="0.40" height="0.40"/>
+<rect x="5.47" y="10.04" width="2.78" height="2.78"/>
+<rect x="9.47" y="9.47" width="3.92" height="3.92"/>
+<rect x="13.99" y="9.42" width="4.02" height="4.02"/>
+<rect x="18.61" y="9.47" width="3.92" height="3.92"/>
+<rect x="23.75" y="10.04" width="2.78" height="2.78"/>
+<rect x="29.51" y="11.23" width="0.40" height="0.40"/>
+<rect x="1.84" y="15.56" width="0.89" height="0.89"/>
+<rect x="5.25" y="14.39" width="3.22" height="3.22"/>
+<rect x="9.42" y="13.99" width="4.02" height="4.02"/>
+<rect x="13.99" y="13.99" width="4.02" height="4.02"/>
+<rect x="18.56" y="13.99" width="4.02" height="4.02"/>
+<rect x="23.53" y="14.39" width="3.22" height="3.22"/>
+<rect x="29.27" y="15.56" width="0.89" height="0.89"/>
+<rect x="2.08" y="20.37" width="0.40" height="0.40"/>
+<rect x="5.47" y="19.18" width="2.78" height="2.78"/>
+<rect x="9.47" y="18.61" width="3.92" height="3.92"/>
+<rect x="13.99" y="18.56" width="4.02" height="4.02"/>
+<rect x="18.61" y="18.61" width="3.92" height="3.92"/>
+<rect x="23.75" y="19.18" width="2.78" height="2.78"/>
+<rect x="29.51" y="20.37" width="0.40" height="0.40"/>
+<rect x="6.17" y="24.46" width="1.37" height="1.37"/>
+<rect x="10.04" y="23.75" width="2.78" height="2.78"/>
+<rect x="14.39" y="23.53" width="3.22" height="3.22"/>
+<rect x="19.18" y="23.75" width="2.78" height="2.78"/>
+<rect x="24.46" y="24.46" width="1.37" height="1.37"/>
+<rect x="11.23" y="29.51" width="0.40" height="0.40"/>
+<rect x="15.56" y="29.27" width="0.89" height="0.89"/>
+<rect x="20.37" y="29.51" width="0.40" height="0.40"/>
+</g>
+</svg>

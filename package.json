@@ -1,15 +1,19 @@
 {
+  "name": "ptl-landing",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@9.12.3",
+  "description": "ptl.inc — the argument, drawn.",
   "scripts": {
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
-    "build:css": "tailwindcss -i ./src/styles.css -o ./assets/tailwind.css -m",
-    "subset:fonts": "node scripts/subset-fonts.js",
-    "build": "npm run build:css && npm run subset:fonts"
+    "dev": "python3 -m http.server 8777",
+    "lint": "oxlint src",
+    "deadcode": "knip",
+    "dupes": "jscpd src --min-lines 12 --threshold 2 --reporters consoleFull",
+    "verify": "pnpm lint && pnpm deadcode && pnpm dupes"
   },
   "devDependencies": {
-    "@tailwindcss/cli": "^4.1.10",
-    "prettier": "3.6.2",
-    "prettier-plugin-tailwindcss": "^0.6.14",
-    "tailwindcss": "^4.1.10"
+    "jscpd": "^4.0.5",
+    "knip": "^5.39.2",
+    "oxlint": "^0.15.0"
   }
 }
