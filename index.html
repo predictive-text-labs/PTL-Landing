@@ -218,8 +218,21 @@
     background:var(--wash);
     backdrop-filter:blur(28px);
     -webkit-backdrop-filter:blur(28px);
-    -webkit-mask-image:radial-gradient(ellipse 82% max(68%,26rem) at 50% 100%,#000 0%,#000 46%,transparent 100%);
-    mask-image:radial-gradient(ellipse 82% max(68%,26rem) at 50% 100%,#000 0%,#000 46%,transparent 100%)}
+    -webkit-mask-image:radial-gradient(ellipse 82% 68% at 50% 100%,#000 0%,#000 46%,transparent 100%);
+    mask-image:radial-gradient(ellipse 82% 68% at 50% 100%,#000 0%,#000 46%,transparent 100%)}
+
+  /* Short viewports need a far bigger dome — the copy occupies most of a
+     landscape phone, and 68% of 390px puts the mask's opaque core below where
+     the words start. This is a media query and NOT max(68%,26rem) inside the
+     gradient: Chromium does not parse a CSS math function in a gradient size,
+     drops the whole mask-image as invalid, and then backdrop-filter blurs the
+     entire page with nothing masking it. WebKit accepts it, which is exactly
+     how it shipped. */
+  @media (max-height:620px){
+    .veil{
+      -webkit-mask-image:radial-gradient(ellipse 92% 135% at 50% 100%,#000 0%,#000 46%,transparent 100%);
+      mask-image:radial-gradient(ellipse 92% 135% at 50% 100%,#000 0%,#000 46%,transparent 100%)}
+  }
 
   .copy{position:absolute;left:50%;transform:translateX(-50%);
     width:min(60rem,86vw);text-align:center;bottom:4.2rem}
