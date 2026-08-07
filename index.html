@@ -1,10 +1,6 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <script>
-      // Prevent FOUC: start hidden; we'll reveal after CSS arrives (not fonts)
-      document.documentElement.classList.add("no-fouc");
-    </script>
     <meta charset="UTF-8" />
     <meta
       name="viewport"
@@ -12,10 +8,9 @@
     />
     <title>Predictive Text Labs</title>
 
-    <!-- Basic SEO -->
     <meta
       name="description"
-      content="Predictive Text Labs builds AI that predicts the future."
+      content="Predictive Text Labs builds machines that can be held to what they predict."
     />
     <meta name="author" content="Predictive Text Labs" />
     <meta name="application-name" content="Predictive Text Labs" />
@@ -25,47 +20,35 @@
     />
     <link rel="canonical" href="https://ptl.inc/" />
 
-    <!-- Icons & colors -->
     <link rel="icon" href="/favicon.ico" sizes="any" />
-    <meta name="theme-color" content="#ffffff" />
+    <meta name="theme-color" content="#FAF8F5" />
     <meta name="color-scheme" content="light" />
     <meta name="format-detection" content="telephone=no" />
 
-    <!-- Performance hints for external assets -->
-
-    <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://ptl.inc/" />
     <meta property="og:site_name" content="Predictive Text Labs" />
     <meta property="og:locale" content="en_US" />
-    <meta
-      property="og:title"
-      content="Predictive Text Labs — Temporal AI for Forecasting"
-    />
+    <meta property="og:title" content="Predictive Text Labs" />
     <meta
       property="og:description"
-      content="Predictive Text Labs builds AI that predicts the future."
+      content="Predictive Text Labs builds machines that can be held to what they predict."
     />
     <meta property="og:image" content="https://ptl.inc/favicon.ico" />
-    <meta property="og:image:alt" content="Predictive Text Labs logo" />
+    <meta property="og:image:alt" content="Predictive Text Labs" />
 
-    <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:url" content="https://ptl.inc/" />
-    <meta
-      name="twitter:title"
-      content="Predictive Text Labs — Temporal AI for Forecasting"
-    />
+    <meta name="twitter:title" content="Predictive Text Labs" />
     <meta
       name="twitter:description"
-      content="Predictive Text Labs builds AI that predicts the future."
+      content="Predictive Text Labs builds machines that can be held to what they predict."
     />
     <meta name="twitter:image" content="https://ptl.inc/favicon.ico" />
-    <meta name="twitter:image:alt" content="Predictive Text Labs logo" />
+    <meta name="twitter:image:alt" content="Predictive Text Labs" />
     <meta name="twitter:site" content="@PredictiveTextLabs" />
     <meta name="twitter:creator" content="@PredictiveTextLabs" />
 
-    <!-- Structured Data -->
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
@@ -73,13 +56,12 @@
         "name": "Predictive Text Labs",
         "url": "https://ptl.inc/",
         "logo": "https://ptl.inc/favicon.ico",
-        "description": "Predictive Text Labs builds AI that predicts the future.",
+        "description": "Predictive Text Labs builds machines that can be held to what they predict.",
         "foundingDate": "2024",
         "sameAs": ["https://twitter.com/PredictiveTextLabs"]
       }
     </script>
 
-    <!-- Preload local variable fonts for faster first paint -->
     <link
       rel="preload"
       as="font"
@@ -96,13 +78,15 @@
       crossorigin
       fetchpriority="high"
     />
+    <link
+      rel="preload"
+      as="font"
+      href="/fonts/GeistMono.woff2"
+      type="font/woff2"
+      crossorigin
+    />
 
-    <!-- Self-hosted Cormorant variable font -->
     <style>
-      /* Keep page hidden only until CSS/Fonts ready */
-      .no-fouc body {
-        visibility: hidden;
-      }
       @font-face {
         font-family: "Cormorant";
         src: url("/fonts/Cormorant Variable Font.woff2") format("woff2");
@@ -117,329 +101,372 @@
         font-style: italic;
         font-display: swap;
       }
-      /* Critical CSS to prevent initial layout shift before Tailwind loads */
-      html,
-      body {
-        margin: 0; /* avoid UA 8px body margin CLS */
-        overscroll-behavior: contain !important; /* Contained overscroll */
-        overscroll-behavior-y: contain !important;
-      }
-      /* Reserve scrollbar gutter to prevent width jumps on first layout */
-      html {
-        scrollbar-gutter: stable both-edges;
-        font-size: 85%; /* Scale everything to 80% */
-      }
-      body {
-        overscroll-behavior: contain !important;
-        overscroll-behavior-y: contain !important;
-      }
-      /* Preapply final metrics for the hero <h1> to avoid CLS */
-      h1[data-hero] {
-        font-family: "Cormorant", serif;
-        font-weight: 500; /* font-medium */
-        letter-spacing: 0.05em; /* tracking-wider */
-        margin-bottom: 0.25rem; /* mb-1 */
-        font-size: 3.75rem; /* text-6xl */
-        line-height: 1; /* leading-\[1\] */
-      }
-      @media (min-width: 64rem) {
-        h1[data-hero] {
-          font-size: 6rem; /* lg:text-8xl */
-          margin-bottom: 0.75rem; /* lg:mb-3 */
-        }
-      }
-      /* Radial oval sizing for footer backdrop */
-      :root {
-        --oval-rx: 100vw; /* full viewport width */
-        --oval-ry: 8rem; /* mobile & tablet visible height */
-      }
-      @media (min-width: 1024px) {
-        /* desktop */
-        :root {
-          --oval-rx: 100vw; /* full viewport width */
-          --oval-ry: 12rem; /* desktop visible height */
-        }
+      @font-face {
+        font-family: "Geist Mono";
+        src: url("/fonts/GeistMono.woff2") format("woff2");
+        font-weight: 100 900;
+        font-style: normal;
+        font-display: swap;
       }
 
-      /* Robust footer glow: render gradient within footer stacking context */
-      footer {
-        isolation: isolate; /* ensure ::before sits behind text only */
-      }
-      footer::before {
-        content: "";
-        position: absolute;
-        left: 0;
-        right: 0;
-        bottom: -0.25rem; /* nudge so ellipse center aligns at page bottom */
-        height: var(--oval-ry);
-        pointer-events: none;
-        z-index: -1;
-        background: radial-gradient(
-          ellipse var(--oval-rx) var(--oval-ry) at 50% 100%,
-          rgba(255, 255, 255, 1) 0%,
-          rgba(255, 255, 255, 0.9) 45%,
-          rgba(255, 255, 255, 0.5) 65%,
-          rgba(255, 255, 255, 0.2) 82%,
-          rgba(255, 255, 255, 0) 100%
-        );
-      }
-    </style>
-    <!-- Preload Tailwind to reduce time-to-style and further cut CLS -->
-    <link
-      rel="preload"
-      href="/assets/tailwind.css"
-      as="style"
-      fetchpriority="high"
-    />
-    <!-- Compiled Tailwind CSS (self-hosted) -->
-    <link id="tailwind-css" rel="stylesheet" href="/assets/tailwind.css" />
-    <script>
-      (function () {
-        var root = document.documentElement;
-        var show = function () {
-          root.classList.remove("no-fouc");
-        };
-
-        // Reveal immediately after CSS is ready; don't block on font downloads.
-        var link = document.getElementById("tailwind-css");
-        if (link) {
-          if (link.sheet) {
-            // CSS is already parsed (bfcache/HTTP2 push/preload path)
-            show();
-          } else {
-            link.addEventListener("load", show, { once: true });
-          }
+      /* Critical shim. Layered, so Tailwind's utilities are never silently
+         overridden by these rules. */
+      @layer base {
+        html,
+        body {
+          margin: 0;
+          overscroll-behavior: contain;
+          overscroll-behavior-y: contain;
         }
-
-        // Safety: if the CSS link fails to load for any reason, unhide after a tick
-        setTimeout(show, 900);
-      })();
-    </script>
-    <noscript
-      ><style>
-        .no-fouc body {
-          visibility: visible;
+        html {
+          font-size: 100%;
+          scrollbar-gutter: stable both-edges;
         }
-      </style></noscript
-    >
-    <!-- Small utility + critical typography shim to reduce CLS on slow CSS -->
-    <style>
-      /* Viewport height stabilization across engines */
-      @supports (min-height: 100svh) {
-        .min-h-\[100svh\] {
-          min-height: 100svh;
+        body {
+          background: rgb(250 248 245);
+          color: rgb(64 64 64);
+          font-family: "Cormorant", ui-serif, Georgia, serif;
         }
-      }
-      @supports ((not (min-height: 100svh)) and (min-height: 100dvh)) {
-        .min-h-\[100dvh\] {
-          min-height: 100dvh;
+        .wordmark-1 {
+          font-family: "Cormorant", ui-serif, Georgia, serif;
+          font-size: clamp(3.5rem, 9vw, 6rem);
+          font-weight: 500;
+          letter-spacing: 0.05em;
+          line-height: 1;
+          margin: 0;
         }
-      }
-      /* Baseline mobile typography to match utilities before Tailwind parses */
-      html {
-        font-family: "Cormorant", serif;
-      }
-      header > p {
-        font-size: 1.875rem;
-        line-height: 2.25rem;
-        font-weight: 300;
-        font-style: italic;
-      }
-      section p {
-        font-size: 1.25rem;
-        line-height: 1.75rem;
-        margin-bottom: 1rem;
-      }
-      /* Keep base heading styling light so Tailwind utilities win */
-      section h2 {
-        font-weight: 600;
-        /* omit margin-top so utility classes control spacing */
-        margin-bottom: 1rem;
-      }
-      /* Founders section spacing */
-      @media (min-width: 1024px) {
-        .founders-section {
-          margin-top: 9.5rem;
-          transition: opacity 0.2s ease;
-        }
-        .mobile-separator {
-          display: none !important;
-        }
-        /* Fade main content when hovering over sidebar */
-        .founders-section:hover ~ .main-content .main-content-section,
-        .content-wrapper:has(.founders-section:hover) .main-content-section {
-          opacity: 0.75;
-        }
-        .main-content-section {
-          transition: opacity 0.2s ease;
+        .wordmark-2 {
+          font-size: clamp(1.75rem, 4.5vw, 3rem);
+          font-style: italic;
+          font-weight: 300;
+          line-height: 1.1;
+          margin: 0;
         }
       }
     </style>
+
+    <link rel="preload" href="/assets/tailwind.css" as="style" fetchpriority="high" />
+    <link rel="stylesheet" href="/assets/tailwind.css" />
   </head>
 
-  <body class="relative overflow-x-hidden bg-stone-100">
-    <!-- Subtle circular gradient background that fades to transparent (paint early) -->
-    <div
+  <body>
+    <div class="bloom" aria-hidden="true"></div>
+
+    <svg
+      class="fld"
+      data-k="all"
+      viewBox="0 0 1440 900"
+      preserveAspectRatio="xMidYMid slice"
       aria-hidden="true"
-      class="pointer-events-none fixed inset-0 z-0"
-      style="
-        background: radial-gradient(
-          ellipse var(--oval-rx) var(--oval-ry) at 50% 100%,
-          rgba(255, 255, 255, 1) 0%,
-          rgba(255, 255, 255, 0.9) 45%,
-          rgba(255, 255, 255, 0.5) 65%,
-          rgba(255, 255, 255, 0.2) 82%,
-          rgba(255, 255, 255, 0) 100%
-        );
-      "
-    ></div>
-    <!-- Main Content -->
-    <main
-      class="relative z-[1] flex flex-col items-start justify-start gap-8 px-1 pt-16 pb-6 md:px-4 lg:flex-row lg:gap-12 lg:pb-18"
+      focusable="false"
+      role="presentation"
     >
-      <div
-        class="mx-auto mb-8 w-full max-w-screen-xl px-6 lg:max-w-[66rem] lg:px-0"
-      >
-        <div
-          class="content-wrapper flex w-full flex-col items-start gap-8 text-xl lg:mt-12 lg:grid lg:max-w-none lg:grid-cols-[40rem_20rem] lg:justify-center lg:gap-x-24"
-        >
-          <div class="main-content max-w-[40rem] lg:col-start-1">
-            <header>
-              <h1
-                class="mb-1 text-6xl font-medium tracking-wider text-stone-700 lg:mb-3 lg:text-8xl"
-                data-hero
-              >
-                Predictive
-              </h1>
-              <p
-                class="text-3xl font-light text-stone-600 italic lg:mb-4 lg:text-5xl"
-              >
-                Text Labs.
-              </p>
-            </header>
-            <section
-              class="main-content-section mt-10 flex-1 text-[1.625rem] text-stone-700 transition-opacity duration-200 lg:mt-12 lg:text-[1.625rem]"
-            >
-              <p class="mb-4">
-                The underlying insight driving Predictive Text Labs is that when
-                leaders ask “what should I do?”, they want an actionable answer,
-                not another chart. Anyone who's worked with a CEO knows that
-                actionable answers start with a prediction.
-              </p>
-              <p class="mb-4">
-                LLMs are powerful; trained on billions of articles, books, and
-                websites, they summarize the past brilliantly. But we still
-                don’t trust them to forecast. That's because reasoning to
-                predict events is fundamentally different from predicting the
-                next token. Real forecasting requires seeing how events cascade,
-                why patterns repeat, and which signals matter.
-              </p>
-              <p class="mb-4">
-                We believe temporal reasoning isn’t just another AI capability.
-                It’s the core primitive that turns LLMs from search engines into
-                decision-making partners. Without it, AI can analyze the past
-                but never predict the future.
-              </p>
-              <p class="mb-4">
-                This gap limits every organization trying to leverage AI to
-                drive decisions.
-              </p>
-              <p>Our mission is to close it.</p>
+      <g class="w">
+        <rect class="n" x="1264" y="212" width="10" height="10" vector-effect="non-scaling-stroke"/>
+        <rect class="n" x="228" y="128" width="10" height="10" vector-effect="non-scaling-stroke"/>
+        <rect class="n" x="236" y="832" width="10" height="10" vector-effect="non-scaling-stroke"/>
+        <rect class="n" x="108" y="68" width="10" height="10" vector-effect="non-scaling-stroke"/>
+        <rect class="n" x="180" y="360" width="10" height="10" vector-effect="non-scaling-stroke"/>
+        <rect class="n" x="76" y="280" width="10" height="10" vector-effect="non-scaling-stroke"/>
+        <rect class="n" x="1236" y="420" width="10" height="10" vector-effect="non-scaling-stroke"/>
+        <rect class="n" x="228" y="752" width="10" height="10" vector-effect="non-scaling-stroke"/>
+        <rect class="n" x="176" y="772" width="10" height="10" vector-effect="non-scaling-stroke"/>
+        <rect class="n" x="1352" y="584" width="10" height="10" vector-effect="non-scaling-stroke"/>
+        <rect class="n" x="1180" y="520" width="10" height="10" vector-effect="non-scaling-stroke"/>
+        <rect class="n" x="156" y="36" width="10" height="10" vector-effect="non-scaling-stroke"/>
+        <rect class="n" x="1340" y="268" width="10" height="10" vector-effect="non-scaling-stroke"/>
+        <rect class="n" x="1248" y="148" width="10" height="10" vector-effect="non-scaling-stroke"/>
+        <rect class="n" x="188" y="588" width="10" height="10" vector-effect="non-scaling-stroke"/>
+        <rect class="n" x="196" y="456" width="10" height="10" vector-effect="non-scaling-stroke"/>
+        <rect class="n" x="868" y="852" width="10" height="10" vector-effect="non-scaling-stroke"/>
+        <rect class="n" x="908" y="576" width="10" height="10" vector-effect="non-scaling-stroke"/>
+        <rect class="n" x="428" y="548" width="10" height="10" vector-effect="non-scaling-stroke"/>
+        <rect class="n" x="640" y="684" width="10" height="10" vector-effect="non-scaling-stroke"/>
+        <rect class="n" x="832" y="460" width="10" height="10" vector-effect="non-scaling-stroke"/>
+        <rect class="n" x="188" y="104" width="10" height="10" vector-effect="non-scaling-stroke"/>
+        <rect class="n" x="1040" y="488" width="10" height="10" vector-effect="non-scaling-stroke"/>
+        <rect class="n" x="796" y="568" width="10" height="10" vector-effect="non-scaling-stroke"/>
+        <rect class="n" x="124" y="840" width="10" height="10" vector-effect="non-scaling-stroke"/>
+        <rect class="n" x="556" y="744" width="10" height="10" vector-effect="non-scaling-stroke"/>
+        <rect class="n" x="832" y="268" width="10" height="10" vector-effect="non-scaling-stroke"/>
+        <rect class="n" x="1116" y="400" width="10" height="10" vector-effect="non-scaling-stroke"/>
+        <rect class="n" x="548" y="48" width="10" height="10" vector-effect="non-scaling-stroke"/>
+        <rect class="n" x="336" y="556" width="10" height="10" vector-effect="non-scaling-stroke"/>
+        <rect class="n" x="1348" y="700" width="10" height="10" vector-effect="non-scaling-stroke"/>
+        <rect class="n" x="516" y="776" width="10" height="10" vector-effect="non-scaling-stroke"/>
+        <rect class="n" x="940" y="52" width="10" height="10" vector-effect="non-scaling-stroke"/>
+        <rect class="n" x="1048" y="388" width="10" height="10" vector-effect="non-scaling-stroke"/>
+        <path class="e" d="M 233 128 V 119 Q 233 109 223 109 H 198" vector-effect="non-scaling-stroke"/>
+        <path class="e" d="M 113 68 V 51 Q 113 41 123 41 H 156" vector-effect="non-scaling-stroke"/>
+        <path class="e" d="M 241 832 V 787 Q 241 777 231 777 H 186" vector-effect="non-scaling-stroke"/>
+        <path class="e" d="M 1241 430 V 515 Q 1241 525 1231 525 H 1190" vector-effect="non-scaling-stroke"/>
+        <path class="e" d="M 113 78 V 99 Q 113 109 123 109 H 188" vector-effect="non-scaling-stroke"/>
+      </g>
+      <g class="r">
+        <rect class="n c0" x="40" y="68" width="10" height="10" vector-effect="non-scaling-stroke"/>
+        <rect class="n c0" x="128" y="140" width="10" height="10" vector-effect="non-scaling-stroke"/>
+        <rect class="n c0" x="60" y="236" width="10" height="10" vector-effect="non-scaling-stroke"/>
+        <path class="e c0" d="M 45 78 V 135 Q 45 145 55 145 H 128" vector-effect="non-scaling-stroke"/>
+        <path class="e c0" d="M 133 150 V 231 Q 133 241 123 241 H 70" vector-effect="non-scaling-stroke"/>
 
-              <h2 class="mt-12 mb-4 text-3xl font-semibold">Join us</h2>
-              <p class="mb-4">
-                We're the researchers, developers, and builders behind leading
-                ML tools and platforms like DLFinLab and Netlify. The
-                researchers we work with have tens of thousands of citations.
+        <rect class="n c1" x="1392" y="140" width="10" height="10" vector-effect="non-scaling-stroke"/>
+        <rect class="n c1" x="1300" y="228" width="10" height="10" vector-effect="non-scaling-stroke"/>
+        <rect class="n c1" x="1380" y="332" width="10" height="10" vector-effect="non-scaling-stroke"/>
+        <path class="e c1" d="M 1392 145 H 1315 Q 1305 145 1305 155 V 228" vector-effect="non-scaling-stroke"/>
+        <path class="e c1" d="M 1305 238 V 327 Q 1305 337 1315 337 H 1380" vector-effect="non-scaling-stroke"/>
+
+        <rect class="n c2" x="36" y="332" width="10" height="10" vector-effect="non-scaling-stroke"/>
+        <rect class="n c2" x="124" y="404" width="10" height="10" vector-effect="non-scaling-stroke"/>
+        <rect class="n c2" x="52" y="500" width="10" height="10" vector-effect="non-scaling-stroke"/>
+        <path class="e c2" d="M 46 337 H 119 Q 129 337 129 347 V 404" vector-effect="non-scaling-stroke"/>
+        <path class="e c2" d="M 129 414 V 495 Q 129 505 119 505 H 62" vector-effect="non-scaling-stroke"/>
+
+        <rect class="n c3" x="1372" y="428" width="10" height="10" vector-effect="non-scaling-stroke"/>
+        <rect class="n c3" x="1292" y="512" width="10" height="10" vector-effect="non-scaling-stroke"/>
+        <rect class="n c3" x="1400" y="620" width="10" height="10" vector-effect="non-scaling-stroke"/>
+        <path class="e c3" d="M 1372 433 H 1307 Q 1297 433 1297 443 V 512" vector-effect="non-scaling-stroke"/>
+        <path class="e c3" d="M 1297 522 V 615 Q 1297 625 1307 625 H 1400" vector-effect="non-scaling-stroke"/>
+
+        <rect class="n c4" x="44" y="572" width="10" height="10" vector-effect="non-scaling-stroke"/>
+        <rect class="n c4" x="140" y="656" width="10" height="10" vector-effect="non-scaling-stroke"/>
+        <rect class="n c4" x="68" y="772" width="10" height="10" vector-effect="non-scaling-stroke"/>
+        <path class="e c4" d="M 54 577 H 135 Q 145 577 145 587 V 656" vector-effect="non-scaling-stroke"/>
+        <path class="e c4" d="M 145 666 V 767 Q 145 777 135 777 H 78" vector-effect="non-scaling-stroke"/>
+
+        <rect class="n c5" x="1340" y="652" width="10" height="10" vector-effect="non-scaling-stroke"/>
+        <rect class="n c5" x="1276" y="736" width="10" height="10" vector-effect="non-scaling-stroke"/>
+        <rect class="n c5" x="1368" y="840" width="10" height="10" vector-effect="non-scaling-stroke"/>
+        <path class="e c5" d="M 1340 657 H 1291 Q 1281 657 1281 667 V 736" vector-effect="non-scaling-stroke"/>
+        <path class="e c5" d="M 1281 746 V 830 Q 1281 840 1291 840 H 1368" vector-effect="non-scaling-stroke"/>
+        <path class="e c5" d="M 1373 850 V 940" vector-effect="non-scaling-stroke"/>
+      </g>
+    </svg>
+
+    <main class="shell">
+      <div class="page">
+        <div class="opening">
+          <header class="masthead">
+            <h1 class="wordmark-1">Predictive</h1>
+            <div class="wordmark-2-row">
+              <p class="wordmark-2">Text Labs.</p>
+              <span class="handle">ptl.inc</span>
+            </div>
+          </header>
+
+          <p class="statement">
+            Within a generation, machines will make most of the decisions that
+            matter. Almost nothing about how we build them establishes which one
+            has earned the right.
+          </p>
+        </div>
+
+          <section class="beat">
+            <p class="label-micro">What we have</p>
+            <p class="body-text">
+              A language model is a memory. Ask it what happens next and it
+              answers, fluently, with the past.
+            </p>
+            <dl class="strip">
+              <div>
+                <dt>Trained on</dt>
+                <dd>the written past</dd>
+              </div>
+              <div>
+                <dt>Answers with</dt>
+                <dd>the written past</dd>
+              </div>
+              <div>
+                <dt>Answers for</dt>
+                <dd>
+                  <span class="vh">nothing</span
+                  ><span class="dash" aria-hidden="true">&#8212;</span>
+                </dd>
+              </div>
+            </dl>
+            <p class="strip-caption">
+              An em dash is not a zero. It marks where nothing exists to report.
+            </p>
+          </section>
+
+          <section class="beat">
+            <p class="label-micro">Temporal reasoning</p>
+            <p class="gloss">
+              Reasoning about what follows from what, and how long it takes.
+            </p>
+            <p class="body-text">
+              Seeing how one event pulls the next, why a pattern repeats, which
+              signals are doing the work. Not one more capability: the primitive
+              that separates a search engine from a partner in deciding.
+            </p>
+          </section>
+
+          <section class="beat">
+            <p class="label-micro">The missing test</p>
+            <p class="body-text">
+              Suppose you had it. How would you know it was any good?
+            </p>
+            <p class="body-text">
+              A benchmark will not tell you: it reports an average, and an
+              average is where a confident, catastrophic error hides.
+            </p>
+            <p class="body-text">
+              Nothing happens to a model that was confidently wrong. Nothing
+              happens to the people who built it.
+            </p>
+            <p class="body-text">
+              Confidence is easy. Accountability is the part nobody builds.
+            </p>
+          </section>
+
+          <section class="beat">
+            <p class="label-micro">Earning the right</p>
+            <p class="body-text">
+              Accountability cannot be measured afterwards. It has to be built
+              in.
+            </p>
+            <p class="body-text">
+              A machine earns the right to decide the way a person does: it
+              makes a claim, answers for it, and bears the consequence of being
+              wrong.
+            </p>
+            <p class="band">Observe &#183; Predict &#183; Commit &#183; Learn</p>
+            <p class="body-text">
+              Consequence is the training signal. That machine does not exist
+              yet. We are building it.
+            </p>
+          </section>
+
+          <section class="close-block">
+            <p class="statement">
+              The machine that gets to decide should be the one that has to
+              answer for it.
+            </p>
+
+            <div class="beat">
+              <p class="label-micro">Join us</p>
+              <p class="body-text">
+                We are the researchers and builders behind leading ML tools and
+                platforms, working with researchers who have tens of thousands
+                of citations.
               </p>
-
-              <p class="mb-4">
-                We build AI models that predict the future. If you're
-                world‑class in research, graphs, time series, ML engineering, or
-                product and want to ship with velocity, we'd love to talk.
+              <p class="body-text">
+                We are hiring in research, graphs, time series, ML engineering,
+                and product. If you want to build the thing that has to be
+                right, write to us.
               </p>
-            </section>
-          </div>
-
-          <!-- Mobile separator -->
-          <div class="mobile-separator my-8 w-full text-center text-stone-400">
-            ⁂
-          </div>
-
-          <!-- Our team: text-only list -->
-          <section
-            class="founders-section w-full max-w-[36rem] shrink-0 pb-24 text-stone-700 transition-opacity duration-200 lg:col-start-2 lg:w-[18rem] lg:max-w-none lg:pb-0 lg:opacity-75 lg:hover:opacity-100"
-          >
-            <div class="lg:sticky lg:top-12">
-              <h2 class="mb-4 text-3xl font-semibold lg:text-lg">Founders</h2>
-              <ul class="space-y-4 text-lg lg:text-[0.95rem] lg:leading-[1.4]">
-                <li>
-                  <span class="font-bold">Chris Bach / Co-CEO:</span>
-                  <span class="font-light"
-                    >Serial entrepreneur, co-founder of Netlify, powering 90M+
-                    sites. Pioneered the Jamstack movement and the decoupled
-                    web.</span
-                  >
-                </li>
-                <li>
-                  <span class="font-bold">Alex Pan / Co-CEO:</span>
-                  <span class="font-light"
-                    >MLE and product. Authored the first synthetic benchmark for
-                    verifiable mixed logic reasoning and state management.
-                    Founded Storipress. Forbes 30 Under 30.</span
-                  >
-                </li>
-                <li>
-                  <span class="font-bold">Athon Millane / CTO:</span>
-                  <span class="font-light"
-                    >Data scientist. Built DLFinLab—the deep learning
-                    algotrading system powering today's quant funds. Founding
-                    Team at The Network State.</span
-                  >
-                </li>
-              </ul>
-              <h2 class="mt-12 mb-4 text-3xl font-semibold lg:text-lg">
-                Advisors
-              </h2>
-              <ul class="space-y-4 text-lg lg:text-[0.95rem] lg:leading-[1.4]">
-                <li>
-                  <span class="font-bold">Ming Jin, PhD:</span>
-                  <span class="font-light"
-                    >Time Series Researcher, Griffith University.</span
-                  >
-                </li>
-                <li>
-                  <span class="font-bold">Andy Huang, PhD:</span>
-                  <span class="font-light"
-                    >Graph Researcher, Oxford University.</span
-                  >
-                </li>
-                <li>
-                  <span class="font-bold">Flora Salim, PhD:</span>
-                  <span class="font-light"
-                    >Time Series Researcher, University of New South
-                    Wales.</span
-                  >
-                </li>
-              </ul>
+              <div class="contact">
+                <p class="label-micro" style="margin-bottom: 8px">Write to us</p>
+                <a href="mailto:join@ptl.inc">join@ptl.inc</a>
+              </div>
             </div>
           </section>
-        </div>
+
+        <aside class="col-rail">
+          <div class="roster-group">
+            <p class="roster-label">Founders</p>
+            <ul class="roster-list">
+              <li>
+                <span class="roster-name">Chris Bach</span
+                ><span class="roster-handle">Co-CEO</span>
+                <p class="roster-bio">
+                  Serial entrepreneur, co&#8209;founder of Netlify, powering 90M+
+                  sites. Pioneered the Jamstack movement and the decoupled web.
+                </p>
+              </li>
+              <li>
+                <span class="roster-name">Alex Pan</span
+                ><span class="roster-handle">Co-CEO</span>
+                <p class="roster-bio">
+                  MLE and product. Authored the first synthetic benchmark for
+                  verifiable mixed logic reasoning and state management. Founded
+                  Storipress. Forbes 30 Under 30.
+                </p>
+              </li>
+              <li>
+                <span class="roster-name">Athon Millane</span
+                ><span class="roster-handle">CTO</span>
+                <p class="roster-bio">
+                  Data scientist. Built DLFinLab. Founding Team at The Network
+                  State.
+                </p>
+              </li>
+            </ul>
+          </div>
+
+          <div class="roster-group">
+            <p class="roster-label">Advisors</p>
+            <ul class="roster-list">
+              <li>
+                <span class="roster-name">Ming Jin, PhD</span
+                ><span class="roster-handle">Time series</span>
+                <p class="roster-bio">Griffith University.</p>
+              </li>
+              <li>
+                <span class="roster-name">Andy Huang, PhD</span
+                ><span class="roster-handle">Graphs</span>
+                <p class="roster-bio">Oxford University.</p>
+              </li>
+              <li>
+                <span class="roster-name">Flora Salim, PhD</span
+                ><span class="roster-handle">Time series</span>
+                <p class="roster-bio">University of New South Wales.</p>
+              </li>
+            </ul>
+          </div>
+        </aside>
       </div>
     </main>
-    <!-- Footer -->
-    <footer
-      class="pointer-events-none fixed inset-x-0 text-center text-stone-500"
-      style="
-        position: fixed;
-        z-index: 9999;
-        isolation: isolate;
-        bottom: 0;
-        padding-bottom: 0.5rem;
-        padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
-      "
-    >
-      <div class="text-[1.125rem]">© 2026 Predictive Text Labs</div>
-    </footer>
+
+    <footer class="footer-band">&#169; 2026 &#183; Predictive Text Labs</footer>
+
+    <script>
+      (function () {
+        var fld = document.querySelector(".fld");
+        if (!fld) return;
+        if (
+          !matchMedia("(min-width: 80rem)").matches ||
+          matchMedia("(prefers-reduced-motion: reduce)").matches
+        )
+          return;
+
+        var doc = document.documentElement;
+        var k = -1;
+
+        // camera: scroll -> scalar
+        function t() {
+          var span = doc.scrollHeight - innerHeight;
+          return span > 0
+            ? Math.min(1, Math.max(0, scrollY / span))
+            : 0;
+        }
+
+        // painter: scalar -> one attribute
+        function paint(v) {
+          var raw = v * 6;
+          var n =
+            k < 0 || raw > k + 1.03 || raw < k - 0.03
+              ? Math.min(5, Math.max(0, Math.floor(raw)))
+              : k;
+          if (n === k) return;
+          k = n;
+          fld.dataset.k = k;
+        }
+
+        fld.removeAttribute("data-k");
+        var f = 0;
+        function on() {
+          if (!f)
+            f = requestAnimationFrame(function () {
+              f = 0;
+              paint(t());
+            });
+        }
+        addEventListener("scroll", on, { passive: true });
+        addEventListener("resize", on, { passive: true });
+        if (document.fonts && document.fonts.ready)
+          document.fonts.ready.then(on);
+        on();
+      })();
+    </script>
   </body>
 </html>
