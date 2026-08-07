@@ -77,6 +77,8 @@
   const finEl  = document.getElementById('finale');
   const finA   = document.getElementById('finA');
   const finB   = document.getElementById('finB');
+  const finC   = document.getElementById('finC');
+  const cta    = document.getElementById('cta');
   const counter = document.getElementById('bn');
   /* The denominator was the last number on the page still written by hand,
      which meant adding a beat to the argument left the chrome quietly
@@ -161,14 +163,26 @@
     /* in / out windows per line: [start, length]. The claim never leaves. */
     IN:  [[0.00, 0.17], [0.045, 0.17], [0.095, 0.19]],
     OUT: [[0.28, 0.12], [0.30, 0.12]],
+    /* The button waits for the film to be over. The mark stops closing at
+       g = 0.965, which is t = 0.79 of this section, and the claim stops being
+       pushed at the same instant — so 0.80 is the first moment there is a
+       still frame to arrive into. Done by 0.92, which leaves the last 8% as
+       the held end card it was always meant to be. */
+    CTA: [0.80, 0.12],
+    CTA_GAP: 3.4,         // below the claim, in rem, capped against short frames
   };
   const easeIn = u => u * u;             // accelerates out of frame
 
-  let ha = 0, gap = 0;
+  let ha = 0, gap = 0, ctaGap = 0;
   const measure = () => {
     palette();
+    const rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
     ha  = finA.offsetHeight;
-    gap = FIN.GAP * parseFloat(getComputedStyle(document.documentElement).fontSize);
+    gap = FIN.GAP * rem;
+    /* Capped against the viewport as well as set in rem: on a landscape phone
+       a fixed 3.4rem below the claim is a large share of the whole frame, and
+       the button has to fit under it without the pair being crushed. */
+    ctaGap = Math.min(FIN.CTA_GAP * rem, innerHeight * 0.075);
   };
 
   /* The mark's lower edge in screen px — the same arithmetic as form()'s
@@ -201,19 +215,31 @@
        phone with the URL bar showing, markBottom is driven by `base` (the
        WIDTH there) while the pin is a share of the height, and the two
        disagreed enough to slice the closing line in half. */
+    /* What has to fit BELOW the claim. Reserved statically, not as the button
+       fades in: growing the reservation on arrival would drag the claim upward
+       at the exact moment the frame is supposed to be still. On any ordinary
+       viewport this never binds — the pin sits far above the clamp — so it
+       costs nothing except on the short frames it exists for. */
+    const tail = finC.offsetHeight + ctaGap;
     const bY   = Math.min(
       Math.max(rise, H * FIN.PIN, markBottom(g, H) + H * FIN.CLEAR),
-      H - finB.offsetHeight - H * 0.045
+      H - finB.offsetHeight - tail - H * 0.045
     );
     const go   = easeIn(clamp((t - FIN.GO) / FIN.GO_LEN)) * H * FIN.LIFT;
     finB.style.transform = `translate(-50%,${bY.toFixed(1)}px)`;
     finA.style.transform = `translate(-50%,${(bY - gap - ha - go).toFixed(1)}px)`;
+    finC.style.transform =
+      `translate(-50%,${(bY + finB.offsetHeight + ctaGap).toFixed(1)}px)`;
 
     if (reduce) {
-      /* Static, fully readable, clear of the closing mark. */
-      finB.style.transform = `translate(-50%,${(H * 0.70).toFixed(1)}px)`;
-      finA.style.transform = `translate(-50%,${(H * 0.70 - gap - ha).toFixed(1)}px)`;
-      for (const el of [b.l1, b.l2, b.l3]) fadeLine(el, 1, 0, H);
+      /* Static, fully readable, clear of the closing mark — and the button is
+         simply present rather than arriving, since its arrival is the motion. */
+      const rY = H * 0.70 - tail * 0.5;
+      finB.style.transform = `translate(-50%,${rY.toFixed(1)}px)`;
+      finA.style.transform = `translate(-50%,${(rY - gap - ha).toFixed(1)}px)`;
+      finC.style.transform =
+        `translate(-50%,${(rY + finB.offsetHeight + ctaGap).toFixed(1)}px)`;
+      for (const el of [b.l1, b.l2, b.l3, cta]) fadeLine(el, 1, 0, H);
       return;
     }
     const ins = FIN.IN, out = FIN.OUT;
@@ -222,6 +248,7 @@
     fadeLine(b.l2, outCubic(clamp((t - ins[1][0]) / ins[1][1])),
                    inQuad  (clamp((t - out[1][0]) / out[1][1])), H);
     fadeLine(b.l3, outCubic(clamp((t - ins[2][0]) / ins[2][1])), 0, H);
+    fadeLine(cta, outCubic(clamp((t - FIN.CTA[0]) / FIN.CTA[1])), 0, H);
   }
 
   /* One line's arrival and departure: mask, opacity and a small travel of its
@@ -232,7 +259,13 @@
     if (!el) return;
     el.style.setProperty('--rv', inU.toFixed(3));
     el.style.setProperty('--ex', outU.toFixed(3));
-    el.style.opacity = (inU * (1 - outU)).toFixed(3);
+    const a = inU * (1 - outU);
+    el.style.opacity = a.toFixed(3);
+    /* A faded line is still a box. Left hit-testing it would put an I-beam
+       over an empty band of the closing frame — the name and the verb leave
+       but their boxes do not — so the pointer is handed back only while there
+       is something legible to put a cursor in. */
+    el.style.pointerEvents = a > 0.05 ? 'auto' : 'none';
     el.style.transform =
       `translateY(${((1 - inU) * H * 0.030 - outU * H * 0.026).toFixed(1)}px)`;
   }

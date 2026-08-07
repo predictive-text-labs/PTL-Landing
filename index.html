@@ -145,6 +145,19 @@
      clipped away is gone. Same fixed frame, no clip. */
   .type{position:fixed;inset:0;z-index:2;pointer-events:none}
   .type a{pointer-events:auto}
+  /* The LAYER is transparent to the pointer; the WORDS are not. Without this
+     the copy is text you cannot put a cursor in — no I-beam, no selection, no
+     copying a line out of it — because the whole layer above the canvas was
+     waved through. Only the text boxes take the pointer back: the empty frame
+     around them stays transparent, so nothing intercepts a scroll and the
+     mark keeps reading the pointer (which it does from window, so events
+     landing on the copy still reach it by bubbling). The finale's lines are
+     handled in fadeLine, which knows when a line has faded out from under
+     itself and should stop hit-testing an empty band. */
+  .blk h1,.blk p{pointer-events:auto}
+  /* And selection is drawn, not left to the UA's blue — one more inversion,
+     which is the whole vocabulary of the page. */
+  ::selection{background:var(--ink);color:var(--paper)}
 
   .chrome{position:fixed;top:0;left:0;right:0;z-index:3;
     display:flex;align-items:center;justify-content:space-between;
@@ -251,6 +264,27 @@
   .blk{position:absolute;left:50%;bottom:0;transform:translateX(-50%);width:100%;
     visibility:hidden}
   .blk.on{visibility:visible}
+  /* THE BOX MUST CONTAIN THE INK.
+     ------------------------------------------------------------------------
+     A mask clips its element to `mask-clip`, which defaults to the border box,
+     and at this line-height Cormorant's descenders hang below the content box
+     — so the tail of every g and y was being sliced off flat. No mask-repeat
+     value rescues that: the clip happens before the layers are even consulted.
+     `mask-clip:no-clip` is the declaration that means what we want and it
+     parses in all three engines, but only Firefox actually honours it; on
+     Chromium and WebKit the element is still cropped to the border box.
+
+     So the box is grown to hold the overhang instead, and pulled back by the
+     same amount so nothing moves. That works everywhere because it is not a
+     masking feature at all — it is just a bigger box. The margin nets out
+     under collapsing too (a negative and a positive collapse to their sum,
+     and the padding adds it straight back), so the measured gap down to the
+     body is exactly what it was.
+
+     Bottom only: the ascenders were measured and they do not overflow. Top
+     padding would also shift the border-box origin, and the 12px lattice is
+     laid from that corner — it would re-phase the halftone for no reason. */
+  .blk h1,.blk p{padding-bottom:.18em;margin-bottom:-.18em}
   .blk h1{font:300 clamp(1.9rem,3.5vw,3.2rem)/1.14 Cormorant,serif;
     letter-spacing:-.012em;text-wrap:balance}
   /* `balance` sets the paragraph at the narrowest measure that still holds its
@@ -274,8 +308,28 @@
      is exactly what normal flow would have produced. */
   .finale{position:absolute;inset:0;pointer-events:none;visibility:hidden}
   .finale.on{visibility:visible}
-  .fin-a,.fin-b{position:absolute;left:50%;top:0;width:min(60rem,86vw);
+  .fin-a,.fin-b,.fin-c{position:absolute;left:50%;top:0;width:min(60rem,86vw);
     text-align:center;will-change:transform}
+
+  /* THE ONE THING YOU CAN DO.
+     ------------------------------------------------------------------------
+     The page has no CTA by design — it is an argument, not a funnel — so the
+     single action it offers arrives only after the argument has finished
+     making itself: the mark has closed, the claim has come to rest, and the
+     film is holding still. Then this.
+
+     Filled and square: the same block as the caret that ends the claim, grown
+     to hold a label, and drawn in the inversion the whole page is built on —
+     ink ground, paper letters. That is why it is --ink and not a literal
+     black. On the dark variation "a black button" would be a hole. */
+  .cta{display:inline-block;padding:1.25rem 2.2rem;
+    background:var(--ink);color:var(--paper);text-decoration:none;
+    font:500 .70rem/1 "Geist Mono",monospace;
+    letter-spacing:.30em;text-indent:.30em;text-transform:uppercase;
+    transition:background .18s ease,color .18s ease,box-shadow .18s ease}
+  .cta:hover,.cta:focus-visible{background:var(--paper);color:var(--ink);
+    box-shadow:inset 0 0 0 1px var(--ink);outline:none}
+  @media (prefers-reduced-motion:reduce){.cta{transition:none}}
 
   .l1{font:italic 300 clamp(2.4rem,4.6vw,4.2rem)/1.16 Cormorant,serif;
     letter-spacing:-.008em}
@@ -413,6 +467,12 @@
     <div class="finale" id="finale">
       <div class="fin-a" id="finA"></div>
       <div class="fin-b" id="finB"></div>
+      <!-- tabindex="-1" because this whole layer is aria-hidden: it is a
+           rendered duplicate of #story, and a focusable control inside
+           aria-hidden content is a trap — reachable by keyboard, invisible to
+           a screen reader. The chrome's ABOUT link is the same destination and
+           is announced properly, so this one is for the mouse. -->
+      <div class="fin-c" id="finC"><a class="cta fade" id="cta" href="/about.html" tabindex="-1">About PTL</a></div>
     </div>
   </div>
 
@@ -433,7 +493,7 @@
     </section>
     <section data-key="COMMIT">
       <h1>A machine earns this right through a track record of committing scarce resources into the world.</h1>
-      <p>It must bear the consequences of being wrong and improve itself when reality resolves. Today, AI models are built in a vacuum and evaluated after the fact, ignoring the messy complexity of real world high stakes decision making.</p>
+      <p>It must bear the consequences of being wrong and improve itself when the outcome arrives. Today, AI models are built in a vacuum and graded after the fact — never against a decision that cost anything.</p>
     </section>
     <section data-key="PRICE">
       <h1>Predictive Text Labs teaches machines to price uncertainty so they can commit to decisions that matter.</h1>
@@ -468,7 +528,9 @@
     /* Carry the variation across to the about page, so following the link does
        not silently drop you back into variation 1. */
     const v = document.documentElement.dataset.v;
-    if (v) document.getElementById('about').href = '/about.html?v=' + v;
+    if (v) for (const id of ['about', 'cta']) {
+      document.getElementById(id).href = '/about.html?v=' + v;
+    }
   }
 </script>
 <script src="/src/ptl-field.js"></script>
