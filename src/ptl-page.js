@@ -210,7 +210,7 @@
       const cur = document.createElement('i'); cur.className = 'cur';
       l3.append(tw, cur);
       finA.append(l1, l2); finB.append(l3);
-      return { el: finEl, fin: true, l1, l2, l3 };
+      return { el: finEl, fin: true, l1, l2, l3, cur };
     }
     const d = document.createElement('div');
     d.className = 'blk';
@@ -483,7 +483,40 @@
      later — a tablet gains a mouse, or reduced motion is switched off — and a
      listener that was never attached cannot be attached retroactively from the
      media query's own handler without more bookkeeping than the check costs. */
+  /* THE CARET SLEEPS, AND IT HAS TO BE ABLE TO WAKE.
+     ------------------------------------------------------------------------
+     The blink is capped at twelve iterations, which is deliberate: a 2x22px
+     block toggling forever measured as 97% of the closing screen's remaining
+     power draw, on the one screen the reader is meant to sit on. What was
+     missing is the other half of that bargain. Twelve iterations is 12.7
+     seconds, after which the animation FINISHES and holds its base opacity —
+     which is 1 — so the caret ends as a solid lit block and stays that way
+     for the rest of the visit. Measured: last toggle at 10.91s, no animations
+     on the element at 17s. A reader who sits with the page for a quarter of a
+     minute is looking at a cursor that has stopped, and a cursor that has
+     stopped reads as broken rather than as finished.
+
+     So it sleeps only while nothing is happening, and any sign of a reader
+     starts it again. The getAnimations() check is what keeps this cheap: while
+     the blink is still running this returns early and costs nothing, and the
+     forced reflow — the only way to restart a CSS animation — happens at most
+     once per idle period rather than once per event.
+
+     Under reduced motion the stylesheet removes the animation outright, so
+     there is nothing to wake and trying would force a reflow on every mouse
+     move for no result. */
+  function wakeCaret() {
+    if (reduce) return;
+    const cur = blocks[blocks.length - 1] && blocks[blocks.length - 1].cur;
+    if (!cur || !cur.isConnected) return;
+    if (cur.getAnimations().length) return;      // still blinking; leave it be
+    cur.style.animation = 'none';
+    void cur.offsetWidth;                        // reflow, or the restart is a no-op
+    cur.style.animation = '';
+  }
+
   addEventListener('pointermove', e => {
+    wakeCaret();
     if (!POINTER) return;
     const base = Math.max(innerHeight, innerWidth / C.ASPECT);
     tgt[0] = clampAxis((e.clientX - innerWidth  * 0.5) / base);
@@ -706,6 +739,7 @@
        same gesture mean different things on different hardware. */
     vel += Math.abs(window.scrollY - lastY) / Math.max(innerHeight, 1);
     lastY = window.scrollY;
+    wakeCaret();
     /* When the ambient loop is running it is already drawing every frame, so
        scheduling the scroll slot as well would render the same frame twice. */
     if (ambient() && !still) { tick(); return; }
