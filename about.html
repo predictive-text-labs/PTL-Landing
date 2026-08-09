@@ -12,7 +12,7 @@
 <script>
   {
     const v = new URLSearchParams(location.search).get('v');
-    if (v === '2' || v === '3') document.documentElement.dataset.v = v;
+    if (v === '2' || v === '3' || v === '4') document.documentElement.dataset.v = v;
   }
 </script>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -38,6 +38,12 @@
     --paper:#000000; --ink:#F4EADA; --field:#F8E5B8; --field-end:#FFFFFF;
     --dim:#868686; --mid:#969696; --soft:#A9A9A9; --rule:#353535;
     --wash:rgba(0,0,0,.62); --tint:#C64A16;
+  }
+  /* Variation 4 — the control: one bit, nothing added. See index.html. */
+  :root[data-v="4"]{
+    --paper:#000000; --ink:#FFFFFF; --field:#FFFFFF; --field-end:#FFFFFF;
+    --dim:#7C7C7C; --mid:#8A8A8A; --soft:#9E9E9E; --rule:#333333;
+    --wash:rgba(0,0,0,.62); --tint:#000000;
   }
   :root[data-v="2"]{
     --paper:#D6D3D1; --ink:#0C0A09; --field:#0C0A09; --field-end:#0C0A09;
@@ -454,6 +460,8 @@
   /* The drop shadow is the indigo variant's alone — see uShadow in the
      renderer. Read once: the variant cannot change without a reload. */
   const SHADOW = root.dataset.v ? 0 : 1;
+  /* Variation 4 loses the ramp as well as the shadow — see index.html. */
+  const TONE   = root.dataset.v === '4' ? 0 : 1;
   {
     const cs = getComputedStyle(root);
     const paper = cs.getPropertyValue('--paper').trim();
@@ -569,7 +577,7 @@
     root.style.setProperty('--ink-live', mixHex(TYPE_A, TYPE_B, res));
     field.draw(p, {
       g: gNow, section: 0, resolve: res,
-      cell: 12, gap: 0.12, gain: gainAt(p), fov: 0.70, shadow: SHADOW,
+      cell: 12, gap: 0.12, gain: gainAt(p), fov: 0.70, shadow: SHADOW, tone: TONE,
       mouse: [0, 0], act: 0,
       ink: INK, ink2: INK2, paper: PAPER, tint: TINT,
       time: clock, amb: reduce ? 0 : 1,

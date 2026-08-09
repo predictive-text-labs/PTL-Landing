@@ -84,6 +84,7 @@
   uniform vec3      uPaper;     // the ground
   uniform vec3      uTint;      // the mark at its DIMMEST, and the ground's bloom
   uniform float     uShadow;    // 1 = the mark casts one, 0 = it does not
+  uniform float     uTone;      // 1 = the film is toned, 0 = strictly 1-bit
   uniform vec2      uMouse;     // pointer, in the same uv space as the field
   uniform float     uAct;       // 0..1 — how much the pointer is allowed to act
   uniform float     uTime;      // seconds — the ambient clock, which scroll speeds up
@@ -660,7 +661,13 @@
        the last frame is a hard edge with one pixel of antialiasing at every
        DPR instead of a hard edge that crawls on a 1x display. One gs unit is
        half a cell, so one device pixel is 2/uCell of it. */
-    float w     = max(e * mix(0.20, 0.02, resolveU), 1.0 / uCell);
+    float wSoft = max(e * mix(0.20, 0.02, resolveU), 1.0 / uCell);
+    /* Variation 4 has no feather either. The original mark was a hard step()
+       and the softness is one of the things that variation exists to control
+       for, so uTone takes it to the floor: a razor border, correctly sampled.
+       Not a literal step(), because that aliases and crawls as the field
+       breathes — this is the same edge without the crawl. */
+    float w     = mix(1.0 / uCell, wSoft, uTone);
     /* GATED AT ZERO. In an EMPTY cell e is 0, so w is 0 and this would be
        smoothstep(0, 0, d) — spec-undefined for edge0 >= edge1, and on the usual
        lowering saturate(0/0) gives 0, i.e. mark = 1. It needs d == 0, which
@@ -833,6 +840,12 @@
     float lo      = smoothstep(0.30, 0.52, vy);
     float hi      = smoothstep(0.46, 0.72, vy);
     vec3  warm    = mix(mix(uTint, amber, lo), uInk, hi);
+    /* uTone is the whole of variation 4: at 0 the mark is flat uInk with no
+       ramp, and the bloom and spill below are zero, so the frame is ink or
+       paper and nothing between — the 1-bit contract with no atmosphere at
+       all. It is a separate switch from uShadow because the two pale variants
+       want their toning kept and only the shadow dropped. */
+    warm          = mix(uInk, warm, uTone);
     vec3  ink     = mix(warm, uInk2, resolve);
 
     float lowBias = mix(1.0, 0.35, smoothstep(-halfH, halfH, uv.y));
@@ -840,7 +853,7 @@
        is not decoration: a thinning mark blends toward the ground, so if the
        ground stays cold the falloff turns grey no matter how red the ink is.
        Warm ground is what lets the limbs stay orange as they fade out. */
-    float bloom   = pow(clamp(lumG, 0.0, 1.0), 0.42) * lowBias * (1.0 - resolve);
+    float bloom   = pow(clamp(lumG, 0.0, 1.0), 0.42) * lowBias * (1.0 - resolve) * uTone;
     vec3  gnd     = mix(uPaper, uTint, bloom * 0.55);
 
     /* SPILL BETWEEN CELLS, which the blur above cannot produce on its own.
@@ -858,7 +871,7 @@
        they are orange. A tight exponent keeps it welded to the form — at
        the 0.42 the wide haze uses, a nearly-empty cell would still pick up
        a few percent and the dark would stop being dark. */
-    float spill   = pow(clamp(lumG, 0.0, 1.0), 1.1) * (1.0 - resolve);
+    float spill   = pow(clamp(lumG, 0.0, 1.0), 1.1) * (1.0 - resolve) * uTone;
     gnd           = mix(gnd, ink, spill * 0.42);
 
 
@@ -945,7 +958,7 @@
     const UNIFORMS = ['uRes', 'uT', 'uG', 'uCell', 'uGap', 'uGain', 'uMode',
                       'uSection', 'uTex', 'uLat', 'uFov', 'uMouse', 'uAct',
                       'uTime', 'uAmb', 'uInk', 'uInk2', 'uPaper', 'uTint',
-                      'uShadow', 'uResolve'];
+                      'uShadow', 'uTone', 'uResolve'];
     function locate(p) {
       const m = {};
       for (const n of UNIFORMS) m[n] = gl.getUniformLocation(p, n);
@@ -1072,6 +1085,7 @@
       const tint = o.tint || paper;
       gl.uniform3f(uu.uTint, tint[0], tint[1], tint[2]);
       gl.uniform1f(uu.uShadow, o.shadow != null ? o.shadow : 1);
+      gl.uniform1f(uu.uTone, o.tone != null ? o.tone : 1);
       const m = o.mouse || [0, 0];
       gl.uniform2f(uu.uMouse, m[0], m[1]);
       gl.uniform1f(uu.uAct, o.act != null ? o.act : 0);

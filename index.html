@@ -23,7 +23,7 @@
 <script>
   {
     const v = new URLSearchParams(location.search).get('v');
-    if (v === '2' || v === '3') document.documentElement.dataset.v = v;
+    if (v === '2' || v === '3' || v === '4') document.documentElement.dataset.v = v;
   }
 </script>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -78,7 +78,7 @@
      Every colour on the page, including the two the shader resolves its 1-bit
      output to, comes from here. The renderer is handed --field and --paper at
      draw time, so the film and the type can never disagree about the ground
-     they are on. Select with ?v=2 / ?v=3; default is 1.
+     they are on. Select with ?v=2 / ?v=3 / ?v=4; default is 1.
 
        1  the original: white mark on black
        2  inverted onto the old site's own paper (Tailwind stone-100), which
@@ -127,6 +127,27 @@
   /* stone-300. Warm and heavy enough that the type tones cannot be reused
      from the dark variant — #6E6E6E is 4.1:1 on black and 2.6:1 here. These
      are picked against this ground specifically. */
+  /* VARIATION 4 — the film with nothing added to it.
+     ------------------------------------------------------------------------
+     Same black ground and the same six beats, but strictly one bit: no drop
+     shadow, no warm ramp on the mark, no bloom or spill on the ground. Every
+     pixel in the frame is either the ink or the paper, which is what the
+     halftone claims to be and what variation 1 relaxes on purpose.
+
+     It is here to be the control. Variation 1's toning is an argument — that
+     the field reads as an emulsion catching light rather than as a diagram —
+     and an argument of that kind is only worth anything next to the thing it
+     is arguing against. --tint is set to the paper so that even the token is
+     a no-op; the shader is told separately, via tone, not to ramp at all.
+
+     The greys are variation 1's, which are already neutral and already
+     matched to this ground. */
+  :root[data-v="4"]{
+    --paper:#000000; --ink:#FFFFFF; --field:#FFFFFF; --field-end:#FFFFFF;
+    --dim:#7C7C7C; --mid:#8A8A8A; --soft:#9E9E9E; --rule:#333333;
+    --wash:rgba(0,0,0,.62);
+    --tint:#000000;
+  }
   :root[data-v="2"]{
     --paper:#D6D3D1; --ink:#0C0A09; --field:#0C0A09; --field-end:#0C0A09;
     --dim:#57534E; --mid:#44403C; --soft:#3B3735; --rule:#9C9691;

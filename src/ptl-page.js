@@ -120,6 +120,11 @@
   /* The drop shadow is the indigo variant's alone — see uShadow in the
      renderer. Read once: the variant cannot change without a reload. */
   const SHADOW = document.documentElement.dataset.v ? 0 : 1;
+  /* The toning is variation 4's alone to lose. uShadow already goes off for
+     every variation but the first, because a dark halo on light paper is a
+     smudge; the RAMP is a separate question, and the two pale grounds keep
+     theirs. Read once: the variation cannot change without a reload. */
+  const TONE   = document.documentElement.dataset.v === '4' ? 0 : 1;
   const palette = () => {
     const cs = getComputedStyle(document.documentElement);
     /* --field, not --ink: the film's colour and the writing's colour are
@@ -673,7 +678,7 @@
          bright arc swept up through a lockup that reduce pins in place, which
          put 86% of the verb's ink under 4.5:1. */
       g: reduce ? 1 : p, section: idx, word: S[idx].key,
-      cell: 12, gap: 0.12, gain: 1.0, fov: 0.70, shadow: SHADOW,
+      cell: 12, gap: 0.12, gain: 1.0, fov: 0.70, shadow: SHADOW, tone: TONE,
       mouse: cur, act, ink: INK, ink2: INK2, paper: PAPER, tint: TINT,
       time: clock, amb: ambient(), resolve: res,
     });

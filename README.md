@@ -52,20 +52,33 @@ reads it out of the DOM. One source of truth. Edit the copy there.
 
 ## Variations
 
-Three colourways, selected with a query parameter; `?v=` anything else is
+Four colourways, selected with a query parameter; `?v=` anything else is
 variation 1.
 
-    /               1  white mark on black — the original
+    /               1  a toned film on black: the mark's hue ramps with its
+                       brightness, it casts a drop shadow, and the ground
+                       carries a little of the same warm — all of which
+                       resolves to white on hard black by the last frame
     /?v=2           2  inverted onto stone-300, the old site's own warm paper
     /?v=3           3  a heavier, redder ground — taupe-400 — and the same
                        black type, with the blue confined to the FILM,
                        resolving to black as the mark closes
+    /?v=4           4  the control: white mark on black, strictly one bit.
+                       No shadow, no hue ramp, no bloom, no feathered edge —
+                       every pixel is either the ink or the paper
+
+Variation 4 is not a colourway so much as the thing the others are arguing
+against. Variation 1 claims the field reads as an emulsion catching light
+rather than as a diagram; that claim is only worth something next to the
+version with none of it, which is what 4 is. Two switches carry the whole
+difference — `shadow` and `tone` in the draw options — so the two can be
+compared without a second renderer.
 
 Every colour, including the two the shader resolves its 1-bit output to, comes
 from the `:root` blocks at the top of `index.html`; the renderer is handed
 `--field` and `--paper` at draw time, so the film and the type cannot disagree
-about the ground they are on. Once one is chosen, the other two blocks and the
-switch come out.
+about the ground they are on. Once one is chosen, the other three blocks and
+the switch come out.
 
 ## Develop
 
