@@ -11,6 +11,13 @@ is the clock the argument runs on. Every position on the page is a pure
 function of `scrollY`, so there is nothing to seek, buffer or decode; dragging
 the scrollbar backwards runs the film backwards exactly.
 
+The film ends before the page does. The last stretch of scroll — `TAIL` in
+`src/ptl-page.js` — is deliberately dead: the mark has closed, the claim has
+hit its wall, the frame is held, and the reader goes on scrolling into a page
+that has stopped moving. Only after that has plainly registered as an ending
+does the one action the page offers surface. Nothing but that link reads the
+tail, so it cannot stretch a single cue in the film.
+
 The field also breathes on a real-time clock, so a page nobody is touching is
 alive rather than a screenshot, and scrolling makes that clock run faster
 (measured: 1× idle, ~2× under a steady scroll, up to ~8.7× on a hard flick,
@@ -50,8 +57,9 @@ variation 1.
 
     /               1  white mark on black — the original
     /?v=2           2  inverted onto stone-300, the old site's own warm paper
-    /?v=3           3  the same paper and black type, with the blue confined
-                       to the FILM, resolving to black as the mark closes
+    /?v=3           3  a heavier, redder ground — taupe-400 — and the same
+                       black type, with the blue confined to the FILM,
+                       resolving to black as the mark closes
 
 Every colour, including the two the shader resolves its 1-bit output to, comes
 from the `:root` blocks at the top of `index.html`; the renderer is handed

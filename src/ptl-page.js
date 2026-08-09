@@ -32,7 +32,7 @@
   const S = [...document.querySelectorAll('#story section')].map(sec => {
     const p = sec.querySelector('p');
     return {
-      head:   sec.querySelector('h1').textContent.trim(),
+      head:   sec.querySelector('h1,h2').textContent.trim(),
       body:   p ? p.textContent.trim() : '',
       key:    sec.dataset.key || '',
       /* Per-beat timing, when a beat needs it. Everything else uses the
@@ -45,6 +45,54 @@
   });
 
   const PER = 2.0;                       // viewport-heights of scroll per section
+  /* Scroll the FILM does not use, appended after it. The last thing the page
+     does is hold a still frame while the one action it offers surfaces, and
+     that beat is made of scroll — there is no other clock the reader controls.
+     Six sections' worth of scroll was nowhere near enough of it: the mark
+     stops closing with only a fifth of the last section left, and that fifth
+     has to carry a pause long enough to read as an ending, the button's
+     arrival, and a little air after it.
+
+     Note that this does not slow the film down. `film` below is the document
+     height MINUS this tail, so every section still gets exactly PER
+     viewport-heights and every cue lands where it always did; the tail is
+     purely extra distance at the bottom, where nothing is moving anyway. */
+  const TAIL = 0.71;                     // viewport-heights, after the film ends
+
+  /* THE FILM'S LENGTH IS NOT A FUNCTION OF THE LIVE VIEWPORT.
+     ------------------------------------------------------------------------
+     The body's height is set once, in `vh`, which on a phone resolves to the
+     LARGE viewport — the one with the browser chrome retracted — and never
+     changes again. innerHeight does: the URL bar hides and returns as you
+     scroll, by 56-81px. So `film = const - TAIL*innerHeight` moved under the
+     reader, and with it `p = scrollY/film`, which is the clock EVERYTHING on
+     this page is a pure function of.
+
+     Sixteen separate defects were that one line. The toolbar returning at the
+     bottom took the closing link from opacity 1.000 to 0.137 with no scroll
+     at all, and put full opacity permanently out of reach (it needs the
+     chrome under ~25 CSS px; iOS Safari's bar is 81). A resize near a section
+     boundary flipped the section index with dy = 0. Rotation and folding
+     rescaled the clock by up to 2.16x.
+
+     So the film is measured against a latched large-viewport height instead.
+     It is re-latched only when the WIDTH changes, which is what distinguishes
+     a real orientation change from the toolbar sliding.
+
+     NOT `dvh`: measured, that is six times worse, because the document's own
+     height then tracks the chrome too. The film's length simply must not be a
+     function of the live viewport. */
+  let LVH = 0;
+  function latchLVH() {
+    const p = document.createElement('div');
+    p.style.cssText = 'position:absolute;top:0;left:0;width:0;height:100lvh;' +
+                      'visibility:hidden;pointer-events:none';
+    document.body.appendChild(p);
+    LVH = p.offsetHeight || innerHeight;   // 100lvh is unsupported pre-2022
+    p.remove();
+  }
+  latchLVH();
+  const filmLen = () => Math.max((S.length * PER - 1) * LVH, 1);
 
   const clamp    = v => (v < 0 ? 0 : v > 1 ? 1 : v);
   const outCubic = v => 1 - Math.pow(1 - v, 3);
@@ -62,7 +110,16 @@
     const n = v.length === 3 ? v.split('').map(c => c + c).join('') : v;
     return [0, 2, 4].map(i => parseInt(n.slice(i, i + 2), 16) / 255);
   };
-  let INK = [1, 1, 1], INK2 = [1, 1, 1], PAPER = [0, 0, 0];
+  let INK = [1, 1, 1], INK2 = [1, 1, 1], PAPER = [0, 0, 0], TINT = [0, 0, 0];
+  /* The writing's own two ends. TYPE_A is what the type is while the film is
+     toned; TYPE_B is where it lands, which is the same place the MARKS land —
+     --field-end. Tying it to that token rather than to a literal white is what
+     makes this correct in all three variants without a branch: on the two pale
+     grounds --ink already IS --field-end, so the travel is a no-op. */
+  let TYPE_A = '#ffffff', TYPE_B = '#ffffff';
+  /* The drop shadow is the indigo variant's alone — see uShadow in the
+     renderer. Read once: the variant cannot change without a reload. */
+  const SHADOW = document.documentElement.dataset.v ? 0 : 1;
   const palette = () => {
     const cs = getComputedStyle(document.documentElement);
     /* --field, not --ink: the film's colour and the writing's colour are
@@ -70,6 +127,41 @@
     INK   = hex3(cs.getPropertyValue('--field') || '#ffffff');
     INK2  = hex3(cs.getPropertyValue('--field-end') || cs.getPropertyValue('--field') || '#ffffff');
     PAPER = hex3(cs.getPropertyValue('--paper') || '#000000');
+    /* Falls back to the paper itself, which makes the tint a no-op rather
+       than a guess if a variant does not define one. */
+    TINT  = hex3(cs.getPropertyValue('--tint') || cs.getPropertyValue('--paper') || '#000000');
+    /* Read from the ROOT rule, not from the element we are about to write
+       --ink-live onto — reading back our own output would ratchet the type
+       toward white a frame at a time and never come back. */
+    TYPE_A = (cs.getPropertyValue('--ink') || '#ffffff').trim();
+    TYPE_B = (cs.getPropertyValue('--field-end') || TYPE_A).trim();
+  };
+
+  /* THE RESOLVE CLOCK — the one the shader used to own.
+     ------------------------------------------------------------------------
+     It moved up here because the TYPE resolves on it too, and two languages
+     agree on a curve only if one of them does the arithmetic. Both edges are
+     named positions in the argument rather than durations: it opens at the top
+     of PRICE — "Predictive Text Labs teaches machines to price uncertainty so
+     they can commit to decisions that matter.", the line that names what the
+     company actually does — and closes exactly where the mark finishes
+     closing, so the picture and the writing arrive at the same instant.
+
+     Four beats of toned film, then it resolves. The argument is told in the
+     warm; only the answer is white. It is a short window for that reason —
+     0.30 of the page against 0.47 when it opened a beat earlier — so the same
+     K reads faster here than it did there.
+
+     An ease-OUT: it leaves at speed and spends the rest of the window
+     arriving. K is the whole of the aggression — 2 is the ordinary ease-out,
+     4 was too abrupt to read as a settle. */
+  const RES_A = 4 / 6, RES_B = 0.965, RES_K = 2.5;
+  const resolveAt = g => 1 - Math.pow(1 - clamp((g - RES_A) / (RES_B - RES_A)), RES_K);
+
+  const mixHex = (a, b, t) => {
+    const A = hex3(a), B = hex3(b);
+    const c = i => Math.round((A[i] + (B[i] - A[i]) * t) * 255);
+    return 'rgb(' + c(0) + ',' + c(1) + ',' + c(2) + ')';
   };
 
   /* Both preferences are live, not read once at load. Reduced motion in
@@ -174,25 +266,38 @@
     /* The button waits for the film to be over. The mark stops closing at
        g = 0.965, which is t = 0.79 of this section, and the claim stops being
        pushed at the same instant — so that is the first moment there is a
-       still frame to arrive into. It then takes almost all of the remaining
-       scroll: this is the one thing on the page with nowhere to be, and a
-       short window made it pop rather than surface. */
-    /* The claim stops dead at t = 0.79 — that is the instant the mark finishes
-       closing and stops pushing it, and the clamp that holds it is a hard max()
-       with nothing easing it in. What was missing was the BEAT afterwards: the
-       button used to start arriving at 0.79 exactly, so the claim's stop and
-       the button's entrance were the same event and neither read. Now there is
-       a stretch of scroll where the claim has hit its wall and nothing else
-       happens — about 200px of it — and only then does the button begin. */
-    CTA: [0.90, 0.095],
+       still frame to arrive into.
+
+       What was missing at first was the BEAT afterwards: the button used to
+       start arriving at 0.79 exactly, so the claim's stop and the button's
+       entrance were the same event and neither read. Measured, the claim goes
+       still at t = 0.786; the wait after it is now 0.473 of a section — 780px
+       at a 900px frame, near enough a whole screen of scroll — in which the
+       film has hit its wall and nothing whatsoever happens. That is the beat:
+       the reader keeps scrolling, the page does not move, and only once that
+       has plainly registered as an ending does the one action surface.
+
+       This is why TAIL exists. A wait that long puts the start well past
+       t = 1: there was not enough scroll left in the film to hold the pause
+       AND let the button surface, so the page carries most of a frame of
+       scroll the film does not use, and the button arrives on it. In the same
+       units as t the tail runs to 1.387, so the button is fully in at 1.354
+       with about 55px of scroll to spare underneath it. */
+    CTA: [1.259, 0.095],
     CTA_RISE: 0.042,      // how far it floats up, as a fraction of the frame
-    CTA_GAP: 1.7,         // below the claim, in rem, capped against short frames
+    CTA_GAP: 1.4,         // below the claim, in rem, capped against short frames
   };
   const easeIn = u => u * u;             // accelerates out of frame
 
   let ha = 0, gap = 0, ctaGap = 0;
   const measure = () => {
     palette();
+    /* The CSS default is 1 and .cta carries a transition, so on first entering
+       the finale the link rendered at FULL opacity and faded back out over
+       ~120ms — giving away, 2.15 viewport-heights early, the exact thing TAIL
+       exists to withhold. Its opacity is entirely JS-driven; start it where it
+       belongs. */
+    if (cta && !cta.style.opacity) cta.style.opacity = '0';
     const rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
     ha  = finA.offsetHeight;
     gap = FIN.GAP * rem;
@@ -219,7 +324,7 @@
     return 0.5 * H - C.CY * base + (r + C.BW) * base;
   }
 
-  function finale(b, t, H) {
+  function finale(b, t, H, ct) {
     /* The claim does not follow a timed curve into the pin — it is HELD DOWN
        by the mark and released as the mark closes. A timed curve put it
        straight through the middle of the ring on the way up, which is
@@ -251,7 +356,14 @@
     if (reduce) {
       /* Static, fully readable, clear of the closing mark — and the button is
          simply present rather than arriving, since its arrival is the motion. */
-      const rY = H * 0.70 - tail * 0.5;
+      /* The same floor the animated branch enforces. Without it this branch
+         never read markBottom at all and set the name line 26px inside the
+         closed ring (71px in landscape), printing serif type onto the mark's
+         own dots. */
+      const rY = Math.min(
+        Math.max(H * 0.70 - tail * 0.5,
+                 markBottom(1, H) + H * FIN.CLEAR + gap + ha),
+        H - finB.offsetHeight - tail - H * 0.045);
       finB.style.transform = `translate(-50%,${rY.toFixed(1)}px)`;
       finA.style.transform = `translate(-50%,${(rY - gap - ha).toFixed(1)}px)`;
       finC.style.transform =
@@ -261,6 +373,21 @@
       cta.style.opacity = '1';
       cta.style.transform = 'none';
       cta.style.pointerEvents = 'auto';
+      /* AND IT HAS TO BE LIVE. inert is set in exactly one place — floatCta,
+         which this branch returns before reaching — so a reader who scrolls
+         into the finale with motion on (inert true, the link not yet faded up)
+         and THEN turns reduce on was handed a button at full opacity, with
+         pointer-events auto, that could not be clicked, tapped or focused:
+         inert had nothing left to clear it. The page's only action, dead,
+         under the one preference that most needs it to be simple.
+
+         ctaU and ctaSettling go with it. Leaving ctaSettling true strands
+         tick()'s `arriving` re-arm permanently high — an unbounded rAF running
+         two full-screen GL passes a frame on the last screen, under the exact
+         preference the still-frame exists to honour. */
+      cta.inert = false;
+      ctaU = 1;
+      ctaSettling = false;
       return;
     }
     const ins = FIN.IN, out = FIN.OUT;
@@ -269,7 +396,7 @@
     fadeLine(b.l2, outCubic(clamp((t - ins[1][0]) / ins[1][1])),
                    inQuad  (clamp((t - out[1][0]) / out[1][1])), H);
     fadeLine(b.l3, outCubic(clamp((t - ins[2][0]) / ins[2][1])), 0, H);
-    floatCta(t, H);
+    floatCta(ct, H);
   }
 
   /* The button's own arrival, which is not fadeLine's. The lockup's lines come
@@ -278,12 +405,38 @@
      read as one more flourish on a frame that is supposed to have stopped
      moving. Opacity and a rise, on a smoothstep so it is gentle at both ends
      rather than launching and braking. */
+  let ctaU = 0, ctaSettling = false;
   function floatCta(t, H) {
     if (!cta) return;
-    const u = smooth(FIN.CTA[0], FIN.CTA[0] + FIN.CTA[1], t);
+    const target = smooth(FIN.CTA[0], FIN.CTA[0] + FIN.CTA[1], t);
+    /* Rate-limited HERE rather than by a CSS transition. This function drives
+       the opacity and the rise from one number, but only opacity was
+       transitioned — so under a fling the transform snapped to its final value
+       while CSS was still easing the fade, and 0.0px of the 39px rise survived
+       to the frame where the link became half-visible. The arrival was not one
+       at any realistic swipe speed, and it ran backwards too. This guarantees
+       ~22 frames of rise-and-fade however hard the flick is, keeps both
+       properties on one clock, and settles deterministically both ways. */
+    ctaU = target < ctaU ? Math.max(target, ctaU - 0.09)
+                         : Math.min(target, ctaU + 0.06);
+    /* One flag, set from the only place that knows. Deriving this at the call
+       site got it wrong twice: `ctaU > 0` is false on the very first frame of
+       an arrival, and the finale's `.on` class is not on the element this
+       file holds — so the loop shut down before the link had finished coming
+       in, and it stalled wherever the last frame left it (0.30, 0.72). */
+    ctaSettling = ctaU !== target;
+    /* The arrival has to be able to finish on its own. Past CLOSE.TO the
+       ambient loop deliberately shuts down, so without this the link stalled
+       wherever the last scroll frame left it — the rate limit turned into a
+       permanent half-fade. */
+    if (ctaU !== target) tick();
+    const u = ctaU;
     cta.style.opacity = u.toFixed(3);
     cta.style.transform = `translateY(${((1 - u) * H * FIN.CTA_RISE).toFixed(1)}px)`;
-    cta.style.pointerEvents = u > 0.05 ? 'auto' : 'none';
+    /* Gated at half, not at 0.05: below that the link is under 4.5:1 and was
+       a live 105x40 target the reader could not see. */
+    cta.style.pointerEvents = u > 0.5 ? 'auto' : 'none';
+    cta.inert = u <= 0.5;
   }
 
   /* One line's arrival and departure: mask, opacity and a small travel of its
@@ -370,10 +523,16 @@
       ticking = 0;
       /* Clamped, because a backgrounded tab hands back one enormous delta on
          return and the field would jump a second and a half of sine. */
-      const dt = lastTs ? Math.min((ts - lastTs) / 1000, 0.05) : 0.016;
+      /* The clamp was written for the tab-return delta, but applied to every
+         frame it DILATED TIME on exactly the devices already struggling: at
+         15fps the ambient clock ran at 0.72 s/s. Only a genuinely absurd gap
+         is a returning tab; everything else is a slow frame and should count
+         for what it was. */
+      const raw = lastTs ? (ts - lastTs) / 1000 : 0.016;
+      const dt  = raw > 0.5 ? 0.016 : Math.min(raw, 0.25);
       lastTs = ts;
       if (ambient()) {
-        vel *= AMB_DECAY;
+        vel *= Math.pow(AMB_DECAY, dt * 60);   // per second, not per frame
         clock += dt * (AMB_IDLE + AMB_GAIN * Math.min(vel, 1.4));
       }
       const dx = tgt[0] - cur[0], dy = tgt[1] - cur[1];
@@ -390,7 +549,11 @@
       /* document.hidden: a hidden tab gets no frames anyway in every current
          browser, but asking for them is still a promise to burn a core if one
          ever obliges. */
-      if ((ambient() && !document.hidden) || settling) tick();
+      /* ctaU is rate-limited, so it can still be travelling after scroll has
+         stopped: a flick ending mid-band would otherwise strand the link
+         half-faded forever. */
+      const arriving = ctaSettling;
+      if ((ambient() && !still && !document.hidden) || settling || arriving) tick();
     });
   }
   /* Restart the loop when the tab comes back, and reset the timestamp so the
@@ -406,10 +569,10 @@
      PTLField is not a global holding undefined, it is an undeclared name, and
      `PTLField && …` throws a ReferenceError rather than short-circuiting. It
      threw here, mid-file, which is survivable — the no-js document was still
-     in place — except that the body had already been stretched to twelve
-     viewport-heights on the way past, leaving the fallback as one screen of
-     words at the top of a very long empty page. Nothing is committed to now
-     until the mount has been attempted. */
+     in place — except that the body had already been stretched to the film's
+     full height on the way past, leaving the fallback as one screen of words
+     at the top of a very long empty page. Nothing is committed to now until
+     the mount has been attempted. */
   const field = typeof PTLField !== 'undefined'
     ? PTLField.mount(document.getElementById('c'), { mode: 'form' })
     : null;
@@ -417,20 +580,54 @@
      unavailable (or the script is missing), and the choreographed type carries
      the whole argument on its own against a plain ground. What the fallback
      document exists for is the case where none of THIS runs. */
+  /* A restored context rebuilds the program but nothing asks it to draw, and
+     under reduced motion the ambient loop has already self-terminated — so
+     the film simply vanished until the reader happened to scroll. A LOST
+     context is the mirror: the last frame freezes and reads as truth. Both
+     directions want exactly one frame. */
+  {
+    const cv = document.getElementById('c');
+    if (field && cv) for (const ev of ['webglcontextrestored', 'webglcontextlost']) {
+      cv.addEventListener(ev, () => { remeasure = true; frame(); });
+    }
+  }
   document.body.classList.remove('no-js');
-  document.body.style.height = (S.length * PER * 100) + 'vh';
-  let raf = 0, shown = -1, remeasure = false;
+  document.body.style.height = ((S.length * PER + TAIL) * 100) + 'vh';
+  let raf = 0, shown = -1, remeasure = false, lastW = innerWidth;
+  /* True once the film has finished closing. Past PTLField.CLOSE.TO the
+     fragment program is a pure function of constants — the ambient term is
+     multiplied by (1 - smoothstep(0.86, 0.965, g)), exactly zero there, and
+     the pointer light never runs on a phone. Verified by hashing the drawing
+     buffer: 124 consecutive draws, ONE distinct buffer. So the last 1.1
+     viewport-heights were 60 identical fullscreen shader passes a second,
+     forever, on the screen the reader is meant to sit still on — 82% of that
+     frame's power draw, provably wasted. Keyed to the shader's own constant
+     so the two cannot drift. */
+  let still = false;
 
   function render() {
     const max  = document.documentElement.scrollHeight - innerHeight;
+    /* The film's own scroll, which is the document minus the tail. Everything
+       the film does is a function of THIS, so the tail cannot stretch a single
+       cue: past `film`, p is pinned at 1 and every track is already at its end
+       value. */
+    const film = filmLen();
     /* Clamped, because scrollY is not bounded by the document: Safari's elastic
        overscroll reports negative at the top and past `max` at the bottom, and
        an unclamped p drove the section index to -1, where blocks[-1] is
        undefined and this function threw on every frame of the bounce. */
-    const p    = max ? clamp(window.scrollY / max) : 0;
+    const p    = clamp(window.scrollY / film);
     const span = 1 / S.length;
+    still = p >= ((typeof PTLField !== 'undefined' && PTLField.CLOSE)
+                    ? PTLField.CLOSE.TO : 0.965);
     const idx  = Math.min(S.length - 1, Math.floor(p / span));
     const t    = (p - idx * span) / span;
+    /* The button's clock: t while the film is running, and then t past 1,
+       measured in the same units, through the tail. Nothing else reads it — the
+       whole point is that the frame is held while this one number keeps
+       moving. */
+    const tailU = clamp((window.scrollY - film) / Math.max(max - film, 1));
+    const ct    = t + tailU * (TAIL * S.length / (S.length * PER - 1));
 
     if (idx !== shown) {
       blocks.forEach((b, i) => b.el.classList.toggle('on', i === idx));
@@ -439,7 +636,7 @@
     }
     const b = blocks[idx];
     if (b.fin) {
-      finale(b, t, innerHeight);
+      finale(b, t, innerHeight, ct);
     } else if (reduce) {
       /* Reduced motion: fully resolved, no sweep. The argument IS the page, so
          it has to be completely readable with every animation disabled. */
@@ -459,20 +656,41 @@
        would be lighting a diagram. */
     act = POINTER ? smooth(0.88, 0.955, p) : 0;
 
+    /* The writing resolves with the picture. Set on the root so every rule
+       that reads --ink-live moves at once — the claim, the lockup, the caret
+       and the CTA — rather than each being animated on its own timetable and
+       drifting apart. Under reduce the film is held at its end, so the type is
+       held at its end too. */
+    const res = resolveAt(reduce ? 1 : p);
+    document.documentElement.style.setProperty('--ink-live', mixHex(TYPE_A, TYPE_B, res));
+
     /* isDead() means the context came back and would not take the program —
        draw() would return immediately anyway, but there is no reason to build
        it an options object sixty times a second to be ignored. */
     if (field && !field.isDead()) field.draw(t, {
-      g: p, section: idx, word: S[idx].key,
-      cell: 12, gap: 0.12, gain: 1.0, fov: 0.70,
-      mouse: cur, act, ink: INK, ink2: INK2, paper: PAPER,
-      time: clock, amb: ambient(),
+      /* Under reduce the mark is HELD CLOSED. It was still morphing with
+         scroll — only the ambient clock was disabled — and the closing ring's
+         bright arc swept up through a lockup that reduce pins in place, which
+         put 86% of the verb's ink under 4.5:1. */
+      g: reduce ? 1 : p, section: idx, word: S[idx].key,
+      cell: 12, gap: 0.12, gain: 1.0, fov: 0.70, shadow: SHADOW,
+      mouse: cur, act, ink: INK, ink2: INK2, paper: PAPER, tint: TINT,
+      time: clock, amb: ambient(), resolve: res,
     });
   }
 
   function frame() {
     raf = 0;
-    if (remeasure) { remeasure = false; measure(); }
+    if (remeasure) {
+      remeasure = false;
+      measure();
+      if (keepP != null) {
+        const max1 = document.documentElement.scrollHeight - innerHeight;
+        const f1 = filmLen();
+        window.scrollTo(0, Math.min(max1, f1 * keepP + keepTail * Math.max(max1 - f1, 0)));
+        keepP = null;
+      }
+    }
     render();
     if (act > 0.001) tick();
   }
@@ -485,7 +703,7 @@
     lastY = window.scrollY;
     /* When the ambient loop is running it is already drawing every frame, so
        scheduling the scroll slot as well would render the same frame twice. */
-    if (ambient()) { tick(); return; }
+    if (ambient() && !still) { tick(); return; }
     if (!raf) raf = requestAnimationFrame(frame);
   }, { passive: true });
   /* Coalesced through the same rAF slot as scroll. Dragging a window edge
@@ -493,7 +711,19 @@
      measure — two forced layouts — plus a full GL draw, while also clearing
      `raf` out from under a scroll frame that was already scheduled. The flag
      is what keeps the measurement from being lost when that slot is taken. */
+  /* A resize preserves scrollY in both engines, so the reader's PIXEL
+     survived a rotation and their place in the argument did not — up to 3.2
+     sections in one gesture, and a fold-and-unfold destroyed the closing link
+     outright. Capture the dimensionless position before the layout changes
+     and restore it after; every layer that paints is position:fixed, so
+     re-anchoring the scroll is visually invisible. */
+  let keepP = null, keepTail = 0;
   addEventListener('resize', () => {
+    if (innerWidth !== lastW) { lastW = innerWidth; latchLVH(); }
+    const max0 = document.documentElement.scrollHeight - innerHeight;
+    const f0 = filmLen();
+    keepP = clamp(window.scrollY / f0);
+    keepTail = Math.max(0, window.scrollY - f0) / Math.max(max0 - f0, 1);
     remeasure = true;
     if (!raf) raf = requestAnimationFrame(frame);
   });
@@ -502,10 +732,16 @@
      its `.matches` keeps the two in step: reduced motion turns the pointer
      light off regardless of what hardware is attached. */
   const prefs = () => {
+    const was = reduce;
     reduce  = mqReduce.matches;
     POINTER = !reduce && mqPointer.matches;
     if (!POINTER) { tgt[0] = tgt[1] = cur[0] = cur[1] = 0; }
     frame();
+    /* Turning reduce back OFF left the loop dead for the rest of the visit:
+       frame() only re-arms via `act > 0.001`, and act is identically 0 on a
+       coarse pointer. tick()'s step self-terminates when ambient() is 0, so
+       this is safe in the forward direction too — it costs one frame. */
+    if (was && !reduce) tick();
   };
   mqReduce.addEventListener('change', prefs);
   mqPointer.addEventListener('change', prefs);
@@ -517,10 +753,14 @@
   frame();
   tick();          // and the field starts breathing, with nobody having done anything
 
-  /* Deterministic seeking, for tests and for screenshots. */
+  /* Deterministic seeking, for tests and for screenshots. `t` is the film's,
+     so AT(i, 1) is the last frame of section i however much dead scroll the
+     page carries after it; on the last section t may run past 1, into the
+     tail, up to 1 + TAIL * S.length * H / film. */
   window.AT = (i, t) => {
-    const max = document.documentElement.scrollHeight - innerHeight;
-    window.scrollTo(0, max * ((i + t) / S.length));
+    const max  = document.documentElement.scrollHeight - innerHeight;
+    const film = filmLen();
+    window.scrollTo(0, Math.min(max, film * ((i + t) / S.length)));
     render();
   };
 })();

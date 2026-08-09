@@ -82,10 +82,37 @@
   uniform vec3      uInk;       // the mark, at the top of the page
   uniform vec3      uInk2;     // the mark, at the bottom of it
   uniform vec3      uPaper;     // the ground
+  uniform vec3      uTint;      // the mark at its DIMMEST, and the ground's bloom
+  uniform float     uShadow;    // 1 = the mark casts one, 0 = it does not
   uniform vec2      uMouse;     // pointer, in the same uv space as the field
   uniform float     uAct;       // 0..1 — how much the pointer is allowed to act
   uniform float     uTime;      // seconds — the ambient clock, which scroll speeds up
   uniform float     uAmb;       // 0..1 — how much ambient motion is allowed
+  uniform sampler2D uLat;       // the picture, already sampled once per cell
+  uniform float     uResolve;   // 0..1 — how far the film has resolved
+
+  /* A LUMINANCE IN A BYTE PAIR. The lattice pass writes to an RGBA8 target —
+     the one colour-renderable format WebGL2 guarantees without an extension —
+     and one byte per cell is not enough: the ground raises lum to the 0.42, so
+     a single 1/255 step at the bottom of the range opens to a tenth of the
+     bloom and the dark banded. Split across two channels this carries 16 bits,
+     which is more than the picture has. */
+  vec2  encLum(float l){ float q = clamp(l, 0.0, 1.0) * 255.0;
+                         return vec2(floor(q) / 255.0, fract(q)); }
+  float decLum(vec2 e){ return e.r + e.g / 255.0; }
+  /* The breathe rides in the third channel. It is a property of a CELL, like
+     the luminance, so it is evaluated where cells are evaluated — otherwise
+     the shading pass recomputes two sines per neighbour per pixel, eighteen a
+     pixel, to arrive at numbers the lattice pass already knew.
+
+     Measured honestly, this bought nothing on the software path: 36.0ms either
+     way, inside the noise. It is here because it is what makes the invariant
+     true — the shading pass evaluates NOTHING positional, it only reads — and
+     because eighteen transcendentals a pixel is a bill a phone pays even when
+     SwiftShader does not. One byte is plenty: it spans 0.85 to 1.15, so a step
+     is a thousandth of a mark. */
+  float encBrt(float b){ return clamp((b - 0.88) / 0.255, 0.0, 1.0); }
+  float decBrt(float e){ return 0.88 + e * 0.255; }
 
   float hash(vec2 p){ return fract(sin(dot(p, vec2(41.3, 289.1))) * 43758.5453); }
 
@@ -325,6 +352,25 @@
     return smoothstep(30.0, 74.0, t) * (1.0 - smoothstep(150.0, 260.0, t));
   }
 
+  /* One mark's shadow, sampled at a point given RELATIVE to that mark's
+     centre in cell units. The distance from a point to a box is
+     length(max(|p| - half, 0)) — zero inside, Euclidean outside, so the
+     falloff is round at the corners even though the mark is square. */
+  float castShadow(vec2 p, float e, float sg){
+    /* A WIDE BLUR OF A SQUARE IS ROUND. Measuring from the BOX — the distance
+       length(max(|p| - e, 0)) — keeps the glow's contours square at every
+       radius: rounded rectangles whose corner radius is the distance itself,
+       which against a large mark is a square with the corners barely eased.
+       That is the squareness left after the ground was fixed. Convolving a
+       square with a kernel much wider than it does not preserve its shape, it
+       loses it, so the metric has to follow the blur: hug the box while the
+       blur is tight, and go radial as it grows past the mark. */
+    float dBox = length(max(abs(p) - e, vec2(0.0)));
+    float dRad = max(length(p) - e, 0.0);
+    float rnd  = clamp(sg / max(e, 1e-4), 0.0, 0.55);
+    return exp(-mix(dBox, dRad, rnd) / sg);
+  }
+
   float arch(vec2 uv, float halfH, float t){
     vec3 ro = vec3(0.0, 0.0, t * 125.0);
     /* A shifted lens — the architectural photographer's rising front. Parks the
@@ -370,6 +416,70 @@
     return texture(uTex, tc).r;
   }
 
+  /* THE MARK ANY GIVEN CELL CARRIES, in cell units.
+     ---------------------------------------------------------------------------
+     Factored out of main because a drop shadow is cast by a MARK, and the marks
+     that fall on a fragment are mostly not its own cell's. Everything a mark's
+     size depends on is a function of its cell id alone — the form sampled at
+     that cell's centre, the tail cut, the gap, and the breathe, which is itself
+     positional — so one id in, one size out, and a fragment can ask about its
+     neighbours on the same terms it asks about itself. */
+  vec2 cellUv(vec2 id){
+    return ((id + 0.5) * uCell - 0.5 * uRes) / max(uRes.y, uRes.x / 1.78);
+  }
+
+  /* THE PICTURE, SAMPLED AT ONE CELL. This is the only place the form is ever
+     evaluated. A halftone has exactly one sample per cell by definition, and
+     the whole frame — marks, shadows, ground — is built from this lattice of
+     samples and nothing else. */
+  float formAt(vec2 id){
+    float base  = max(uRes.y, uRes.x / 1.78);
+    float halfH = 0.5 * uRes.y / base;
+    vec2  uvc   = cellUv(id);
+    float l = uMode == 0 ? form(uvc, uG)
+            : uMode == 1 ? arch(uvc, halfH, uT)
+                         : typeField(uvc, uT);
+    /* Cut the tail. A near-constant 2% across a large area is not invisible —
+       it renders as a perfectly regular lattice of isolated marks, i.e.
+       wallpaper across the whole frame and through the headline. Anything this
+       dim carries no form, so it is not dim, it is off. */
+    return max(l * uGain - 0.06, 0.0) / 0.94;
+  }
+
+  /* ...AND EVERY READ OF IT AFTER THE FIRST IS A TEXTURE FETCH.
+     ---------------------------------------------------------------------------
+     A cell's sample is the same for every pixel in that cell, and a fragment
+     shader has no way to know that — asked nine times per pixel it evaluates
+     the form nine times per pixel, which measured 5.4x the whole frame's cost
+     on the software path. So the form is evaluated once per CELL into a small
+     texture and read back here. At a 12px cell that is one evaluation per 144
+     device pixels instead of nine per pixel, which is why the correct nine-tap
+     version is also the fastest this page has ever been.
+
+     The one-cell border is what makes the edge of the frame ordinary: a
+     fragment in the outermost cell asks about a neighbour at -1, and it is
+     there. */
+  vec3 cellAt(vec2 id){
+    ivec2 t = clamp(ivec2(id) + 1, ivec2(0), textureSize(uLat, 0) - 1);
+    return texelFetch(uLat, t, 0).rgb;
+  }
+
+  /* The breathe at one cell — evaluated in the lattice pass, alongside the
+     luminance, because it belongs to the same cell and runs on the same
+     clock. */
+  float breatheAt(vec2 id){
+    vec2  uvc  = cellUv(id);
+    float wave = sin(uTime * 0.55 + uvc.x * 2.3 + uvc.y * 1.7)
+               + sin(uTime * 0.37 - uvc.x * 1.6 + uvc.y * 2.9) * 0.7;
+    float amb  = uAmb * (1.0 - smoothstep(0.86, 0.965, uG));
+    return 1.0 + amb * 0.060 * wave;
+  }
+
+  /* ...and the mark a cell's texel gets drawn as, in cell units. */
+  float markOf(vec3 t){
+    return sqrt(clamp(decLum(t.rg), 0.0, 1.0)) * (1.0 - uGap) * decBrt(t.b);
+  }
+
   void main(){
     vec2 cellId = floor(gl_FragCoord.xy / uCell);
     vec2 centre = (cellId + 0.5) * uCell;
@@ -380,20 +490,60 @@
     vec2 uv = (centre - 0.5 * uRes) / base;
     float halfH = 0.5 * uRes.y / base;
 
-    float lum = uMode == 0 ? form(uv, uG)
-              : uMode == 1 ? arch(uv, halfH, uT)
-                           : typeField(uv, uT);
-    lum *= uGain;
+    /* THE GROUND IS THE SAME PICTURE THE MARKS ARE, AT THE SAME RESOLUTION.
+       ------------------------------------------------------------------------
+       This is the second half of the blockiness, and it is the opposite
+       mistake to the first. The ground was originally snapped to the cell,
+       which painted it in flat cell-sized tiles. The fix was to sample the
+       form at the fragment's own position — continuous, and it did kill the
+       tiles, but it bought a subtler defect: the ground could now resolve
+       detail FINER than a cell, and the marks could not.
 
-    /* Cut the tail. A near-constant 2% across a large area is not invisible —
-       it renders as a perfectly regular lattice of isolated marks, i.e.
-       wallpaper across the whole frame and through the headline. Anything this
-       dim carries no form, so it is not dim, it is off. This one line stands
-       between a field and screen dirt, which is the failure the video shipped. */
-    lum = max(lum - 0.06, 0.0) / 0.94;
+       The form has such detail. The lattice's rules are a band about four
+       hundredths of a lattice cell wide — 4px against a 24px halftone cell at
+       2x — so a rule that happens to fall between two mark centres is invisible
+       to every mark and fully visible in the ground. What you get is a smooth
+       vertical hairline standing in open black with no marks anywhere on it,
+       repeating on the lattice's period (base/13, measured at 105px). That is
+       what was left after the shadow was fixed, and it is not a shadow artefact
+       at all — it is the ground drawing something the halftone cannot say.
 
-    float s = sqrt(clamp(lum, 0.0, 1.0));
-    vec2 f = abs(fract(gl_FragCoord.xy / uCell) - 0.5) * 2.0;
+       So the ground is interpolated between the SAME cell samples the marks are
+       made of. Continuous, so no tiles; band-limited to the cell grid, so no
+       hairlines; and the two layers are now provably one picture rather than
+       two renderings of it that agree in the smooth places.
+
+       Smoothstepped before the mix, not raw bilinear: straight bilinear is
+       continuous but kinks at every cell centre, and a field of derivative
+       creases is its own texture. This is C1 and costs two multiplies.
+
+       The four samples come out of the 3x3 the shadow already needs, so the
+       ground is now free — the whole frame costs nine reads of the form where
+       it used to cost two, and nine is simply what a halftone with a shadow
+       and a glow honestly costs. */
+    vec3 C[9];
+    for (int j = -1; j <= 1; j++){
+      for (int i = -1; i <= 1; i++){
+        C[(j + 1) * 3 + (i + 1)] = cellAt(cellId + vec2(float(i), float(j)));
+      }
+    }
+
+    vec2  qc   = gl_FragCoord.xy / uCell - 0.5;  // cell CENTRES at the integers
+    vec2  qlo  = floor(qc);                      // the four that surround us
+    vec2  qf   = qc - qlo;
+    ivec2 qi   = ivec2(qlo - cellId) + 1;        // 0 or 1 per axis, into L
+    qf = qf * qf * (3.0 - 2.0 * qf);
+    float lumG = mix(mix(decLum(C[ qi.y      * 3 + qi.x].rg),
+                         decLum(C[ qi.y      * 3 + qi.x + 1].rg), qf.x),
+                     mix(decLum(C[(qi.y + 1) * 3 + qi.x].rg),
+                         decLum(C[(qi.y + 1) * 3 + qi.x + 1].rg), qf.x),
+                     qf.y);
+
+    /* Signed cell coordinate, -1 to 1, zero at the mark's centre. The abs is
+       what the mark itself needs; the SIGN is what tells a shadow which of its
+       neighbours it is nearest to. */
+    vec2 gs = (fract(gl_FragCoord.xy / uCell) - 0.5) * 2.0;
+    vec2 f  = abs(gs);
 
     /* THE FIELD BREATHES.
        --------------------------------------------------------------------
@@ -412,29 +562,317 @@
 
        It dies as the form closes, on exactly the closing track's window: the
        last frame of the page is meant to be still, and a mark that is still
-       pulsing under the closing claim is a film that has not ended. */
-    float wave = sin(uTime * 0.55 + uv.x * 2.3 + uv.y * 1.7)
-               + sin(uTime * 0.37 - uv.x * 1.6 + uv.y * 2.9) * 0.7;
-    float amb  = uAmb * (1.0 - smoothstep(0.86, 0.965, uG));
-    float breathe = 1.0 + amb * 0.060 * wave;
+       pulsing under the closing claim is a film that has not ended.
 
-    float mark = step(max(f.x, f.y), s * (1.0 - uGap) * breathe);
-    /* Still one bit per cell — every pixel is either ink or paper, never a
-       blend. Which two colours those are is the page's business, not the
+       The arithmetic lives in markOf, because it belongs to a CELL and the
+       shadow needs it for cells that are not this fragment's own. */
+
+    /* SOFT EDGES, deliberately. A hard step() gives a mark with a razor
+       border, which at this cell size reads as a printed screen — correct,
+       but inert. Feathering the edge by a fraction of a cell makes the marks
+       catch light the way an emulsion or a CRT phosphor does: the small ones
+       in the falloff dissolve into the ground instead of switching off, and
+       the field shimmers as the ambient breathe moves the boundary through
+       the feather rather than snapping it a whole pixel.
+
+       No fwidth() here: d is built from a fract(), whose derivative is
+       discontinuous at every cell boundary, so the analytic footprint is
+       garbage on exactly the pixels the edge runs through.
+
+       This is the one place the 1-bit contract is knowingly relaxed. It is
+       relaxed at the EDGE of a mark and nowhere else — the interior is still
+       exactly ink, the ground is still exactly paper. */
+    /* The mark stays a TRUE square, sharp corners and all. Easing them into
+       a squircle was a misread: the squareness that needed fixing was the
+       GLOW's, and rounding the mark as well ate its corners until every mark
+       read as a circle. The halftone's whole character is that its marks are
+       square; only the light around them is not. */
+    float d = max(f.x, f.y);
+    float e = markOf(C[4]);
+    /* A DROP SHADOW, WHICH IS AN OUTSIDE-ONLY THING.
+       ------------------------------------------------------------------------
+       The mark stays a flat, hard square. Blurring the mark ITSELF looks
+       right in the abstract and is wrong the moment you see it: d is the
+       Chebyshev distance from the cell's centre, so a gradient in d is a
+       gradient in concentric SQUARES, and every mark comes out a little
+       pyramid with a lit apex and four shaded faces. The field turned to
+       studded leather. A shadow never touches the inside of the thing that
+       casts it; that is the whole difference between a shadow and a blur.
+
+       So: coverage is the square OR its shadow, whichever is greater. Inside,
+       the square is 1 and wins outright, which is what keeps the interior
+       flat and the 1-bit contract intact. Outside, the square is 0 and the
+       shadow decays from just under full opacity — exponential, because
+       "less spread, more blur" is exactly the difference between a profile
+       with a plateau and one that starts falling the instant it leaves the
+       edge. max() is also why a shadow can never lie on top of a neighbouring
+       mark: any cell holding a mark reads 1 there regardless.
+
+       ZERO SPREAD, ALL BLUR, AND THE BLUR SCALES WITH THE DOT. Spread grows
+       the shape before blurring it, which is a wider PLATEAU — the shadow
+       leaves the edge already at full strength and only then begins to fall.
+       There is none here: the exponential starts decaying the instant it
+       clears the mark. That is the whole reason the radius can be as large
+       as it is without the picture going to fog, and it is why sg is
+       PROPORTIONAL with no constant term. A floor would be spread wearing
+       blur's name — it would hand a one-pixel mark a fixed halo, and the
+       falloff, which is nothing but small marks, would haze over. Scaled,
+       a miniscule dot casts a miniscule shadow and the dark stays dark.
+
+       0.60, not 1.0, because a step function blurred by a symmetric kernel
+       is at HALF strength on the edge itself, not full — a shadow that
+       begins at 1.0 is just a bigger square. Held under, the mark keeps a
+       defined border with its light outside it.
+
+       The gate only closes one hole: at e exactly 0 the exponent is 0/0 at
+       the cell's centre pixel, which lights one pixel in every empty cell in
+       the frame — a speckle across the whole dark field. Everywhere else it
+       is already 1, so it costs nothing.
+
+       AND IT SHARPENS AS THE FILM ENDS. The blur is the atmosphere the
+       argument is told through; the last frame is the conclusion, and a
+       conclusion is not hazy. It begins at the fourth beat — where the
+       argument turns from picture to claim — and runs to the last frame, so
+       the sharpening is something the reader scrolls INTO rather than a
+       change that happens to them at the door, on the same clock the toning
+       drains on. Floored rather than zeroed: the shadow divides by sg. */
+    /* ONE CLOCK, AND THE PAGE OWNS IT.
+       ------------------------------------------------------------------------
+       The shadow leaving, the feather tightening and the colour draining are
+       not three effects that happen to coincide, they are the same event — the
+       film resolving into its conclusion — so they run off a single number.
+
+       That number is computed in JS and handed down rather than derived from
+       uG here, because the TYPE resolves on it too. A headline still warm cream
+       while the marks behind it have gone white is the same defect as a shadow
+       that lags the colour, and the only way two languages agree on a curve is
+       for one of them to do the arithmetic. It also lets the about page, which
+       plays this film backwards, carry its own window without the shader
+       knowing there is more than one. */
+    float resolveU = clamp(uResolve, 0.0, 1.0);
+
+    /* THE FEATHER RESOLVES TOO, and it has to: once the shadow has gone this
+       is the ONLY softness left, so a 0.20e feather is still a 4.2px ramp on a
+       24px cell — which is exactly what reads as "still blurry" on the last
+       frame however sharp the shadow is.
+
+       Floored at half a device pixel rather than at a fraction of the mark, so
+       the last frame is a hard edge with one pixel of antialiasing at every
+       DPR instead of a hard edge that crawls on a 1x display. One gs unit is
+       half a cell, so one device pixel is 2/uCell of it. */
+    float w     = max(e * mix(0.20, 0.02, resolveU), 1.0 / uCell);
+    /* GATED AT ZERO. In an EMPTY cell e is 0, so w is 0 and this would be
+       smoothstep(0, 0, d) — spec-undefined for edge0 >= edge1, and on the usual
+       lowering saturate(0/0) gives 0, i.e. mark = 1. It needs d == 0, which
+       needs gs exactly (0,0), which happens at one pixel per cell and ONLY when
+       uCell is an odd integer: uCell is 12 * dpr, so Windows at 125% gives 15
+       and 175% gives 21. Measured on both: the pixel at the predicted phase ran
+       +36.8 above its own cell's median against +1.2 at uCell 12 — a lit
+       speckle in every empty cell, on two of the commonest desktop scalings in
+       the world, invisible on this machine. */
+    float mark  = (1.0 - smoothstep(e - w, e + w, d)) * smoothstep(0.0, 0.02, e);
+
+
+    /* ROUND, THOUGH THE MARK IS SQUARE. d is the Chebyshev distance — the
+       metric whose circles ARE squares — so driving the shadow off it gave
+       every mark a square halo with four sharp corners, and where those
+       corners met across a cell the field broke into hard rectangular
+       patches. Blocky, and the more blur the worse, because a bigger square
+       halo is a bigger square. The distance from a point to a BOX is
+       length(max(|p| - half, 0)), which is Euclidean outside and therefore
+       round at the corners — a blurred shadow is round no matter what shape
+       cast it. Same cost, and the artefact is gone rather than hidden. */
+    /* 0.80e — a fade length, not a reach. The falloff is exponential, so the
+       scale is where the shadow drops to 37%; it stays faintly visible to
+       roughly three times that. At the largest mark (e = 0.88 on a 12px cell,
+       where one unit of gs is half a cell = 6px) that is 4.2px of fade and
+       about 12px of visible glow — a reach of two cells, which is why it has
+       to be able to leave the cell it was cast in. Worth stating because it is
+       NOT Figma's number: Figma blurs with a gaussian, and the same-looking
+       softness carries a different figure there. */
+
+    /* A SHADOW BELONGS TO ITS MARK, NOT TO ITS CELL.
+       ------------------------------------------------------------------------
+       This is the blockiness, and it took three wrong diagnoses to find.
+
+       gs wraps at the cell wall, so a shadow computed from gs alone can only
+       ever be its OWN cell's — which means a fragment sitting in an empty cell
+       beside a full one gets nothing, while the fragment one pixel away on the
+       other side of the wall gets the full 0.84 of that mark's halo. That is a
+       hard step of 84% coverage running along a straight line, and a lattice of
+       straight lines is exactly what the picture looked like: tiles, at every
+       boundary where the form's brightness changed. Measured on the fourth
+       beat, the mean luminance step at the wall phase was ten times the step
+       anywhere else in the cell.
+
+       An earlier attempt at the nine neighbours was recorded here as a proven
+       no-op, and it was — but only because it shared ONE e across all nine.
+       With the same mark size everywhere the fragment is nearest its own mark
+       by construction, so the max is always itself and the loop cannot do
+       anything. The whole content of a neighbour's shadow is that the
+       neighbour is a DIFFERENT SIZE, which is what markOf now supplies.
+
+       max, not sum. Summing nine was tried and inverts the lattice at this
+       radius — four marks are near a corner and one is near a centre, so the
+       corners come out brighter than the marks (0.757 against 0.750): a bright
+       cross at every corner, a dark ring around every mark. A union of shadows
+       is a max, which is also what keeps a shadow off a neighbouring mark:
+       cover takes the square first.
+
+       Continuity is the point, so it is worth stating why this is continuous.
+       Crossing the wall between cells A and B, the fragment's 3x3 changes by
+       exactly two columns — the one at distance three that leaves, and the one
+       at distance three that arrives. Three cell-units out the exponential is
+       at 5% for the largest mark on the page and immeasurable for any smaller
+       one, and it is the max of nine, so a term that small is buried by its
+       neighbours. The 84% step is gone and nothing takes its place.
+
+       uShadow gates the whole loop, which is the pale variants' win: they pay
+       for one markOf instead of nine. The shadow belongs to the indigo variant
+       only — on the two light grounds the mark is DARK, so its shadow is dark
+       too, and a dark halo on light paper is not a mark catching light, it is a
+       smudge. The point of the thing is a lit emulsion, and only a dark ground
+       reads that way. */
+    float shade = 0.0;
+    if (uShadow > 0.001){
+      for (int j = -1; j <= 1; j++){
+        for (int i = -1; i <= 1; i++){
+          vec2  off = vec2(float(i), float(j));
+          /* One cell is TWO units of gs, so the neighbour's centre sits at
+             2*off and the point handed to castShadow is gs measured from it. */
+          float en  = markOf(C[(j + 1) * 3 + (i + 1)]);
+          float sgn = mix(0.80 * en, 0.06 * en, resolveU) + 1e-4;
+          shade = max(shade, castShadow(gs - 2.0 * off, en, sgn)
+                             * smoothstep(0.0, 0.02, en));
+        }
+      }
+      /* AND IT LEAVES ENTIRELY. Tightening sg alone takes the shadow to
+         0.06e, which is small but still 90% opaque against the mark's own
+         edge — a dark seam a pixel or two wide around every square, which is a
+         shadow, and the last frame is meant to have none. Multiplying it out
+         makes the end state arithmetically shadowless rather than nearly so,
+         and because sg tightens on the same clock it sharpens as it fades
+         rather than dissolving in place. */
+      shade *= 0.90 * uShadow * (1.0 - resolveU);
+    }
+
+    float cover = max(mark, shade);
+
+    /* One bit per cell everywhere except the feathered edge above. Which two
+       colours those are is the page's business, not the
        renderer's.
 
        The ink may travel across the page, though. Where uInk2 differs from
        uInk the mark bleeds from one to the other as you scroll, which is
        how the blue variation resolves to black by the last frame.
 
-       The window is deliberately late: it tracks the CLOSING of the mark
-       (0.86-0.965 above) rather than the length of the page. Draining from
-       the top meant the colour was already spent by the time the final
-       lockup assembled — so the one section that most wants the blue never
-       had any. Now the whole argument is blue and the colour resolves at
-       exactly the moment the form does. */
-    vec3 ink = mix(uInk, uInk2, smoothstep(0.885, 0.985, uG));
-    fragColor = vec4(mix(uPaper, ink, mark), 1.0);
+       This ran late for a long time — pinned to the CLOSING of the mark
+       (0.86-0.965 above) so the colour and the form arrived together. It no
+       longer does. The resolving now finishes at the top of the finale, one
+       whole section before the form closes, which is a deliberate separation
+       and not a drift: the argument is toned, the conclusion is not, and the
+       last section is meant to be a still white frame rather than a frame
+       still cooling. uInk2 is therefore WHITE, not the cream the ramp passes
+       through — a resolve that lands on a tone has not resolved. */
+    /* THE FILM IS TONED, NOT MONOCHROME.
+       ------------------------------------------------------------------------
+       Sampled off photographs of the thing running: the ground is not black,
+       it is a deep indigo (#111228 measured, consistently across six frames),
+       and the marks are not white, they are a warm cream (#F5E1BA at the
+       arch's crown). Cool shadow, warm highlight — which is why it reads as a
+       surface catching light from a warm bulb rather than as a diagram.
+
+       And the mark's HUE ramps with its brightness, which is the part that
+       makes it look lit rather than coloured. Measured along the arch: the
+       crown is pale cream #F5E1BA, the mid limb a deeper amber #E4C198. That
+       is a black-body ramp — a filament is orange when it is dim and goes
+       pale as it heats — so the same ramp is what a real light does, and it
+       is what a flat mark colour cannot fake. uTint is the dim end.
+
+       The ground carries a small amount of the same warm at the same time, so
+       the light appears to spill off the form instead of stopping at its
+       edge, and it is WEIGHTED LOW: gl_FragCoord's origin is bottom-left, so
+       uv.y runs positive upward and the ramp below is full at the floor and
+       0.35 at the ceiling.
+
+       All of it drains on the closing window. As the form collapses the ramp
+       flattens to uInk2 and the ground returns to flat paper, so the last
+       frame is the palette's own two values with nothing added — the room
+       lights going down as the object arrives. */
+    float resolve = resolveU;
+    /* KEYED TO THE FRAME, NOT TO THE FORM.
+       Ramping on lum made the warmth radiate out of the arc's own centre —
+       it travelled with the object, so every part of the form at the same
+       brightness was the same colour wherever it sat. What the reference
+       actually does is vertical: the floor of the frame is orange, it passes
+       through yellow, and it is neutral cream by the top. That is light
+       coming from BELOW the picture, and it stays put while the form moves
+       through it. vy is 0 at the floor and 1 at the ceiling. */
+    float vy      = clamp((uv.y + halfH) / (2.0 * halfH), 0.0, 1.0);
+    /* THREE STOPS, not two. A straight line from the orange to the cream
+       spends most of the frame in the muddy middle of that line, which is the
+       tan the first attempt produced -- warm, but never actually orange at
+       the floor and never actually yellow at the top. The reference has a
+       distinct yellow BAND: measured up the limb of the arch, G/R climbs
+       0.813 -> 0.83 -> 0.91 -> 0.93 while B/R sits flat near 0.70 and only
+       lifts to 0.785 at the crown. Red first, then yellow, then pale: the
+       middle stop is what makes the yellow read as its own colour rather than
+       as a stage the orange passes through.
+
+       Derived from the two ends rather than carried as a third uniform -- the
+       page should not have to name a colour it cannot see. */
+    /* PEAK RED SITS AT A QUARTER HEIGHT, NOT AT THE FLOOR.
+       Running the reddest colour all the way down to vy = 0 put it exactly
+       where the arch's marks are smallest, so it never survived to the
+       screen: at partial coverage the mix runs ink toward GROUND, and orange
+       diluted by indigo is a neutral grey. Measured down the limb it came out
+       #4F413E with B/R 0.785 — desaturated, which is the "more white" that
+       band reads as. Held flat below a quarter height, the red lands while
+       the marks are still full strength, and stays red as they thin. */
+    vec3  amber   = mix(uTint, uInk, 0.52);
+    float lo      = smoothstep(0.30, 0.52, vy);
+    float hi      = smoothstep(0.46, 0.72, vy);
+    vec3  warm    = mix(mix(uTint, amber, lo), uInk, hi);
+    vec3  ink     = mix(warm, uInk2, resolve);
+
+    float lowBias = mix(1.0, 0.35, smoothstep(-halfH, halfH, uv.y));
+    /* And the ground under the form carries the same warm, weighted low. This
+       is not decoration: a thinning mark blends toward the ground, so if the
+       ground stays cold the falloff turns grey no matter how red the ink is.
+       Warm ground is what lets the limbs stay orange as they fade out. */
+    float bloom   = pow(clamp(lumG, 0.0, 1.0), 0.42) * lowBias * (1.0 - resolve);
+    vec3  gnd     = mix(uPaper, uTint, bloom * 0.55);
+
+    /* SPILL BETWEEN CELLS, which the blur above cannot produce on its own.
+       Every mark is solved inside its own cell and d saturates at the cell
+       wall, so a bright mark's light stops dead at its neighbour's border —
+       widen the kernel and the dots only get rounder while the gaps between
+       them get DARKER, because a mark spread thinner is a mark dimmer. The
+       photographs do the opposite: the gaps inside the bright band carry
+       light and the whole band glows, with the screen still legible in it.
+
+       That light has to come from somewhere outside the cell, so it comes
+       from lum, which is the form itself and knows nothing about the grid.
+       Toward ink rather than toward the warm, because it is the marks'
+       own light: cream where they are cream, orange low in the frame where
+       they are orange. A tight exponent keeps it welded to the form — at
+       the 0.42 the wide haze uses, a nearly-empty cell would still pick up
+       a few percent and the dark would stop being dark. */
+    float spill   = pow(clamp(lumG, 0.0, 1.0), 1.1) * (1.0 - resolve);
+    gnd           = mix(gnd, ink, spill * 0.42);
+
+
+    fragColor = vec4(mix(gnd, ink, cover), 1.0);
+  }`;
+
+  /* THE LATTICE PASS. One texel per cell, and nothing else in it. Built by
+     cutting the main shader at its main() so the two can never drift: same
+     uniforms, same form, same tail cut, by construction rather than by care. */
+  const COMMON   = FRAG.slice(0, FRAG.indexOf('  void main(){'));
+  const FRAG_LAT = COMMON + `void main(){
+    /* One cell of border all round, so texel (0,0) is cell (-1,-1). */
+    vec2 id = floor(gl_FragCoord.xy) - 1.0;
+    fragColor = vec4(encLum(formAt(id)), encBrt(breatheAt(id)), 1.0);
   }`;
 
   function compile(gl, type, src) {
@@ -465,6 +903,9 @@
        stay blank for the rest of the session while the type kept choreographing
        over nothing. */
     let prog = null, u = {}, tex = null, drawn = null, lost = false;
+    /* The lattice pass and the target it draws into: one texel per cell, plus
+       a cell of border. lw/lh cache its size the way w/h cache the canvas's. */
+    let latProg = null, ul = {}, latTex = null, fbo = null, lw = 0, lh = 0;
     /* The drawing-buffer size last handed to gl.viewport(). Declared up here so
        build() can clear it: after a restore the GL state is back at its
        defaults, and leaving the cache populated would let size() decide there
@@ -475,44 +916,75 @@
        asking rather than calling draw() on every scroll frame forever. */
     let dead = false;
 
+    function link(frag) {
+      const vs = compile(gl, gl.VERTEX_SHADER, VERT);
+      let fs;
+      try {
+        fs = compile(gl, gl.FRAGMENT_SHADER, frag);
+      } catch (e) {
+        gl.deleteShader(vs);
+        throw e;
+      }
+      const p = gl.createProgram();
+      gl.attachShader(p, vs);
+      gl.attachShader(p, fs);
+      gl.linkProgram(p);
+      /* Linked or not, the shader objects have served their purpose: the
+         program holds everything it needs. Left attached they stay resident
+         for the life of the page. */
+      gl.detachShader(p, vs); gl.deleteShader(vs);
+      gl.detachShader(p, fs); gl.deleteShader(fs);
+      if (!gl.getProgramParameter(p, gl.LINK_STATUS)) {
+        const log = gl.getProgramInfoLog(p) || 'link failed';
+        gl.deleteProgram(p);
+        throw new Error(log);
+      }
+      return p;
+    }
+
+    const UNIFORMS = ['uRes', 'uT', 'uG', 'uCell', 'uGap', 'uGain', 'uMode',
+                      'uSection', 'uTex', 'uLat', 'uFov', 'uMouse', 'uAct',
+                      'uTime', 'uAmb', 'uInk', 'uInk2', 'uPaper', 'uTint',
+                      'uShadow', 'uResolve'];
+    function locate(p) {
+      const m = {};
+      for (const n of UNIFORMS) m[n] = gl.getUniformLocation(p, n);
+      return m;
+    }
+
     function build() {
       /* On a restore these handles name objects the driver has already
          destroyed, so deleting them is a formality — but build() is the one
          place that makes them, and it should be the one place that lets them
          go. */
-      if (prog) gl.deleteProgram(prog);
-      if (tex) gl.deleteTexture(tex);
+      if (!gl.isContextLost()) {          // else: two INVALID_OPERATIONs per restore
+        if (prog) gl.deleteProgram(prog);
+        if (latProg) gl.deleteProgram(latProg);
+        if (tex) gl.deleteTexture(tex);
+        if (latTex) gl.deleteTexture(latTex);
+        if (fbo) gl.deleteFramebuffer(fbo);
+      }
 
-      const vs = compile(gl, gl.VERTEX_SHADER, VERT);
-      let fs;
-      try {
-        fs = compile(gl, gl.FRAGMENT_SHADER, FRAG);
-      } catch (e) {
-        gl.deleteShader(vs);
-        throw e;
-      }
-      prog = gl.createProgram();
-      gl.attachShader(prog, vs);
-      gl.attachShader(prog, fs);
-      gl.linkProgram(prog);
-      /* Linked or not, the shader objects have served their purpose: the
-         program holds everything it needs. Left attached they stay resident
-         for the life of the page. */
-      gl.detachShader(prog, vs); gl.deleteShader(vs);
-      gl.detachShader(prog, fs); gl.deleteShader(fs);
-      if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
-        const log = gl.getProgramInfoLog(prog) || 'link failed';
-        gl.deleteProgram(prog); prog = null;
-        throw new Error(log);
-      }
-      gl.useProgram(prog);
+      prog = link(FRAG);
+      latProg = link(FRAG_LAT);
+      u = locate(prog); ul = locate(latProg);
 
-      u = {};
-      for (const n of ['uRes', 'uT', 'uG', 'uCell', 'uGap', 'uGain', 'uMode',
-                       'uSection', 'uTex', 'uFov', 'uMouse', 'uAct', 'uTime', 'uAmb',
-                       'uInk', 'uInk2', 'uPaper']) {
-        u[n] = gl.getUniformLocation(prog, n);
-      }
+      latTex = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, latTex);
+      /* NEAREST, and it matters: the value in a texel is a PAIR OF BYTES that
+         together are one number, and the average of two encodings is not the
+         encoding of the average. The interpolation the ground wants happens in
+         the shader, on decoded values. */
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      fbo = gl.createFramebuffer();
+      gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+      gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0,
+                              gl.TEXTURE_2D, latTex, 0);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      lw = lh = 0;                      // and the lattice needs re-sizing
 
       tex = gl.createTexture();
       gl.bindTexture(gl.TEXTURE_2D, tex);
@@ -576,6 +1048,38 @@
       gl.viewport(0, 0, w, h);
     }
 
+    /* Both programs read the same picture, so both take the same uniforms.
+       Handed the program's OWN location map, because a uniform location belongs
+       to a program and using one against the other silently writes nothing. */
+    function feed(p, uu, t, o, dpr, mode) {
+      gl.useProgram(p);
+      gl.uniform1i(uu.uTex, 0);
+      gl.uniform1i(uu.uLat, 1);
+      gl.uniform2f(uu.uRes, w, h);
+      gl.uniform1f(uu.uT, t);
+      gl.uniform1f(uu.uG, o.g != null ? o.g : t);
+      gl.uniform1f(uu.uCell, (o.cell != null ? o.cell : 12) * dpr);
+      gl.uniform1f(uu.uGap, o.gap != null ? o.gap : 0.12);
+      gl.uniform1f(uu.uGain, o.gain != null ? o.gain : 1.0);
+      gl.uniform1i(uu.uMode, mode);
+      gl.uniform1i(uu.uSection, o.section || 0);
+      gl.uniform1f(uu.uFov, o.fov != null ? o.fov : 0.70);
+      const ink = o.ink || [1, 1, 1], paper = o.paper || [0, 0, 0];
+      const ink2 = o.ink2 || ink;
+      gl.uniform3f(uu.uInk, ink[0], ink[1], ink[2]);
+      gl.uniform3f(uu.uInk2, ink2[0], ink2[1], ink2[2]);
+      gl.uniform3f(uu.uPaper, paper[0], paper[1], paper[2]);
+      const tint = o.tint || paper;
+      gl.uniform3f(uu.uTint, tint[0], tint[1], tint[2]);
+      gl.uniform1f(uu.uShadow, o.shadow != null ? o.shadow : 1);
+      const m = o.mouse || [0, 0];
+      gl.uniform2f(uu.uMouse, m[0], m[1]);
+      gl.uniform1f(uu.uAct, o.act != null ? o.act : 0);
+      gl.uniform1f(uu.uTime, o.time != null ? o.time : 0);
+      gl.uniform1f(uu.uAmb, o.amb != null ? o.amb : 0);
+      gl.uniform1f(uu.uResolve, o.resolve != null ? o.resolve : 0);
+    }
+
     function draw(t, o) {
       if (lost || dead) return;
       o = o || {};
@@ -583,29 +1087,34 @@
       const dpr = Math.min(root.devicePixelRatio || 1, 2);
       const mode = MODES[o.mode || opt.mode] || 0;
       if (mode === 2 && o.word) setWord(o.word);
-      gl.useProgram(prog);
+      const cell = (o.cell != null ? o.cell : 12) * dpr;
+
+      /* One texel per cell, plus a cell of border either side, so a fragment
+         in the outermost cell can still ask about a neighbour beyond the frame
+         and get an answer rather than a clamp. */
+      const nw = Math.ceil(w / cell) + 2, nh = Math.ceil(h / cell) + 2;
+      if (nw !== lw || nh !== lh) {
+        lw = nw; lh = nh;
+        gl.bindTexture(gl.TEXTURE_2D, latTex);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, lw, lh, 0,
+                      gl.RGBA, gl.UNSIGNED_BYTE, null);
+      }
+
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, tex);
-      gl.uniform1i(u.uTex, 0);
-      gl.uniform2f(u.uRes, w, h);
-      gl.uniform1f(u.uT, t);
-      gl.uniform1f(u.uG, o.g != null ? o.g : t);
-      gl.uniform1f(u.uCell, (o.cell != null ? o.cell : 12) * dpr);
-      gl.uniform1f(u.uGap, o.gap != null ? o.gap : 0.12);
-      gl.uniform1f(u.uGain, o.gain != null ? o.gain : 1.0);
-      gl.uniform1i(u.uMode, mode);
-      gl.uniform1i(u.uSection, o.section || 0);
-      gl.uniform1f(u.uFov, o.fov != null ? o.fov : 0.70);
-      const ink = o.ink || [1, 1, 1], paper = o.paper || [0, 0, 0];
-      const ink2 = o.ink2 || ink;
-      gl.uniform3f(u.uInk, ink[0], ink[1], ink[2]);
-      gl.uniform3f(u.uInk2, ink2[0], ink2[1], ink2[2]);
-      gl.uniform3f(u.uPaper, paper[0], paper[1], paper[2]);
-      const m = o.mouse || [0, 0];
-      gl.uniform2f(u.uMouse, m[0], m[1]);
-      gl.uniform1f(u.uAct, o.act != null ? o.act : 0);
-      gl.uniform1f(u.uTime, o.time != null ? o.time : 0);
-      gl.uniform1f(u.uAmb, o.amb != null ? o.amb : 0);
+      gl.activeTexture(gl.TEXTURE1);
+      gl.bindTexture(gl.TEXTURE_2D, latTex);
+
+      /* PASS ONE: the picture, once per cell. */
+      gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+      gl.viewport(0, 0, lw, lh);
+      feed(latProg, ul, t, o, dpr, mode);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+      /* PASS TWO: the frame, which now only has to read it. */
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      gl.viewport(0, 0, w, h);
+      feed(prog, u, t, o, dpr, mode);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     }
 

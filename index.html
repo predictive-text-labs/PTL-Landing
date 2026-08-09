@@ -48,9 +48,14 @@
      italic and the grotesque are both needed at the finale — arriving late
      there would leave a gap in the closing lockup. 147KB, all local. -->
 <link rel="preload" href="/fonts/Cormorant.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="/fonts/Cormorant-Italic.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/fonts/GeistMono.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="/fonts/Inter.woff2" as="font" type="font/woff2" crossorigin>
+<!-- Cormorant-Italic and Inter are NOT preloaded. They are used only by the
+     closing lockup, eleven viewport-heights down, and at top priority they
+     contended with the roman that gates the LCP: measured on Slow 4G, the
+     roman finished 86ms AFTER an italic nothing could see yet. Dropping the
+     two preloads took LCP from 1640ms to 1260ms — 23% — with FCP unchanged at
+     156ms. The @font-face rules still fetch them, at normal priority, when
+     the finale first needs them. -->
 
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"Organization","name":"Predictive Text Labs",
@@ -92,10 +97,32 @@
      of the paper colour laid over a plain blur — which is what "lower the
      contrast of whatever is behind the copy" actually means, and it is correct
      for any ground, dark, light or mid. */
+  /* Variation 1 is a DUOTONE, and the values are measured rather than
+     chosen: sampled off photographs of the page running, the ground is a deep
+     indigo (#111228, consistent across six frames) and the marks are a warm
+     cream (#F5E1BA at the arch's crown, #E4C198 through the mid limb). Cool
+     shadow against warm highlight is what makes it read as a surface catching
+     light from a warm bulb instead of as a diagram.
+
+     --tint is the mark at its DIMMEST. The shader ramps the mark's hue from
+     it up to --field as the form brightens, which is a black-body ramp: a
+     filament is orange when it is cool and goes pale as it heats. That ramp
+     is the "iridescence" — a single flat mark colour cannot produce it.
+
+     The ground is PITCH BLACK. It was a deep indigo for a long time, sampled
+     off photographs of the thing running, and the greys were re-authored on it
+     — each carrying a little of the paper's own hue, because pure neutrals
+     read cold and dirty against blue-violet. With the blue gone they are
+     neutral again, matched to the old ones by LUMINANCE rather than by eye so
+     the type sits exactly where it sat: #8A8398 -> #868686, #9A93A6 -> #969696,
+     #ADA6B8 -> #A9A9A9, rule #33334D -> #353535. Contrast improves slightly on
+     the way, because black is darker than the indigo was — 5.77:1 for the
+     chrome's --dim and 7.10:1 for the body's --mid, both clear AA. */
   :root{
-    --paper:#000000; --ink:#ffffff; --field:#ffffff; --field-end:#ffffff;
-    --dim:#7C7C7C; --mid:#8A8A8A; --soft:#9E9E9E; --rule:#333333;
+    --paper:#000000; --ink:#F4EADA; --field:#F8E5B8; --field-end:#FFFFFF;
+    --dim:#868686; --mid:#969696; --soft:#A9A9A9; --rule:#353535;
     --wash:rgba(0,0,0,.62);
+    --tint:#C64A16;
   }
   /* stone-300. Warm and heavy enough that the type tones cannot be reused
      from the dark variant — #6E6E6E is 4.1:1 on black and 2.6:1 here. These
@@ -104,25 +131,54 @@
     --paper:#D6D3D1; --ink:#0C0A09; --field:#0C0A09; --field-end:#0C0A09;
     --dim:#57534E; --mid:#44403C; --soft:#3B3735; --rule:#9C9691;
     --wash:rgba(214,211,209,.70);
+    /* The dim end of the mark. On paper the ramp runs the other way — a dark
+       mark on a light ground is DEEPER when it is dim, not warmer-brighter —
+       so this is a warm near-black that lifts to the flat ink as the form
+       brightens. Same mechanism, inverted ground. */
+    --tint:#3E301E;
   }
-  /* stone-400, a full step heavier again, and its own scale rather than a
+  /* taupe-400, a full step heavier again, and its own scale rather than a
      borrowed one: a genuinely mid ground caps the page at about 7.8:1 even
      with near-black ink, so there is less range to spend and every tone has
-     to sit darker. stone-600 — the natural pick for secondary text — manages
-     only 3.0:1 here and is unusable. The blue takes the heavier ground best,
+     to sit darker. taupe-600 — the natural pick for secondary text — manages
+     only 3.1:1 here and is unusable. The blue takes the heavier ground best,
      which is why this variation keeps it: the deeper the paper, the more the
-     halftone reads as a printed screen rather than a glow. */
+     halftone reads as a printed screen rather than a glow.
+
+     TAUPE, not stone, and the whole block moves together. Taupe sits at hue
+     ~41 against stone's ~56 — redder, and at roughly twice the chroma — so a
+     taupe ground under stone ink reads as two different warms arguing rather
+     than one. The two hand-picked tones (--dim, --rule) are not scale steps
+     and have no taupe equivalent to look up, so they were re-authored at
+     their own OKLCH lightness with taupe's hue and chroma: the tonal
+     structure that was tuned against this ground is preserved exactly and
+     only the temperature moves. Every ratio against the paper holds to
+     within 0.08 of a point — ink 7.83 -> 7.75, --mid 6.01 -> 5.98,
+     --dim 4.67 -> 4.66, the blue 5.52 -> 5.47. */
   :root[data-v="3"]{
     /* --field-end is where the mark ARRIVES. The blue is the state of the
        argument at the top of the page, not a brand colour, so it resolves
-       to the same ink the type is set in by the time the film closes. */
-    --paper:#A8A29E; --ink:#0C0A09; --field:#0000A0; --field-end:#0C0A09;
-    --dim:#3B3735; --mid:#292524; --soft:#1C1917; --rule:#6F6864;
-    --wash:rgba(168,162,158,.72);
+       to the same ink the type is set in by the time the film closes.
+       taupe-950 and stone-950 are the same hex, so the ink is unchanged. */
+    --paper:#ABA09C; --ink:#0C0A09; --field:#0000A0; --field-end:#0C0A09;
+    --dim:#3F3533; --mid:#2B2422; --soft:#1D1816; --rule:#746661;
+    --wash:rgba(171,160,156,.72);
+    /* The floor of the frame, and it goes LIGHTER here, not darker. On the
+       indigo variant the ramp runs bright cream at the ceiling down to a dim
+       orange at the floor, so the mark loses contrast against its ground as
+       it descends. Deepening the blue on a pale taupe ground would invert
+       that — the bottom of the frame would be the heaviest thing on the page.
+       A light blue keeps the same relationship the dark variant has: full
+       strength overhead, falling away toward the floor. */
+    --tint:#5A86D8;
   }
 
   *{margin:0;padding:0;box-sizing:border-box}
-  html,body{background:var(--paper);color:var(--ink);-webkit-font-smoothing:antialiased}
+  /* --ink-live is --ink travelling to --field-end on the resolve clock, set
+     from JS each frame. The fallback is the whole no-JS story: without script
+     the type is simply --ink and nothing is lost. */
+  html,body{background:var(--paper);color:var(--ink-live,var(--ink));
+    -webkit-font-smoothing:antialiased}
   body{overflow-x:hidden}
 
   /* The argument, in the markup. -----------------------------------------
@@ -164,16 +220,39 @@
     padding:2.4rem;font:400 .68rem/1 "Geist Mono",monospace;color:var(--dim)}
   .chrome .wm{letter-spacing:.34em}
   .nav{display:flex;align-items:center;gap:.9em;letter-spacing:.24em}
-  .nav b{color:var(--ink);font-weight:500}
+  /* --dim, not --ink. White-on-the-field measured 1.00:1 for 15% of the
+     scroll on a foldable's unfolded panel, where this element is visible;
+     the weight carries the emphasis instead. */
+  .nav b{color:var(--dim);font-weight:500}
   .nav i{width:2.2em;height:1px;background:var(--rule);font-style:normal}
   /* The only interactive element on the page, so it has to announce itself as
      one on hover and on keyboard focus alike. The underline is offset clear of
      the caps rather than crowding them, and the trailing letter-space is pulled
      back so the rule stops with the last letter instead of running past it. */
-  .nav a{color:var(--dim);text-decoration:none;margin-right:-.24em;transition:color .16s ease}
+  .nav a{position:relative;color:var(--dim);text-decoration:none;
+    margin-right:-.24em;transition:color .16s ease;
+    -webkit-tap-highlight-color:transparent}
+  /* The drawn box is 45.7 x 10.9. A pseudo-element rather than padding,
+     because .chrome is an align-items:center flex row and the underline's
+     offset is calibrated — this changes the hit rectangle and moves nothing.
+     ~58 x 44, which is the platform minimum with no layout consequence. */
+  .nav a::after{content:"";position:absolute;left:-6px;right:-6px;
+    top:50%;height:44px;transform:translateY(-50%)}
+  /* On a phone there is no hover, so the page's only control was pixel-
+     identical to the inert wordmark beside it — same colour, size, family and
+     weight, no underline. The affordance has to exist without a cursor. */
+  @media (hover:none){
+    .nav a{color:var(--ink);text-decoration:underline;
+      text-underline-offset:.45em;text-decoration-thickness:1px}
+  }
   .nav a:hover,.nav a:focus-visible{color:var(--ink);text-decoration:underline;
     text-underline-offset:.45em;text-decoration-thickness:1px}
-  .nav a:focus-visible{outline:none}
+  /* A real ring, not a 1px underline sitting on the film: the substituted
+     underline measured 82.8% of its ink below 3:1 at the worst beat. The
+     paper-coloured spread is what makes the ring legible over the halftone
+     rather than over whatever happens to be behind it. */
+  .nav a:focus-visible{outline:2px solid var(--ink);outline-offset:.35em;
+    box-shadow:0 0 0 .4em var(--paper);text-decoration:none}
 
   /* NARROW SCREENS — the counter goes.
      ------------------------------------------------------------------------
@@ -193,12 +272,25 @@
   /* On a desktop the form never reaches the header. On a phone — and on any
      short viewport — it does, and the bar ends up set over pure white cells.
      A scrim of the page's own ground, only there. */
+  /* .82 was the one value that destroyed the thing it was protecting. The
+     chrome's ink is --dim, mid-grey: it reads 5.03:1 on black AND 4.17:1 on
+     white, so it survives both extremes — and dies only on the MID-TONES an
+     82% scrim manufactures. Measured, 96.7% of ABOUT's core pixels fell below
+     3:1 at the worst beat, median 1.41:1; with the scrim removed entirely,
+     6.1%. It was the cause, not the cure, for ~2 viewport-heights of scroll on
+     every phone and every variant.
+
+     Full paper to 72% instead. The type sits 29-60% down an 83px bar, so this
+     covers both wordmark lines and the link and still fades out at the bar's
+     bottom edge. Built from --paper, so it lands on all three variants. */
   @media (max-width:560px),(max-height:560px){
     .chrome::before{content:"";position:absolute;inset:0;z-index:-1;
-      background:linear-gradient(180deg,var(--paper) 0%,transparent 100%);
-      opacity:.82}
+      background:linear-gradient(180deg,var(--paper) 0%,var(--paper) 72%,transparent 100%)}
   }
-  @media (max-width:560px){
+  /* max-height too: a landscape phone is 844 wide and never matched, so it
+     got the desktop bar — 87.7px, 22% of a 390-tall frame, and section 03's
+     headline cleared it by 10px. */
+  @media (max-width:560px),(max-height:560px){
     .chrome{padding:1.5rem 1.2rem;align-items:center}
     .nav .count,.nav i{display:none}
     .nav{gap:0}
@@ -208,8 +300,6 @@
        far too tight for two. */
     .wm br{display:inline}
     .chrome .wm{line-height:1.62}
-    /* More measure for the closing lockup, so the claim stays on one line. */
-    .fin-a,.fin-b{width:min(60rem,94vw)}
   }
   /* The page declares viewport-fit=cover, so on a notched phone in landscape
      the bar would otherwise lay itself into the cutout it opted into. */
@@ -268,8 +358,25 @@
       mask-image:radial-gradient(ellipse 92% 135% at 50% 100%,#000 0%,#000 46%,transparent 100%)}
   }
 
+  /* The top bound is what keeps a grown block off the chrome, and it has to
+     be written against the chrome's RENDERED height — which doubles with the
+     root font too, so a plain rem bound would not clear a two-line wordmark.
+     max(…, env()) tracks it because the chrome's own padding is written the
+     same way. */
   .copy{position:absolute;left:50%;transform:translateX(-50%);
-    width:min(60rem,86vw);text-align:center;bottom:4.2rem}
+    width:min(60rem,86vw);text-align:center;
+    top:calc(max(1.5rem,env(safe-area-inset-top)) + 4.5rem);bottom:4.2rem}
+  /* NO overflow-y:auto here, deliberately, and it was tried. The descender
+     fix below pads each line by .18em and pulls it back with a negative
+     margin — which nets to zero for LAYOUT but not for scrollHeight, so the
+     block measures 269 against a 266 client height at every size. With
+     `overflow-y:auto` that 3px makes it a live scroll container at DEFAULT
+     text size, and a wheel starting over the copy was swallowed by a
+     container with 3px to give: measured, scrollY 0 -> 0 where it should be
+     0 -> 900. overscroll-behavior:contain made it worse, not better.
+     The reachability of over-large text is carried instead by the viewport
+     cap on the type below and by .copy's top bound above, which together stop
+     the block outgrowing the frame in the first place. */
   .blk{position:absolute;left:50%;bottom:0;transform:translateX(-50%);width:100%;
     visibility:hidden}
   .blk.on{visibility:visible}
@@ -301,13 +408,25 @@
      costs nothing, and a cropped ascender is not nothing. */
   .blk h1,.blk p{padding-bottom:.18em;margin-bottom:-.18em}
   .blk h1{padding-top:.32em}
-  .blk h1{font:300 clamp(1.9rem,3.5vw,3.2rem)/1.14 Cormorant,serif;
+  /* Two things at once.
+     The vw term needed 869px before it engaged, so the headline was a FIXED
+     30.4px at every width from 320 to 430 — at 320 that set as six lines of
+     15-19 characters. 7.1vw engages across the whole phone range: 22.7px at
+     320, 30.5px at 430, so the largest phone keeps today's size and the
+     smallest gets a real reduction.
+     And the min() OUTSIDE the clamp is what stops a raised text size deleting
+     the copy. .blk is bottom-anchored inside a position:fixed layer, so the
+     block grows UPWARD past y=0 where there is no scroll container and no
+     overflow — at 200% text size 76% of one headline was simply gone, with no
+     scroll position that could recover it. min() inside the clamp does not
+     work: the rem floor wins and nothing changes. */
+  .blk h1{font:300 min(clamp(1.55rem,7.1vw,3.2rem),5.6vh)/1.14 Cormorant,serif;
     letter-spacing:-.012em;text-wrap:balance}
   /* `balance` sets the paragraph at the narrowest measure that still holds its
      line count, so a two-line body is two EVEN lines rather than a long one
      and a stub. max-width is the ceiling it balances within. */
-  .blk p{margin-top:1.9rem;font:400 .78rem/1.9 "Geist Mono",monospace;
-    letter-spacing:.04em;color:var(--mid);max-width:44rem;text-wrap:balance;
+  .blk p{margin-top:1.9rem;font:400 min(.78rem,2.2vh)/1.9 "Geist Mono",monospace;
+    letter-spacing:.04em;color:var(--mid);max-width:36rem;text-wrap:balance;
     margin-left:auto;margin-right:auto}
 
   /* THE FINALE — one sentence, three registers, two destinations.
@@ -350,23 +469,49 @@
      No rule at rest. It carries none of the mono's letter-spacing now, so
      text-decoration hugs the glyphs and there is no trailing space to throw
      the rule off centre — and because text-decoration is not layout, the
-     underline can appear on hover without anything moving.
+     underline can appear on hover without anything moving. The rule stops at
+     the words: the arrow is an atomic inline, which all three engines skip
+     rather than draw through, so the hairline under the type and the hairline
+     of the arrow never join into one long stroke.
 
      Deliberately NOT .fade. The lockup's lines arrive through a mask wipe
      because they are type resolving out of the field; this is not part of the
      argument, it is what is offered once the argument is over, and a wipe read
      as one more piece of choreography. It just rises and fades — see
      floatCta(). */
-  .cta{display:inline-block;padding:.4rem .3rem;will-change:opacity,transform;
-    color:var(--ink);text-decoration:none;
-    font:300 1rem/1.15 Cormorant,serif;
+  /* opacity:0 because the value is entirely JS-driven — the CSS default of 1
+     made the link flash fully lit the instant the finale mounted. The
+     transition is gone with it: floatCta() rate-limits the arrival itself now,
+     on one clock with the rise, which the transition was tearing apart. */
+  .cta{display:inline-block;padding:.55rem .3rem;opacity:0;
+    will-change:opacity,transform;-webkit-tap-highlight-color:transparent;
+    color:var(--ink-live,var(--ink));text-decoration:none;
+    font:300 1.5rem/1.15 Cormorant,serif;
     letter-spacing:.005em;
-    text-underline-offset:.19em;text-decoration-thickness:1px;
-    transition:opacity .18s ease}
+    text-underline-offset:.19em;text-decoration-thickness:1px}
   .cta:hover,.cta:focus-visible{text-decoration:underline;outline:none}
-  @media (prefers-reduced-motion:reduce){.cta{transition:none}}
 
-  .l1{font:italic 300 clamp(2.4rem,4.6vw,4.2rem)/1.16 Cormorant,serif;
+  /* The arrow is DRAWN, not typed. None of the four faces this page ships
+     carries U+2192, so a typed arrow would fall out of the stack to whatever
+     the system serves as `serif` — a Times arrow, heavier and stubbier than
+     anything else on the line, next to Cormorant at weight 300. Drawn, it is
+     one hairline: non-scaling-stroke pins it to exactly 1px, the same 1px the
+     hover rule underneath it is drawn at, so the two read as the same
+     instrument. vertical-align:middle is the definition we want here — the
+     box's centre against the baseline plus half the parent's x-height — which
+     puts the shaft through the middle of the lowercase, and keeps the arrow
+     entirely above the baseline so it cannot deepen the line box.
+     pointer-events:none so the anchor, not the path, is what the cursor
+     finds. */
+  .cta .arw{width:.95em;height:.292em;margin-left:.4em;vertical-align:middle;
+    pointer-events:none;
+    fill:none;stroke:currentColor;stroke-width:1;
+    vector-effect:non-scaling-stroke;stroke-linejoin:miter}
+
+  /* 9.8vw so the closing name scales with the headline across the phone
+     range; at 320 it had 0.08px of slack in its box, in an italic whose
+     rasterised advance differs between engines. */
+  .l1{font:italic 300 clamp(1.95rem,9.8vw,4.2rem)/1.16 Cormorant,serif;
     letter-spacing:-.008em}
   /* The hinge. Small, tracked, grey — the same register as the corner marks,
      so the verb reads as connective tissue between two statements rather than
@@ -395,8 +540,14 @@
      the line without the cursor on it and the two lines were centred on axes
      an em apart. The margin travels with the cursor, so it is correct on
      whichever line the cursor ends up on. */
+  /* padding+margin for the same reason as .blk h1's descender fix above: the
+     caret is pulled OUTSIDE the line box by margin-right:-1.005em, and .fade's
+     mask clips to the border box, so at 320px the entire terminal block was
+     sliced off — 770 device px of ink, the sentence's full stop. The pair nets
+     to zero, so not one glyph moves. */
   .l3{font:300 clamp(1.15rem,2.8vw,2.5rem)/1.25 Inter,sans-serif;
-    text-transform:uppercase;letter-spacing:0}
+    text-transform:uppercase;letter-spacing:0;
+    padding-right:1.05em;margin-right:-1.05em}
   .l3 .t{letter-spacing:.145em}
   /* An empty inline-block takes its baseline from its bottom margin edge, so
      `vertical-align:baseline` seats it on the baseline. Taller than the caps
@@ -410,7 +561,10 @@
   .l3 .cur{display:inline-block;vertical-align:baseline;
     width:.60em;height:.93em;margin-left:.26em;margin-bottom:-.1015em;
     margin-right:-1.005em;
-    background:var(--ink);animation:caret 1.06s step-end infinite}
+    background:var(--ink-live,var(--ink));animation:caret 1.06s step-end infinite}
+  /* Bounded. A 2x22px block toggling forever was 97% of the closing screen's
+     remaining power draw, on the one screen the reader is meant to sit on. */
+  .fin-b .cur{animation-iteration-count:12}
   @keyframes caret{0%{opacity:1}50%{opacity:0}}
   @media (prefers-reduced-motion:reduce){.l3 .cur{animation:none}}
 
@@ -480,7 +634,8 @@
     clip-path:none;white-space:normal;
     max-width:44rem;padding:6rem 2.4rem;margin-inline:auto}
   .no-js .story section+section{margin-top:4rem}
-  .no-js .story h1{font:300 clamp(1.6rem,3vw,2.4rem)/1.2 Cormorant,serif}
+  .story .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+  .no-js .story h1,.no-js .story h2{font:300 clamp(1.6rem,3vw,2.4rem)/1.2 Cormorant,serif}
   .no-js .story p{margin-top:1.2rem;font:400 .8rem/1.9 "Geist Mono",monospace;color:var(--mid)}
   .no-js .stage{display:none}
 </style>
@@ -507,13 +662,19 @@
            aria-hidden content is a trap — reachable by keyboard, invisible to
            a screen reader. The chrome's ABOUT link is the same destination and
            is announced properly, so this one is for the mouse. -->
-      <div class="fin-c" id="finC"><a class="cta" id="cta" href="/about.html" tabindex="-1">about ptl.</a></div>
+      <div class="fin-c" id="finC"><a class="cta" id="cta" href="/about.html" tabindex="-1">join us<svg class="arw" viewBox="0 0 26 8" aria-hidden="true"><path d="M0 4h24M20.5 1 24 4l-3.5 3"/></svg></a></div>
     </div>
   </div>
 
   <main class="story" id="story">
+      <!-- The six beats were six h1s and nothing else, so heading navigation
+           gave a screen-reader user six equal-rank siblings with no way to
+           tell the claim from the beats supporting it. One page-level h1, and
+           the beats demote to h2. #story is clipped, so nothing visible
+           moves. -->
+      <h1 class="sr">Predictive Text Labs — Machines that Decide</h1>
     <section data-key="DECIDE">
-      <h1>In twenty years, machines will make most consequential decisions in government and business.</h1>
+      <h2>In twenty years, machines will make most consequential decisions in government and business.</h2>
       <p>They will not merely advise. If machines can price uncertainty, they can allocate resources — or ‘act’.</p>
     </section>
     <!-- data-in / data-out are "start,length" in section-local time, and
@@ -521,17 +682,17 @@
          early and the next arrives quickly, because the gap between the
          question and the answer was reading as a pause. -->
     <section data-key="WHEN" data-out="0.64,0.20">
-      <h1>The question is not whether this future arrives, but when.</h1>
+      <h2>The question is not whether this future arrives, but when.</h2>
     </section>
     <section data-key="EARN" data-in="0.00,0.15">
-      <h1>How can we help machines earn this right to lead?</h1>
+      <h2>How can we help machines earn this right to lead?</h2>
     </section>
     <section data-key="COMMIT">
-      <h1>A machine earns this right through a track record of committing scarce resources into the world.</h1>
+      <h2>A machine earns this right through a track record of committing scarce resources into the world.</h2>
       <p>It must feel the consequences of being wrong and learn when the results land. Today, AI models are built in a vacuum and graded after the fact — never against a decision that cost anything.</p>
     </section>
     <section data-key="PRICE">
-      <h1>Predictive Text Labs teaches machines to price uncertainty so they can commit to decisions that matter.</h1>
+      <h2>Predictive Text Labs teaches machines to price uncertainty so they can commit to decisions that matter.</h2>
     </section>
     <!-- The finale is the one section set as a lockup rather than a sentence:
          three registers, and two destinations. The name and the verb leave,
@@ -539,7 +700,7 @@
          block stands in for it, which is a full stop still waiting for the
          next input. -->
     <section data-key="DECIDE" data-finale>
-      <h1><span class="ln">Predictive Text Labs.</span> <span class="ln">Builds</span> <span class="ln">Machines that Decide</span></h1>
+      <h2><span class="ln">Predictive Text Labs.</span> <span class="ln">Builds</span> <span class="ln">Machines that Decide</span></h2>
     </section>
   </main>
 
