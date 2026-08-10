@@ -716,12 +716,41 @@
      overflow — at 200% text size 76% of one headline was simply gone, with no
      scroll position that could recover it. min() inside the clamp does not
      work: the rem floor wins and nothing changes. */
+      /* AND A MEASURE OF ITS OWN, NARROWER THAN THE COLUMN.
+     At .copy's full 60rem the two long beats — COMMIT and PRICE — set as two
+     lines of nearly sixty characters, a paragraph measure on type this size,
+     while the opening beat beside them ran to three. Three lines each is the
+     shape the argument wants: one rhythm from beat to beat, and no line long
+     enough to need a return sweep.
+
+     IN em, AND THAT IS THE WHOLE TRICK. The size above is capped by 5.6vh, so
+     the headline is 51px on a tall screen and 43px on a 768-high laptop — and
+     a measure in rem holds a fixed number of PIXELS while the type shrinks
+     underneath it, which is a different number of characters to the line. Set
+     in px it worked at 900 high and dropped PRICE back to two lines at 768.
+     em resolves against the element's own font-size, so the measure is a
+     character count and the line count stops depending on the window's
+     height. Measured at 900, 982, 1080 and 768 high: the window is 13.5em to
+     18em, the SAME window at every one of them.
+
+     16em, not an edge: below 13.5 the opening beat breaks to four, above 18
+     the two long ones fall back to two, and everything between renders
+     3/2/2/3/3 alike, because text-wrap:balance minimises the longest line
+     once the count is fixed. The middle is where an edit to the copy can move
+     without taking the composition with it.
+
+     It binds only while the column is wider than it — around 930px and up.
+     Below that 86vw is already narrower and the viewport sets the count, as
+     it did before. */
       .blk h1 {
         font:
           300 min(clamp(1.55rem, 7.1vw, 3.2rem), 5.6vh)/1.14 Cormorant,
           serif;
         letter-spacing: -0.012em;
         text-wrap: balance;
+        max-width: 16em;
+        margin-left: auto;
+        margin-right: auto;
       }
       /* `balance` sets the paragraph at the narrowest measure that still holds its
      line count, so a two-line body is two EVEN lines rather than a long one
