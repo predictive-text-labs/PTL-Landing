@@ -370,20 +370,27 @@
       .type a {
         pointer-events: auto;
       }
-      /* iOS 26 clips a full-screen `position: fixed` layer to the band between
-     Safari's status bar and its floating toolbar, so the film stopped short of
-     both edges and the page's own black showed through — at the bottom of the
-     frame, which is the one place this page has no picture to lose. The clip is
-     not the safe area: `viewport-fit=cover` is already set and the chrome bar,
-     also fixed, draws where it should. Safari only clips a fixed layer it can
-     treat as a plain fill; an opacity below 1 sends it through the compositor
-     instead and it paints the whole screen. 0.999 is the smallest step off 1
-     that is still off it, and against this ground it is not a colour.
-     -webkit-touch-callout is the guard because only iOS has both the bug and
-     the property, so no other engine pays for a layer it does not need. */
+      /* Safari 26 tints its own chrome from the page rather than letting the
+     page paint there: it looks for a `position: fixed` element against each
+     viewport edge and takes that element's `background-color`. The bar at the
+     bottom of an iPhone is the result, and it is why the film appears to stop
+     short of the edge — it is not clipped, it is covered.
+
+     Two rules, and they are one idea. `.stage` gets the ground as a real
+     background-color so Safari has the page's own colour to read; it is behind
+     an opaque canvas, so nothing on the page can see it. And .stage takes an
+     opacity a thousandth off 1, which is what stops Safari treating a
+     full-screen fixed layer as a plain fill it can clip. `.type` is
+     deliberately NOT in either rule: it is the topmost fixed layer at the same
+     edge and it has to stay transparent for the film to show through, so
+     promoting it only offers Safari a transparent layer to sample — which is
+     read as light, and returns a white bar.
+
+     -webkit-touch-callout is the guard because only iOS has both the behaviour
+     and the property, so no other engine pays for a layer it does not need. */
       @supports (-webkit-touch-callout: none) {
-        .stage,
-        .type {
+        .stage {
+          background: var(--paper);
           opacity: 0.999;
         }
       }

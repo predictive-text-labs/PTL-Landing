@@ -224,19 +224,19 @@
           mask-image: none;
         }
       }
-      /* iOS 26 clips a full-screen `position: fixed` layer to the band between
-     Safari's status bar and its floating toolbar. This page's film and its veil
-     are both such layers, so both stopped short of the top and bottom edges and
-     the paper showed through where the picture should be. It is not the safe
-     area — `viewport-fit=cover` is already set. Safari only clips a fixed layer
-     it can treat as a plain fill; an opacity below 1 sends it through the
-     compositor instead and it paints the whole screen. 0.999 is the smallest
-     step off 1 that is still off it, and at this size it is not a colour.
-     -webkit-touch-callout is the guard because only iOS has both the bug and
-     the property, so no other engine pays for a layer it does not need. */
+      /* Safari 26 tints its own chrome from the page rather than letting the
+     page paint there: it looks for a `position: fixed` element against each
+     viewport edge and takes that element's `background-color`. The film is the
+     fixed layer against both edges here, so it is the one that answers, and it
+     answers with the page's own ground. The opacity a thousandth off 1 is what
+     stops Safari treating a full-screen fixed layer as a plain fill it can
+     clip. The veil is left alone: it sits over the film and has to stay
+     translucent, and a translucent layer offered to Safari is read as light.
+     -webkit-touch-callout is the guard because only iOS has both the behaviour
+     and the property, so no other engine pays for a layer it does not need. */
       @supports (-webkit-touch-callout: none) {
-        #c,
-        .veil {
+        #c {
+          background: var(--paper);
           opacity: 0.999;
         }
       }
