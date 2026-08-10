@@ -498,13 +498,26 @@
      than restating the argument they just scrolled through. Cormorant at a
      reading size — big enough to be the opening statement, small enough to be
      two paragraphs rather than a headline. */
-      /* A MEASURE, NOT A WIDTH. 84ch of Cormorant rendered about 105
-     characters to the line — nearly twice a comfortable one, and on a wide
-     screen the second line of each paragraph ran out past everything else
-     on the page. ch rather than rem because it is set in the text's own
-     font, so it holds if the type ever changes size. */
+      /* A MEASURE, NOT A WIDTH. 84ch rendered about 105 characters to the
+     line — nearly twice a comfortable one, and on a wide screen the second
+     line of each paragraph ran out past everything else on the page.
+
+     IN REM, THOUGH, AND THAT IS A CORRECTION. This was 54ch, on the reasoning
+     that ch is set in the text's own font and so holds if the type ever
+     changes size. It is not: ch resolves against THIS element's font, and
+     nothing gives the container one, so it was measuring the browser's
+     default serif — Times, 16px, a face that appears nowhere on this page —
+     while the paragraphs inside it are Cormorant at 18.56px. The measure was
+     therefore both wrong about itself and at the mercy of whatever the
+     visitor's system serves as `serif`, which is a strange thing for a fixed
+     line count to depend on. 29rem is the same 464px here, on every machine.
+
+     464px because the first paragraph breaks to four lines above 448 and the
+     fourth is two words. Measured across chromium, webkit and firefox: the
+     break is at exactly 448px in all three, so this carries 16px of slack
+     rather than sitting on the threshold. */
       .intro {
-        max-width: 54ch;
+        max-width: 29rem;
         margin-bottom: 4.4rem;
       }
       .intro p {
@@ -865,22 +878,20 @@
 
         <footer class="closing" aria-label="Supported by">
           <div>
-            <p class="cap up">In good hands</p>
+            <p class="cap up">Backed by</p>
             <ul class="backers up">
               <li>Blackbird Ventures</li>
               <li>Founders of Synthesia</li>
               <li>Founders of Supabase</li>
               <li>Prime Beta</li>
               <li>Florent</li>
+              <li>Roger M Low</li>
               <li>Georg Stockinger</li>
-              <li>Ian Huang</li>
-              <li>Christian Duschek</li>
               <li>Konstantin Richter</li>
               <li>Nadav Eylath</li>
               <li>Tony Liu</li>
               <li>Bjarke Klinge Staun</li>
               <li>Geeta Schmidt</li>
-              <li>Roger M Low</li>
               <li>Martine Niejadlik</li>
               <li>Valerie Buresboenstroem</li>
               <li>and other angels</li>
