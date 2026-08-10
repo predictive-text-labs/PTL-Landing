@@ -24,18 +24,6 @@
     <meta name="color-scheme" content="dark" />
     <meta name="format-detection" content="telephone=no" />
 
-    <!-- The palette switch, resolved in the HEAD so it lands before the first
-     paint. It used to sit with the other scripts at the end of the body, which
-     is after the browser is entitled to have painted the background once
-     already — long enough for ?v=2 to flash black before turning stone. Only
-     the attribute is set here; the stylesheet below reads it. -->
-    <script>
-      {
-        const v = new URLSearchParams(location.search).get("v");
-        if (v === "2" || v === "3" || v === "4")
-          document.documentElement.dataset.v = v;
-      }
-    </script>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="icon" href="/favicon.ico" sizes="any" />
 
@@ -134,23 +122,14 @@
         font-display: block;
       }
 
-      /* THE PALETTE — four colourways, one switch.
+      /* THE PALETTE — one colourway, and this is it.
      ------------------------------------------------------------------------
      Every colour on the page, including the two the shader resolves its 1-bit
      output to, comes from here. The renderer is handed --field and --paper at
      draw time, so the film and the type can never disagree about the ground
-     they are on. Variation 1 is the default and has no query at all; 2, 3 and
-     4 are selected with ?v=, and ?v= anything else falls back to 1.
-
-       1  the original: white mark on black
-       2  inverted onto the old site's own paper (Tailwind stone-100), which
-          is warm — pure white would have read as a different brand
-       3  the same paper and the same black type as 2, with the blue confined
-          to the FIELD. That is why --field is a separate token from --ink:
-          the colour is an event in the film, not a change of voice in the
-          writing, and running the copy in it as well made the page read as
-          branded-blue rather than as a black-and-white page with one blue
-          thing moving on it.
+     they are on. --field is a separate token from --ink because the film's
+     colour and the writing's colour are allowed to differ: the field is an
+     event in the picture, not a change of voice in the copy.
 
      --wash is the defocus dome. It used to be a brightness() term, which only
      works when the paper is at one end of the range: on a MID-TONE ground,
@@ -159,7 +138,7 @@
      of the paper colour laid over a plain blur — which is what "lower the
      contrast of whatever is behind the copy" actually means, and it is correct
      for any ground, dark, light or mid. */
-      /* Variation 1 is a DUOTONE, and the values are measured rather than
+      /* THE FILM IS A DUOTONE, and the values are measured rather than
      chosen: sampled off photographs of the page running, the ground is a deep
      indigo (#111228, consistent across six frames) and the marks are a warm
      cream (#F5E1BA at the arch's crown, #E4C198 through the mid limb). Cool
@@ -192,117 +171,6 @@
         --wash: rgba(0, 0, 0, 0.62);
         --deep: rgba(0, 0, 0, 0.33);
         --tint: #c64a16;
-      }
-      /* stone-300. Warm and heavy enough that the type tones cannot be reused
-     from the dark variant — #6E6E6E is 4.1:1 on black and 2.6:1 here. These
-     are picked against this ground specifically. */
-      /* VARIATION 4 — the film with nothing added to it.
-     ------------------------------------------------------------------------
-     Same black ground and the same six beats, but strictly one bit: no drop
-     shadow, no warm ramp on the mark, no bloom or spill on the ground. Every
-     pixel in the frame is either the ink or the paper, which is what the
-     halftone claims to be and what variation 1 relaxes on purpose.
-
-     It is here to be the control. Variation 1's toning is an argument — that
-     the field reads as an emulsion catching light rather than as a diagram —
-     and an argument of that kind is only worth anything next to the thing it
-     is arguing against. --tint is set to the paper so that even the token is
-     a no-op; the shader is told separately, via tone, not to ramp at all.
-
-     The greys are variation 1's, which are already neutral and already
-     matched to this ground. */
-      :root[data-v="4"] {
-        --paper: #000000;
-        --ink: #ffffff;
-        --field: #ffffff;
-        --field-end: #ffffff;
-        --dim: #7c7c7c;
-        --mid: #8a8a8a;
-        --soft: #9e9e9e;
-        --rule: #333333;
-        --wash: rgba(0, 0, 0, 0.62);
-        --deep: rgba(0, 0, 0, 0.33);
-        --tint: #000000;
-      }
-      :root[data-v="2"] {
-        --paper: #d6d3d1;
-        --ink: #0c0a09;
-        --field: #0c0a09;
-        --field-end: #0c0a09;
-        --dim: #57534e;
-        --mid: #44403c;
-        --soft: #3b3735;
-        --rule: #9c9691;
-        --wash: rgba(214, 211, 209, 0.7);
-        --deep: rgba(214, 211, 209, 0.33);
-        /* The dim end of the mark. On paper the ramp runs the other way — a dark
-       mark on a light ground is DEEPER when it is dim, not warmer-brighter —
-       so this is a warm near-black that lifts to the flat ink as the form
-       brightens. Same mechanism, inverted ground. */
-        --tint: #3e301e;
-      }
-      /* taupe-300 — variation 2's step, in variation 3's colour.
-     ------------------------------------------------------------------------
-     This ground was taupe-400 for a while, a full step heavier, on the
-     argument that the blue takes a deeper paper best: the deeper the ground,
-     the more the halftone reads as a printed screen rather than a glow. The
-     glow was real. What it cost was the picture. A genuinely mid ground caps
-     the page at about 7.8:1 even with near-black ink, and it caps the FILM
-     harder than it caps the type — the blue managed 3.97:1 against that
-     paper and the tint, which owns the whole floor of the frame, only
-     1.40:1. The crown measured 0.845 modulation and the bottom third
-     dissolved into the ground rather than standing in front of it. Here the
-     same two inks measure 6.79:1 and 2.40:1, and the crown 0.912. The lower
-     limbs stay graphic all the way down, which is what the light climbing
-     the frame was for.
-
-     TAUPE, not stone, and the whole block moves together — the temperature
-     is now the only thing separating this ground from variation 2's, so it
-     has to carry the distinction on its own. Taupe sits at hue ~41 against
-     stone's ~56 — redder, and at about one and a half times the chroma — so
-     a taupe ground under stone ink reads as two different warms arguing
-     rather than one. The greys are variation 2's scale held at their own
-     OKLCH lightness and re-authored with taupe's hue and chroma: the tonal
-     structure that was tuned against a 300 ground is preserved exactly and
-     only the temperature moves. Every ratio holds to within 0.04 of a point
-     — ink 13.26 -> 13.27, --mid 6.90 -> 6.90, --dim 5.12 -> 5.16, the blue
-     6.79 -> 6.79.
-
-     The chroma is a judgement and not a lookup. Stone's own chroma nearly
-     vanishes at the 300 step — 0.004, against taupe-400's 0.014 — so taking
-     this paper from the scale ratio alone gives #D8D2D0, which is stone with
-     a rumour of warmth and is not taupe at all. It sits at 0.010 instead,
-     near the midpoint: unmistakably the 400's own colour a step lighter, and
-     short of the blush that holding the full 0.014 turns into this close to
-     white. */
-      :root[data-v="3"] {
-        /* --field-end is where the mark ARRIVES. The blue is the state of the
-       argument at the top of the page, not a brand colour, so it resolves
-       to the same ink the type is set in by the time the film closes.
-       taupe-950 and stone-950 are the same hex, so the ink is unchanged.
-
-       AND THE BLUE IS A PIGMENT, NOT A DARK. It was #0000A0, which is not a
-       saturated blue — it is a dull one, dimmed by taking blue away. On a
-       light ground the useful trick is the opposite: blue carries only 0.0722
-       of the luminance, so it can be run almost to the top of its channel and
-       still land nearly as dark. #0000E0 is two thirds more chromatic than
-       #0000A0 and measures 0.918 modulation at the crown against its 0.961 —
-       four percent of the contrast, for an ink that reads as ink. */
-        --paper: #dad2cf;
-        --ink: #0c0a09;
-        --field: #0000e0;
-        --field-end: #0c0a09;
-        --dim: #5b514e;
-        --mid: #473f3c;
-        --soft: #3d3634;
-        --rule: #a09490;
-        --wash: rgba(218, 210, 207, 0.72);
-        --deep: rgba(218, 210, 207, 0.33);
-        /* NO --tint. The blue is the only variation that runs the film
-       strictly one bit on paper — see TONE — so the ramp, the ground's haze
-       and everything else that reads a tint are all multiplied out. A token
-       that names a colour nothing can use is a lie in the palette, and the
-       renderer falls back to the paper, which makes the term a no-op. */
       }
 
       * {
@@ -510,11 +378,11 @@
      82% scrim manufactures. Measured, 96.7% of ABOUT's core pixels fell below
      3:1 at the worst beat, median 1.41:1; with the scrim removed entirely,
      6.1%. It was the cause, not the cure, for ~2 viewport-heights of scroll on
-     every phone and every variant.
+     every phone.
 
      Full paper to 72% instead. The type sits 29-60% down an 83px bar, so this
      covers both wordmark lines and the link and still fades out at the bar's
-     bottom edge. Built from --paper, so it lands on all three variants. */
+     bottom edge. Built from --paper, so it is the page's own ground. */
       @media (max-width: 560px), (max-height: 560px) {
         .chrome::before {
           content: "";
@@ -586,18 +454,13 @@
      frame, starting at the mark's own centre.
 
      Not in the shader, though it was built there first — as a depth term
-     inside the mark's own feather. Two reasons it is here instead. That
-     feather is switched off entirely on variation 4, which is one bit by
-     contract, so the control would have been the variant without the effect;
-     and softening the MARK is the trade this page refuses everywhere else,
-     while softening the FRAME leaves every mark the shape it was drawn.
+     inside the mark's own feather. It is here instead because softening the
+     MARK is the trade this page refuses everywhere else, while softening the
+     FRAME leaves every mark the shape it was drawn.
 
      ON THE FILM'S OWN CLOCK. --resolved is the number the type resolves on,
      published by ptl-page.js; at the close it is 1 and this is gone. The last
-     frame is sharp to the floor, which is the point of the last frame.
-
-     The ramp is a token, not black paint: on paper the ground deepening is the
-     paper, or the bottom of the frame would go to soot on a light variation. */
+     frame is sharp to the floor, which is the point of the last frame. */
       /* PHONE ONLY. On a wide frame the mark keeps the upper two thirds and the
      copy has the floor, so there is no depth to describe down there — the
      bottom of the frame is where the argument is written, and blurring it
@@ -641,12 +504,12 @@
       /* saturate(0) so the defocus carries VALUE and not HUE. The wash is already
      the paper colour, but it is translucent on purpose — a defocus, not an
      eraser — and the ~28% of the field still showing through arrives with its
-     own colour. On variation 3 that is blue, so the dome behind the copy came
-     out lavender: a third colour, on a page that has two. Desaturating the
-     backdrop first means what bleeds through is only light and dark, and the
-     dome reads as the paper defocused. Measured: haze chroma 17 -> 8, against
-     the paper's own 10. A no-op on the other two variations, whose ink is
-     already neutral, so it does not need scoping to v3. */
+     own colour. That colour is warm — --field is a cream and --tint an orange
+     — so without this the dome behind the copy comes out tinted: a third
+     colour, on a page that has two. Desaturating the backdrop first means what
+     bleeds through is only light and dark, and the dome reads as the paper
+     defocused. NOT a no-op, and not removable: it changes what is drawn on
+     every frame the dome is over the field. */
       .veil {
         position: absolute;
         inset: 0;
@@ -1305,7 +1168,7 @@
       <span class="wm">PREDICTIVE <br />TEXT LABS</span>
       <nav class="nav">
         <span class="count"><b id="bn">01</b> / <span id="bt">06</span></span
-        ><i></i><a id="about" href="/about.html">ABOUT</a>
+        ><i></i><a href="/about.html">ABOUT</a>
       </nav>
     </header>
 
@@ -1387,35 +1250,6 @@
       </section>
     </main>
 
-    <script>
-      /* The rest of the switch, which needs the stylesheet parsed and the body
-     present. Both the browser chrome and the link out are derived from the
-     resolved palette rather than restated: the hexes live in one place. */
-      {
-        const paper = getComputedStyle(document.documentElement)
-          .getPropertyValue("--paper")
-          .trim();
-        const n = paper.replace("#", "");
-        const [r, g, b] = [0, 2, 4].map(
-          (i) => parseInt(n.slice(i, i + 2), 16) / 255,
-        );
-        document.querySelector("meta[name=theme-color]").content = paper;
-        /* Which end of the range the paper sits at is what `color-scheme` is for —
-       it is what the scrollbar and any UA widget are drawn against. Variations
-       2 and 3 are light grounds; announcing them as dark drew a dark scrollbar
-       down the side of a stone page. */
-        document.querySelector("meta[name=color-scheme]").content =
-          0.2126 * r + 0.7152 * g + 0.0722 * b > 0.5 ? "light" : "dark";
-
-        /* Carry the variation across to the about page, so following the link does
-       not silently drop you back into variation 1. */
-        const v = document.documentElement.dataset.v;
-        if (v)
-          for (const id of ["about", "cta"]) {
-            document.getElementById(id).href = "/about.html?v=" + v;
-          }
-      }
-    </script>
     <script src="/src/ptl-field.js"></script>
     <script src="/src/ptl-page.js"></script>
   </body>

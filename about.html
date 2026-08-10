@@ -15,13 +15,6 @@
     <link rel="canonical" href="https://ptl.inc/about.html" />
     <meta name="theme-color" content="#000000" />
     <meta name="color-scheme" content="dark" />
-    <script>
-      {
-        const v = new URLSearchParams(location.search).get("v");
-        if (v === "2" || v === "3" || v === "4")
-          document.documentElement.dataset.v = v;
-      }
-    </script>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <meta property="og:type" content="website" />
@@ -101,43 +94,6 @@
         --rule: #353535;
         --wash: rgba(0, 0, 0, 0.62);
         --tint: #c64a16;
-      }
-      /* Variation 4 — the control: one bit, nothing added. See index.html. */
-      :root[data-v="4"] {
-        --paper: #000000;
-        --ink: #ffffff;
-        --field: #ffffff;
-        --field-end: #ffffff;
-        --dim: #7c7c7c;
-        --mid: #8a8a8a;
-        --soft: #9e9e9e;
-        --rule: #333333;
-        --wash: rgba(0, 0, 0, 0.62);
-        --tint: #000000;
-      }
-      :root[data-v="2"] {
-        --paper: #d6d3d1;
-        --ink: #0c0a09;
-        --field: #0c0a09;
-        --field-end: #0c0a09;
-        --dim: #57534e;
-        --mid: #44403c;
-        --soft: #3b3735;
-        --rule: #9c9691;
-        --wash: rgba(214, 211, 209, 0.7);
-        --tint: #3e301e;
-      }
-      :root[data-v="3"] {
-        --paper: #dad2cf;
-        --ink: #0c0a09;
-        --field: #0000e0;
-        --field-end: #0c0a09;
-        --dim: #5b514e;
-        --mid: #473f3c;
-        --soft: #3d3634;
-        --rule: #a09490;
-        --wash: rgba(218, 210, 207, 0.72);
-        /* No --tint: this variation runs strictly one bit — see index.html. */
       }
 
       * {
@@ -725,7 +681,7 @@
 
     <div class="page">
       <header class="chrome">
-        <a class="wm" id="home" href="/">PREDICTIVE <br />TEXT LABS</a>
+        <a class="wm" href="/">PREDICTIVE <br />TEXT LABS</a>
         <nav class="nav"><i></i><span class="here">ABOUT</span></nav>
       </header>
 
@@ -906,8 +862,9 @@
         const reduceMQ = matchMedia("(prefers-reduced-motion: reduce)");
         let reduce = reduceMQ.matches;
 
-        /* The browser chrome is derived from the resolved paper rather than
-     restated, and the way back carries the variation with it. */
+        /* The renderer's palette, read out of the stylesheet rather than
+     restated here: index.html's :root is the source, this page mirrors it, and
+     the film is handed whatever the browser resolved. */
         const hex3 = (h) => {
           const n = (h || "").trim().replace("#", "");
           return [0, 2, 4].map((i) => parseInt(n.slice(i, i + 2), 16) / 255);
@@ -916,41 +873,21 @@
           INK2 = [1, 1, 1],
           PAPER = [0, 0, 0],
           TINT = [0, 0, 0];
-        /* Paper or a room — see uPrint in the renderer, and ptl-page.js for why it
-     is read off the ground rather than off the variant name. */
-        let PRINT = 0;
         /* Declared here, not beside resolveAt below: palette() runs before that
      block is reached, and a `let` read from above its own line throws. */
         let TYPE_A = "#ffffff",
           TYPE_B = "#ffffff";
-        /* The drop shadow is the indigo variant's alone — see uShadow in the
-     renderer. Read once: the variant cannot change without a reload. */
-        const SHADOW = root.dataset.v ? 0 : 1;
-        /* Variation 4 loses the ramp as well as the shadow — see index.html. */
-        const TONE = /^[34]$/.test(root.dataset.v || "") ? 0 : 1;
         {
           const cs = getComputedStyle(root);
-          const paper = cs.getPropertyValue("--paper").trim();
           INK = hex3(cs.getPropertyValue("--field"));
           INK2 = hex3(cs.getPropertyValue("--field-end"));
-          TINT = hex3(
-            cs.getPropertyValue("--tint") || cs.getPropertyValue("--paper"),
-          );
-          PAPER = hex3(paper);
-          const pl = 0.2126 * PAPER[0] + 0.7152 * PAPER[1] + 0.0722 * PAPER[2];
-          const pk = pl < 0.25 ? 0 : pl > 0.55 ? 1 : (pl - 0.25) / 0.3;
-          PRINT = pk * pk * (3 - 2 * pk);
+          TINT = hex3(cs.getPropertyValue("--tint"));
+          PAPER = hex3(cs.getPropertyValue("--paper"));
           /* Read from the ROOT rule, never from the element we write --ink-live
        onto — reading back our own output would ratchet the type toward its
        target a frame at a time and never return. */
           TYPE_A = (cs.getPropertyValue("--ink") || "#ffffff").trim();
           TYPE_B = (cs.getPropertyValue("--field-end") || TYPE_A).trim();
-          const [r, g, b] = PAPER;
-          document.querySelector("meta[name=theme-color]").content = paper;
-          document.querySelector("meta[name=color-scheme]").content =
-            0.2126 * r + 0.7152 * g + 0.0722 * b > 0.5 ? "light" : "dark";
-          const v = root.dataset.v;
-          if (v) document.getElementById("home").href = "/?v=" + v;
         }
 
         /* THE FIELD, RUN BACKWARDS AND THEN FORWARDS AGAIN.
@@ -1082,9 +1019,6 @@
             gap: 0.12,
             gain: gainAt(p),
             fov: 0.7,
-            shadow: SHADOW,
-            tone: TONE,
-            print: PRINT,
             mouse: [0, 0],
             act: 0,
             ink: INK,

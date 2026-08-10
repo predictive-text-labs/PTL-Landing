@@ -83,11 +83,6 @@
   uniform vec3      uInk2;     // the mark, at the bottom of it
   uniform vec3      uPaper;     // the ground
   uniform vec3      uTint;      // the mark at its DIMMEST, and the ground's bloom
-  uniform float     uShadow;    // 1 = the mark casts one, 0 = it does not
-  uniform float     uTone;      // 1 = the film is toned, 0 = strictly 1-bit
-  /* 1 = the ground is PAPER, 0 = it is a room. Derived from the paper's own
-     luminance by the page, so a light palette gets it without being asked. */
-  uniform float     uPrint;
   uniform vec2      uMouse;     // pointer, in the same uv space as the field
   uniform float     uAct;       // 0..1 — how much the pointer is allowed to act
   uniform float     uTime;      // seconds — the ambient clock, which scroll speeds up
@@ -627,34 +622,6 @@
        square; only the light around them is not. */
     float d = max(f.x, f.y);
     float e = markOf(C[4]);
-    /* THE STROKE HAS AN EDGE ON PAPER, AND THE DARK VARIANT DOES NOT WANT ONE.
-       ------------------------------------------------------------------------
-       Everything above this line is about colour, and none of it could fix
-       what the pale variants were being accused of. Measured across the arch's
-       crown, every square's interior is EXACTLY the ink — rgb(0,0,224) at every
-       step of a cut through the band — while the cell average runs 170 -> 45 ->
-       160. So nothing radiates: the ink is one colour the whole way across, and
-       what falls off from the spine to either side is the mark's SIZE. A
-       halftone of a soft-edged stroke is a glow, because that is what a
-       shrinking dot means.
-
-       On black that is exactly right — a smaller mark is less light, and light
-       does fall off. On paper it is wrong twice over: less ink is not a dimmer
-       stroke, it is a thinner one, and a printed stroke has a boundary. So the
-       tone response gets a contrast curve here and the band gets an edge,
-       which leaves the vertical ramp as the only gradient in the frame — the
-       one that is supposed to be read.
-
-       Measured on the same cut, the band's coverage was 33 28 53 80 75 75 82 71
-       53 30 8 per cell and is now 0 33 75 75 75 75 75 75 78 53 0 — six cells of
-       transition down to two, with a flat interior. 0.26/0.58: tighter than
-       this and the boundary starts to show the cell grid as a staircase, wider
-       and the glow comes back.
-
-       On e rather than on the form, so the GROUND keeps the smooth field: the
-       lattice's own structure and the ambient are solved off lumG and are not
-       part of this. */
-    e = mix(e, 0.90 * smoothstep(0.26, 0.58, e / 0.90), uPrint);
     /* A DROP SHADOW, WHICH IS AN OUTSIDE-ONLY THING.
        ------------------------------------------------------------------------
        The mark stays a flat, hard square. Blurring the mark ITSELF looks
@@ -728,17 +695,11 @@
        half a cell, so one device pixel is 2/uCell of it. */
     /* The reflection is NOT here, and it was: a depth term inside this feather
        softened the mark itself toward the floor of the frame. It is a layer
-       over the canvas instead — .deep in the page — because a feather cannot
-       exist on variation 4, where uTone takes this to the floor by contract,
-       and an effect the one-bit control cannot have is an effect the control
-       cannot control for. */
-    float wSoft = max(e * mix(0.20, 0.02, resolveU), 1.0 / uCell);
-    /* Variation 4 has no feather either. The original mark was a hard step()
-       and the softness is one of the things that variation exists to control
-       for, so uTone takes it to the floor: a razor border, correctly sampled.
-       Not a literal step(), because that aliases and crawls as the field
-       breathes — this is the same edge without the crawl. */
-    float w     = mix(1.0 / uCell, wSoft, uTone);
+       over the canvas instead — .deep in the page — because softening the MARK
+       is the one trade this film refuses, while softening the FRAME leaves
+       every mark the shape it was drawn. Mirror of the .deep note in
+       index.html; keep the two in step. */
+    float w     = max(e * mix(0.20, 0.02, resolveU), 1.0 / uCell);
     /* GATED AT ZERO. In an EMPTY cell e is 0, so w is 0 and this would be
        smoothstep(0, 0, d) — spec-undefined for edge0 >= edge1, and on the usual
        lowering saturate(0/0) gives 0, i.e. mark = 1. It needs d == 0, which
@@ -803,36 +764,28 @@
        at distance three that arrives. Three cell-units out the exponential is
        at 5% for the largest mark on the page and immeasurable for any smaller
        one, and it is the max of nine, so a term that small is buried by its
-       neighbours. The 84% step is gone and nothing takes its place.
-
-       uShadow gates the whole loop, which is the pale variants' win: they pay
-       for one markOf instead of nine. The shadow belongs to the indigo variant
-       only — on the two light grounds the mark is DARK, so its shadow is dark
-       too, and a dark halo on light paper is not a mark catching light, it is a
-       smudge. The point of the thing is a lit emulsion, and only a dark ground
-       reads that way. */
+       neighbours. The 84% step is gone and nothing takes its place. */
     float shade = 0.0;
-    if (uShadow > 0.001){
-      for (int j = -1; j <= 1; j++){
-        for (int i = -1; i <= 1; i++){
-          vec2  off = vec2(float(i), float(j));
-          /* One cell is TWO units of gs, so the neighbour's centre sits at
-             2*off and the point handed to castShadow is gs measured from it. */
-          float en  = markOf(C[(j + 1) * 3 + (i + 1)]);
-          float sgn = mix(0.80 * en, 0.06 * en, resolveU) + 1e-4;
-          shade = max(shade, castShadow(gs - 2.0 * off, en, sgn)
-                             * smoothstep(0.0, 0.02, en));
-        }
+    for (int j = -1; j <= 1; j++){
+      for (int i = -1; i <= 1; i++){
+        vec2  off = vec2(float(i), float(j));
+        /* One cell is TWO units of gs, so the neighbour's centre sits at
+           2*off and the point handed to castShadow is gs measured from it. */
+        float en  = markOf(C[(j + 1) * 3 + (i + 1)]);
+        float sgn = mix(0.80 * en, 0.06 * en, resolveU) + 1e-4;
+        shade = max(shade, castShadow(gs - 2.0 * off, en, sgn)
+                           * smoothstep(0.0, 0.02, en));
       }
-      /* AND IT LEAVES ENTIRELY. Tightening sg alone takes the shadow to
-         0.06e, which is small but still 90% opaque against the mark's own
-         edge — a dark seam a pixel or two wide around every square, which is a
-         shadow, and the last frame is meant to have none. Multiplying it out
-         makes the end state arithmetically shadowless rather than nearly so,
-         and because sg tightens on the same clock it sharpens as it fades
-         rather than dissolving in place. */
-      shade *= 0.90 * uShadow * (1.0 - resolveU);
     }
+    /* AND IT LEAVES ENTIRELY. Tightening sg alone takes the shadow to
+       0.06e, which is small but still 90% opaque against the mark's own
+       edge — a dark seam a pixel or two wide around every square, which is a
+       shadow, and the last frame is meant to have none. Multiplying it out
+       makes the end state arithmetically shadowless rather than nearly so,
+       and because sg tightens on the same clock it sharpens as it fades
+       rather than dissolving in place. (1.0 - resolveU) is the resolve clock,
+       not a switch: without it the last frame keeps its shadow. */
+    shade *= 0.90 * (1.0 - resolveU);
 
     float cover = max(mark, shade);
 
@@ -841,8 +794,10 @@
        renderer's.
 
        The ink may travel across the page, though. Where uInk2 differs from
-       uInk the mark bleeds from one to the other as you scroll, which is
-       how the blue variation resolves to black by the last frame.
+       uInk the mark bleeds from one to the other as you scroll. They DO
+       differ here — uInk is the cream --field, uInk2 the white --field-end —
+       so this travel is live and the mix at the foot of the ramp is not
+       removable machinery.
 
        This ran late for a long time — pinned to the CLOSING of the mark
        (0.86-0.965 above) so the colour and the form arrived together. It no
@@ -854,11 +809,13 @@
        through — a resolve that lands on a tone has not resolved. */
     /* THE FILM IS TONED, NOT MONOCHROME.
        ------------------------------------------------------------------------
-       Sampled off photographs of the thing running: the ground is not black,
-       it is a deep indigo (#111228 measured, consistently across six frames),
-       and the marks are not white, they are a warm cream (#F5E1BA at the
-       arch's crown). Cool shadow, warm highlight — which is why it reads as a
-       surface catching light from a warm bulb rather than as a diagram.
+       Sampled off photographs of the thing running: the marks are not white,
+       they are a warm cream (#F5E1BA at the arch's crown). The ground was a
+       deep indigo (#111228 measured, consistently across six frames) when
+       those photographs were taken and is pitch black now — see the palette
+       note in index.html — so the warmth is carried entirely by the MARK, and
+       it still reads as a surface catching light from a warm bulb rather than
+       as a diagram.
 
        And the mark's HUE ramps with its brightness, which is the part that
        makes it look lit rather than coloured. Measured along the arch: the
@@ -912,12 +869,6 @@
     float lo      = smoothstep(0.30, 0.52, vyr);
     float hi      = smoothstep(0.46, 0.72, vyr);
     vec3  warm    = mix(mix(uTint, amber, lo), uInk, hi);
-    /* uTone is the whole of variation 4: at 0 the mark is flat uInk with no
-       ramp, and the bloom and spill below are zero, so the frame is ink or
-       paper and nothing between — the 1-bit contract with no atmosphere at
-       all. It is a separate switch from uShadow because the two pale variants
-       want their toning kept and only the shadow dropped. */
-    warm          = mix(uInk, warm, uTone);
     vec3  ink     = mix(warm, uInk2, resolve);
 
     float lowBias = mix(1.0, 0.35, smoothstep(-halfH, halfH, uv.y));
@@ -926,35 +877,11 @@
        ground stays cold the falloff turns grey no matter how red the ink is.
        Warm ground is what lets the limbs stay orange as they fade out. */
     float bloom   = pow(clamp(lumG, 0.0, 1.0), 0.42) * lowBias;
-    /* THE PAPER'S HALF OF IT, AND ON PAPER IT IS KEYED TO THE FRAME RATHER
-       THAN TO THE FORM.
-       Keying the ground to lumG is what makes the dark variant read as a lit
-       OBJECT: the light is the form's own, so it has to come off the form —
-       brightest along the stroke's spine, falling away to either side. On
-       paper that same term reads as a glow radiating out of the line, which
-       is a tube, not a print, and it fought the mark's ramp: the ramp runs up
-       the FRAME while the haze ran out of the LINE, so the two disagreed
-       about where the light was and the eye believed the nearer of them.
-
-       A sheet carries the light of the room it is in, and that light has a
-       direction — up from the floor, unchanged wherever the form happens to
-       be standing. So on paper the haze is a straight vertical wash on the
-       same axis as the ramp above it, and the frame finally makes one claim
-       instead of two: a single source under the picture, with the ink and the
-       stock both taking their colour from it.
-
-       0.16 AND NOT 0.42, WHICH IS WHERE IT WAS FIRST SET. That figure was
-       chosen on the front page, whose veil is an ellipse anchored at the
-       bottom of the frame with saturate(0) in it — so the floor of the frame,
-       which is exactly where this wash is strongest, was having most of its
-       colour taken out again before anyone saw it. The about page's veil is a
-       95deg linear sweep instead, covering the copy column on the left and
-       fading out by 82% across, so the same wash came through raw on the right
-       and laid a cyan band along the bottom of every screen there. The glow
-       the pale variants are for is carried by the MARKS; this is the sheet's
-       share of it, and the sheet's share is small. */
-    float wash    = pow(1.0 - vy, 1.55);
-    float haze    = mix(bloom * 0.55, wash * 0.16, uPrint) * (1.0 - resolve) * uTone;
+    /* Keyed to lumG — the form's own light — which is what makes the ground
+       read as a lit OBJECT rather than as a tinted sheet: brightest along the
+       stroke's spine, falling away to either side. It drains on the resolve
+       clock with everything else. */
+    float haze    = bloom * 0.55 * (1.0 - resolve);
     vec3  gnd     = mix(uPaper, uTint, haze);
 
     /* SPILL BETWEEN CELLS, which the blur above cannot produce on its own.
@@ -972,11 +899,8 @@
        they are orange. A tight exponent keeps it welded to the form — at
        the 0.42 the wide haze uses, a nearly-empty cell would still pick up
        a few percent and the dark would stop being dark. */
-    /* On paper this is the last thing that still hugs the form, so it is the
-       last thing that can read as a glow around the line: it stays only as
-       far as dot gain goes, a few percent of the stock taking ink. */
-    float spill   = pow(clamp(lumG, 0.0, 1.0), 1.1) * (1.0 - resolve) * uTone;
-    gnd           = mix(gnd, ink, spill * mix(0.42, 0.06, uPrint));
+    float spill   = pow(clamp(lumG, 0.0, 1.0), 1.1) * (1.0 - resolve);
+    gnd           = mix(gnd, ink, spill * 0.42);
 
 
     fragColor = vec4(mix(gnd, ink, cover), 1.0);
@@ -1070,7 +994,7 @@
     const UNIFORMS = ['uRes', 'uT', 'uG', 'uCell', 'uGap', 'uGain', 'uMode',
                       'uSection', 'uTex', 'uLat', 'uFov', 'uMouse', 'uAct',
                       'uTime', 'uAmb', 'uInk', 'uInk2', 'uPaper', 'uTint',
-                      'uShadow', 'uTone', 'uResolve', 'uPrint', 'uCopy', 'uLift'];
+                      'uResolve', 'uCopy', 'uLift'];
     function locate(p) {
       const m = {};
       for (const n of UNIFORMS) m[n] = gl.getUniformLocation(p, n);
@@ -1209,9 +1133,6 @@
       gl.uniform3f(uu.uPaper, paper[0], paper[1], paper[2]);
       const tint = o.tint || paper;
       gl.uniform3f(uu.uTint, tint[0], tint[1], tint[2]);
-      gl.uniform1f(uu.uShadow, o.shadow != null ? o.shadow : 1);
-      gl.uniform1f(uu.uTone, o.tone != null ? o.tone : 1);
-      gl.uniform1f(uu.uPrint, o.print != null ? o.print : 0);
       const m = o.mouse || [0, 0];
       gl.uniform2f(uu.uMouse, m[0], m[1]);
       gl.uniform1f(uu.uAct, o.act != null ? o.act : 0);

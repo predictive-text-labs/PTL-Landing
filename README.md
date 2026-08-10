@@ -54,60 +54,23 @@ crawler, a link preview and a screen reader with a page containing no words at
 all. So the argument lives in `#story` as ordinary semantic HTML and the script
 reads it out of the DOM. One source of truth. Edit the copy there.
 
-## Variations
+## The palette
 
-Four colourways: variation 1 is the default and has no query at all, and 2, 3
-and 4 are selected with a query parameter. `?v=` anything else is variation 1.
-
-    /               1  a toned film on black: the mark's hue ramps with its
-                       brightness, it casts a drop shadow, and the ground
-                       carries a little of the same warmth — all three drain
-                       away together, leaving white on hard black by the last
-                       frame
-    /?v=2           2  inverted onto stone-300, the old site's own warm paper
-    /?v=3           3  variation 4's contract on paper: the same strictly
-                       one-bit film, a redder step of stock — taupe-300 —
-                       and the same black type, with the blue confined to
-                       the FILM and resolving to black as the mark closes
-    /?v=4           4  the control: white mark on black, strictly one bit.
-                       No shadow, no hue ramp, no bloom, no feathered edge —
-                       every pixel is either the ink or the paper
-
-Variation 4 is not a colourway so much as the thing the others are arguing
-against. Variation 1 claims the field reads as an emulsion catching light
-rather than as a diagram; that claim is only worth something next to the
-version with none of it, which is what 4 is. Two switches carry the whole
-difference — `shadow` and `tone` in the draw options — so the two can be
-compared without a second renderer. Variation 3 takes `tone` off as well: it
-is 4's contract with a colour in it.
-
-A third switch, `print`, is not a variation at all: it is what the toning
-MEANS on a light ground. On black the ground is zero, so everything added to
-it reads as light — a warm haze off the form, weighted toward the floor of the
-frame like a lamp below the picture. On paper the ground is the brightest
-thing in frame, so the same haze reads as dirt, and the same lamp puts its
-heaviest smudge exactly where the arch's legs are thinnest. The pale variants
-therefore get the print reading of those terms: the ground's haze becomes a
-straight vertical wash instead of a halo keyed to the form, it drops from half
-the tint to a few percent — dot gain instead of glow — and the tone response
-gets a contrast curve, because a printed stroke has a boundary where a lit one
-has a falloff. What is left is one gradient, running up the frame. It is
-derived from the paper's own luminance rather than named per variation, so a
-palette that inverts the ground gets it without having to remember to ask.
-
-Variation 3 is the same 1-bit contract as variation 4, on paper instead of on
-black, and keeping one thing: the mark's colour travels from `--field` to
-`--field-end` across the closing window, so the film is blue for the whole
-argument and neutral by the time the mark lands. The drain sits after the tone
-switch in the shader, which is why turning the toning off does not take it with
-it. Nothing else survives — no ramp, no haze, no bloom, no feathered edge, and
-no `--tint`, because on this variation nothing can read one.
+One colourway, and no switch: a toned film on black. The mark's hue ramps with
+its brightness, it casts a drop shadow, and the ground carries a little of the
+same warmth — all three drain away together, leaving white on hard black by the
+last frame.
 
 Every colour, including the two the shader resolves its 1-bit output to, comes
-from the `:root` blocks at the top of `index.html`; the renderer is handed
-`--field` and `--paper` at draw time, so the film and the type cannot disagree
-about the ground they are on. Once one is chosen, the other three blocks and
-the switch come out.
+from the `:root` block at the top of `index.html`, which is the source;
+`about.html` mirrors it. The renderer is handed `--field` and `--paper` at draw
+time, so the film and the type cannot disagree about the ground they are on.
+
+Three further colourways once shipped, selected with a `?v=` query parameter —
+two on warm paper and one strictly-one-bit control on black. They are gone, and
+with them the `shadow`, `tone` and `print` draw options that carried the
+difference. Git is the archive: they are preserved at the tag
+`variants-2-3-4`.
 
 ## Develop
 
