@@ -168,9 +168,9 @@
      It moved up here because the TYPE resolves on it too, and two languages
      agree on a curve only if one of them does the arithmetic. Both edges are
      named positions in the argument rather than durations: it opens at the top
-     of PRICE — "Predictive Text Labs teaches machines to price uncertainty so
-     they can commit to decisions that matter.", the line that names what the
-     company actually does — and closes exactly where the mark finishes
+     of PRICE — "Predictive Text Labs teaches machines to forecast so they can
+     commit to decisions that matter.", the line that names what the company
+     actually does — and closes exactly where the mark finishes
      closing, so the picture and the writing arrive at the same instant.
 
      Four beats of toned film, then it resolves. The argument is told in the
