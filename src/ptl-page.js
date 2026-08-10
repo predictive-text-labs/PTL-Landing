@@ -389,7 +389,80 @@
        it also cannot exceed 3.75% of the height — the button has to fit under
        the claim without the pair being crushed. */
     ctaGap = Math.min(FIN.CTA_GAP * rem, innerHeight * 0.0375);
+    seatCopy();
   };
+
+  /* THE COPY SITS IN THE CLEARING, NOT ON ITS FLOOR.
+     ------------------------------------------------------------------------
+     The blocks were bottom-anchored, which aligns them by the bottom of
+     whatever each one happens to contain — an edge nobody can see. A two-line
+     headline and a three-line one with a sub-line under it put their words
+     107px apart down the frame at 1600x960, and the beat with the most in it
+     read as placed while the rest read as slipped.
+
+     The film already answers where they belong. The shader clears a band at
+     the bottom of the frame FOR this copy — that is what FLOOR is — and the
+     copy's place is the middle of it, not its floor. So the space is measured
+     off the same four numbers the shader is given: its far edge is where the
+     band's taper is half applied, `-(centre + half-height + falloff/2)` in the
+     shader's own units, which is the line where the picture visibly gives way.
+     Everything below that down to .copy's own bottom margin is the clearing,
+     and every block is centred in it, so they all share a centre rather than
+     an invisible baseline.
+
+     Whole block, not just the headline: the one beat with a sub-line reads as
+     one object, and hanging it off a shared headline centre puts more ink below
+     the line than above on that beat alone.
+
+     Phones are not in this. The copy is centred in the frame there by the
+     stylesheet, against a band that is not FLOOR until the ending, so this
+     hands the elements back and returns. */
+  const seatCopy = () => {
+    const heads = blocks.filter(b => b.head);
+    for (const b of heads) { b.el.style.top = ''; b.el.style.bottom = ''; }
+    if (phone) return;
+    const H = innerHeight;
+    /* .copy is inset from the top, and .blk is positioned inside it, so the
+       clearing has to come back out of viewport coordinates to be usable. */
+    const inset = copy.getBoundingClientRect().top;
+    /* H, not fieldBase(H). The shader divides back out to the real height —
+       `sy = uv.y * base / uRes.y` — precisely so the band is the same share of
+       what the reader can see on a short viewport. Scaling by base instead
+       agrees only when the frame is 16:9 or taller, and on anything wider put
+       this line below the band it is meant to name. */
+    const from  = H * (0.5 + CLEARING) - inset;
+    /* To the frame's own bottom edge, not to .copy's bottom margin. The shader
+       clears the band all the way down — it cannot clear past the frame — and
+       that margin is a layout inset with no claim on where the picture ends.
+       Measuring to it pulled the centre up by half of it, 0.029H, which is
+       exactly what read as high. */
+    const to    = H - inset;
+    /* The margin is still a floor. On a short window the clearing is shorter
+       than the deepest beat and its centre would push that beat past the
+       bottom of the frame — so the floor is applied ONCE, to the tallest
+       block, and every beat rises with it. Clamping each block on its own
+       would let the short beats keep the low centre while the tall ones stop
+       above it, which is the spread this exists to remove: measured 55px at
+       1600x960 and 65px at 1280x800 before it was hoisted out of the loop. */
+    const tall  = Math.max(...heads.map(b => b.el.offsetHeight));
+    /* DROP is by eye, and it is applied AFTER the floor rather than to the
+       clearing's centre, because on every frame shorter than about 1150px the
+       floor is what is binding and an offset above it would be swallowed.
+       So it lowers both: the seat where the clearing sets it, and the floor
+       where the deepest beat does. */
+    const rem   = parseFloat(getComputedStyle(document.documentElement).fontSize);
+    const seat  = Math.min((from + to) / 2, copy.clientHeight - tall / 2) + DROP * rem;
+    for (const b of heads) {
+      b.el.style.top = `${(seat - b.el.offsetHeight / 2).toFixed(1)}px`;
+      b.el.style.bottom = 'auto';
+    }
+  };
+  /* The faces are font-display:block, so the first measure can land on fallback
+     metrics and seat the blocks by a height that is about to change. Nothing
+     else here was that sensitive to it — the old bottom anchor did not care what
+     a block measured — so this re-seats them alone rather than forcing a whole
+     remeasure. */
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(seatCopy);
 
   /* The shader's own normalisation, in JS. baseOf() in ptl-field.js is the
      original; this is the only other copy and both are written from CLOSE, so
@@ -422,6 +495,13 @@
      as it arrives the phone's band grows out of the bottom edge to FLOOR's, on
      the same ramp that brings the dome up. */
   const FLOOR = [-0.40, 0.10, 0.40, 0.21];
+  /* Where the band's taper is half applied: the line, in the shader's own
+     units, at which the picture visibly gives way to the copy's ground. Read
+     by seatCopy above, which runs long after this. */
+  const CLEARING = -(FLOOR[0] + FLOOR[1] + FLOOR[3] / 2);
+  /* And a rem below that, which is not derived from anything — it was asked
+     for against the rendered frame. */
+  const DROP = 1;
 
   /* The mark's lower edge in screen px — the same arithmetic as form()'s
      radius track, restricted to the last section, where every track but the
