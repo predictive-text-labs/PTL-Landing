@@ -1199,7 +1199,18 @@
       const css = parseFloat(
         getComputedStyle(canvas).getPropertyValue('--film-bleed'),
       );
-      bleed  = Math.min(h - 1, Math.max(0, Math.round((css || 0) * dpr)));
+      /* SNAPPED TO WHOLE HALFTONE CELLS. uOrigin restores the frame's
+         composition, but it cannot restore the LATTICE: main() takes its cell
+         id from gl_FragCoord, which counts up from the bottom of the buffer,
+         so rows hung underneath the frame move the grid's phase against the
+         picture. A bleed of a whole number of cells shifts the cell index by
+         an integer and changes nothing else — the centres land where they
+         landed and every fract() is untouched. The page is written to be a
+         whole number already; this is here so that editing that number by eye
+         cannot quietly move every mark in the frame. */
+      const cellPx = 12 * dpr;             // the cell both pages draw with
+      const want   = Math.max(0, (css || 0) * dpr);
+      bleed  = Math.min(h - 1, Math.round(want / cellPx) * cellPx);
       frameH = h - bleed;
       gl.viewport(0, 0, w, h);
     }
@@ -1307,13 +1318,34 @@
      No-op unless the page actually unfixed the layer, so every other engine
      keeps the fixed layer it has no reason to give up. */
   function pin(el) {
-    if (!el || getComputedStyle(el).position !== 'absolute') return;
-    const travel = () => el.style.setProperty(
-      '--film-travel',
-      Math.max(0, document.documentElement.scrollHeight - root.innerHeight) + 'px',
-    );
+    if (!el) return;
+    /* The attribute goes on FIRST and comes off again if it did not take. The
+       page gates the whole treatment on it, so the layer cannot be unfixed by
+       a stylesheet that arrived without the script to carry it — and that
+       gating is also why position has to be read after setting it, not
+       before: before, it is still fixed by definition. */
+    const doc = document.documentElement;
+    doc.dataset.filmPinned = '';
+    if (getComputedStyle(el).position !== 'absolute') {
+      delete doc.dataset.filmPinned;
+      return;
+    }
+    let last = '';
+    const travel = () => {
+      const v = Math.max(0, doc.scrollHeight - root.innerHeight) + 'px';
+      if (v === last) return;              // no write, so no observer feedback
+      last = v;
+      el.style.setProperty('--film-travel', v);
+    };
     travel();
     root.addEventListener('resize', travel);
+    /* The front page sets its own height in vh and is final at once. The about
+       page is ordinary content, and its faces are font-display:block: when
+       they land, lines re-wrap and the document changes height under a number
+       we have already published. Measured once, the film would end up short or
+       long by that difference at the bottom of the page. */
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(travel);
+    if (root.ResizeObserver) new ResizeObserver(travel).observe(document.body);
   }
 
   root.PTLField = { mount, pin, CLOSE };

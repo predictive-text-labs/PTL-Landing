@@ -247,15 +247,20 @@
      every frame and the page would never end. */
       @supports (-webkit-touch-callout: none) and (height: 100lvh) and
         (animation-timeline: scroll()) {
-        #c {
-          --film-bleed: 140px;
+        :root[data-film-pinned] #c {
+          /* Twelve halftone cells, not a round number — see index.html: the
+             lattice counts cells up from the buffer, so a bleed that is not a
+             whole number of them moves every mark in the frame. And gated on
+             the attribute PTLField.pin sets, so the film is never unfixed
+             unless something is there to carry it. */
+          --film-bleed: 144px;
           position: absolute;
           top: 0;
           bottom: auto;
           height: calc(100lvh + var(--film-bleed));
           will-change: transform;
         }
-        #c {
+        :root[data-film-pinned] #c {
           animation: film-follow linear both;
           animation-timeline: scroll(root block);
         }

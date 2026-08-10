@@ -420,10 +420,28 @@
      Together they mean this only ever applies to Safari 26, which is the only
      thing that has the bar in the first place. Every older iOS keeps exactly
      the page it had. */
+      /* THE BLEED IS TWELVE HALFTONE CELLS, and that is not a round number
+     chosen for looking tidy. The lattice is anchored to the drawing buffer:
+     main() takes its cell id from gl_FragCoord, which counts up from the
+     buffer's bottom, so hanging rows underneath the frame moves the grid's
+     PHASE against the picture. At any bleed the frame's composition is
+     restored by uOrigin, but the lattice is not — 140px over a 12px cell is
+     11.67 cells, and every mark in the frame would sit 8 device pixels off
+     where it sits today. A whole number of cells shifts the cell INDEX by an
+     integer and nothing else: the centres land where they landed, and every
+     fract() in the shader is untouched. So this tracks the cell, not the
+     other way round. ptl-field.js snaps it again in size(), because a number
+     edited here by eye is exactly how the invariant gets lost.
+
+     Gated on data-film-pinned rather than the @supports alone, because the
+     layer must not be unfixed unless something is going to carry it. The
+     attribute is set by PTLField.pin; if the script never runs, the page
+     keeps the fixed film it has always had rather than a loose one parked at
+     the top of the document. */
       @supports (-webkit-touch-callout: none) and (height: 100lvh) and
         (animation-timeline: scroll()) {
-        .stage {
-          --film-bleed: 140px;
+        :root[data-film-pinned] .stage {
+          --film-bleed: 144px;
           position: absolute;
           top: 0;
           bottom: auto;
@@ -435,16 +453,16 @@
            OF THE FRAME and has to stay that way: the dome's mask is centred at
            50% 100%, which means the bottom of what the reader sees, and .deep's
            ramp runs from half of it. Left to inherit the taller box they would
-           both quietly slide 140px down the picture they were tuned against.
+           both quietly slide the bleed down the picture they were tuned against.
            So they keep the frame's height, and the bleed carries film alone —
            which is all that can be seen through the bar anyway. */
-        .stage > .deep,
-        .stage > .veil {
+        :root[data-film-pinned] .stage > .deep,
+        :root[data-film-pinned] .stage > .veil {
           bottom: var(--film-bleed);
         }
         /* The follow, run where the scrolling is. --film-travel is the
            document's own scrollable distance, published by PTLField.pin. */
-        .stage {
+        :root[data-film-pinned] .stage {
           animation: film-follow linear both;
           animation-timeline: scroll(root block);
         }
