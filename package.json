@@ -14,6 +14,6 @@
   "devDependencies": {
     "jscpd": "^4.0.5",
     "knip": "^5.39.2",
-    "oxlint": "^0.15.0"
+    "oxlint": "^0.18.0"
   }
 }
