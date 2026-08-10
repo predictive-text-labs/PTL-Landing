@@ -445,7 +445,13 @@
        above it, which is the spread this exists to remove: measured 55px at
        1600x960 and 65px at 1280x800 before it was hoisted out of the loop. */
     const tall  = Math.max(...heads.map(b => b.el.offsetHeight));
-    const seat  = Math.min((from + to) / 2, copy.clientHeight - tall / 2);
+    /* DROP is by eye, and it is applied AFTER the floor rather than to the
+       clearing's centre, because on every frame shorter than about 1150px the
+       floor is what is binding and an offset above it would be swallowed.
+       So it lowers both: the seat where the clearing sets it, and the floor
+       where the deepest beat does. */
+    const rem   = parseFloat(getComputedStyle(document.documentElement).fontSize);
+    const seat  = Math.min((from + to) / 2, copy.clientHeight - tall / 2) + DROP * rem;
     for (const b of heads) {
       b.el.style.top = `${(seat - b.el.offsetHeight / 2).toFixed(1)}px`;
       b.el.style.bottom = 'auto';
@@ -493,6 +499,9 @@
      units, at which the picture visibly gives way to the copy's ground. Read
      by seatCopy above, which runs long after this. */
   const CLEARING = -(FLOOR[0] + FLOOR[1] + FLOOR[3] / 2);
+  /* And a rem below that, which is not derived from anything — it was asked
+     for against the rendered frame. */
+  const DROP = 1;
 
   /* The mark's lower edge in screen px — the same arithmetic as form()'s
      radius track, restricted to the last section, where every track but the
