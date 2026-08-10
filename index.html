@@ -815,6 +815,17 @@
         margin-left: auto;
         margin-right: auto;
       }
+      /* And on a phone it sits closer to what it qualifies. 1.9rem is a wide
+     frame's gap, where the block has the whole floor to breathe on; inside a
+     centred block on a phone it reads as a break between two thoughts rather
+     than as one thought and its footnote. Written AFTER the rule it overrides
+     rather than up with the other phone rules: same specificity, so source
+     order is the whole argument. */
+      @media (max-width: 560px) {
+        .blk p {
+          margin-top: 0.95rem;
+        }
+      }
 
       /* THE FINALE — one sentence, three registers, two destinations.
      ------------------------------------------------------------------------
@@ -991,6 +1002,27 @@
       }
       .l3 .t {
         letter-spacing: 0.145em;
+      }
+      /* ON A PHONE THE CLAIM IS AS BIG AS ONE LINE ALLOWS.
+     The desktop clamp's floor is 1.15rem, and on a narrow frame that is what
+     binds — the last words of the film set smaller than the sentence above
+     them. The ceiling here is the fit itself: measured, MACHINES THAT DECIDE
+     in Inter 300 with this tracking is 14.94 times the font-size wide, and the
+     lockup is 86vw, so 86 / 14.94 = 5.76vw is exactly the size at which it
+     fills the line — 5.6vw with a hair of slack, because a wrap here costs a
+     line of the film's last frame.
+
+     Set halfway between that ceiling and the 1.15rem floor it used to take,
+     which is where it reads: at the ceiling the claim outweighed the name
+     above it. The mean of the two rules rather than a third number, so it
+     still moves with the frame. 5.6vw stays in the min() as a hard ceiling:
+     below about 300px the rem floor is itself wider than the line, so the mean
+     of the two would wrap where the fit alone would not. The rem cap is only a
+     backstop against a very large root size. */
+      @media (max-width: 560px) {
+        .l3 {
+          font-size: min(2.2rem, 5.6vw, calc((1.15rem + 5.6vw) / 2));
+        }
       }
       /* An empty inline-block takes its baseline from its bottom margin edge, so
      `vertical-align:baseline` seats it on the baseline. Taller than the caps
