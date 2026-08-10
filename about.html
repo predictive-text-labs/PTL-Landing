@@ -786,12 +786,21 @@
         const reduceMQ = matchMedia("(prefers-reduced-motion: reduce)");
         let reduce = reduceMQ.matches;
 
+        /* The field's own vocabulary, taken from the field. This page had its
+     own copies of all five helpers and they had already drifted apart from
+     ptl-page.js's — hex3 most dangerously, which expanded three-digit hex
+     there and guarded a missing token here, so `--paper: #000` would have
+     rendered on the front page and handed the shader NaN on this one.
+
+     No fallback bodies, because nothing that uses them runs without the field:
+     render() returns on a null field, and the arrival animation at the foot of
+     this file — the only part that stands on its own — uses none of them. */
+        const PF = typeof PTLField !== "undefined" ? PTLField : null;
+        const { hex3, clamp, lerp, smooth, mixHex } = PF || {};
+        const CLOSE = PF ? PF.CLOSE : { TO: 0.965 };
+
         /* The renderer's palette, read out of the stylesheet rather than
      restated here: index.html's :root is the source and this page mirrors it. */
-        const hex3 = (h) => {
-          const n = (h || "").trim().replace("#", "");
-          return [0, 2, 4].map((i) => parseInt(n.slice(i, i + 2), 16) / 255);
-        };
         let INK = [1, 1, 1],
           INK2 = [1, 1, 1],
           PAPER = [0, 0, 0],
@@ -799,7 +808,7 @@
         /* Outside the block below, which only assigns them. */
         let TYPE_A = "#ffffff",
           TYPE_B = "#ffffff";
-        {
+        if (PF) {
           const cs = getComputedStyle(root);
           INK = hex3(cs.getPropertyValue("--field"));
           INK2 = hex3(cs.getPropertyValue("--field-end"));
@@ -815,26 +824,24 @@
         /* `typeof`, not truthiness: on a failed load PTLField is an undeclared
      name, so `PTLField && …` throws rather than short-circuiting. A null field
      is not a failure — the page is a complete document without it. */
-        const field =
-          typeof PTLField !== "undefined"
-            ? PTLField.mount(document.getElementById("c"))
-            : null;
+        const field = PF ? PF.mount(document.getElementById("c")) : null;
 
-        /* OPEN is where the mark sits when the reader lands: exactly where the
-     front page left it, closed. Scrolling opens it out to WIDE and it STAYS
-     there. It used to close again at the bottom, mirroring the film — but a
-     closing mark is a small dense object in the middle of the frame, which is
-     where the team grid's second column lives, and it parked itself on a name.
-     Wide, the arch is a ground and overlaps nothing but texture. */
-        const OPEN = 0.94,
+        /* OPEN is where the mark sits when the reader lands: just short of where
+     the front page left it. Scrolling opens it out to WIDE and it STAYS there.
+     It used to close again at the bottom, mirroring the film — but a closing
+     mark is a small dense object in the middle of the frame, which is where the
+     team grid's second column lives, and it parked itself on a name. Wide, the
+     arch is a ground and overlaps nothing but texture.
+
+     DERIVED, NOT RESTATED. This was the literal 0.94 under a comment claiming it
+     was exactly the front page's last frame. It was not: that frame is CLOSE.TO,
+     and the two have been free to drift apart ever since — the hazard CLOSE's
+     own note in ptl-field.js describes. The 0.025 is the gap, and it is a real
+     decision: at CLOSE.TO the mark is a full stop, and this page opens with one
+     that is still legibly a mark. Move the gap, not the anchor. */
+        const OPEN = CLOSE.TO - 0.025,
           WIDE = 0.3,
           OPENS_BY = 1.0;
-        const clamp = (x) => (x < 0 ? 0 : x > 1 ? 1 : x);
-        const smooth = (x) => {
-          const t = clamp(x);
-          return t * t * (3 - 2 * t);
-        };
-        const lerp = (a, b, t) => a + (b - a) * t;
 
         /* Mostly linear, with only a soft start. A pure smoothstep flattens at
      BOTH ends, so the last fifth of the page read as frozen — 0.20 mean pixel
@@ -844,7 +851,7 @@
           lerp(
             OPEN,
             WIDE,
-            0.35 * smooth(p / OPENS_BY) + 0.65 * clamp(p / OPENS_BY),
+            0.35 * smooth(0, 1, p / OPENS_BY) + 0.65 * clamp(p / OPENS_BY),
           );
 
         /* THIS PAGE KEEPS ITS OWN RESOLVE WINDOW, and has to. gAt runs the film
@@ -857,12 +864,6 @@
           RES_B = 0.985;
         const resolveAt = (g) =>
           Math.pow(clamp((g - RES_A) / (RES_B - RES_A)), 2);
-        const mixHex = (a, b, t) => {
-          const A = hex3(a),
-            B = hex3(b);
-          const c = (i) => Math.round((A[i] + (B[i] - A[i]) * t) * 255);
-          return "rgb(" + c(0) + "," + c(1) + "," + c(2) + ")";
-        };
 
         /* And it RECEDES as the page stops being a film and becomes a document.
      The principles are a full-width table; there is no right half to give the

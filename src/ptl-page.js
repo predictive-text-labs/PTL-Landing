@@ -69,6 +69,15 @@
   latchLVH();
   const filmLen = () => Math.max((S.length * PER - 1) * LVH, 1);
 
+  /* THESE ARE PTLField'S TOO, AND THIS FILE KEEPS ITS OWN ON PURPOSE.
+     about.html takes clamp/lerp/smooth/hex3/mixHex off PTLField, because nothing
+     in that file runs without the field. This one does: with no renderer the
+     choreographed type still carries the whole argument against a plain ground
+     (see the mount below), and every line of that path goes through clamp and
+     mixHex. Sourcing them from a script that may not have loaded would trade a
+     designed-for degradation for a page that throws — which it has done before,
+     after `no-js` was already off the body. Keep the bodies identical to the
+     ones in ptl-field.js; that is the only coupling here. */
   const clamp    = v => (v < 0 ? 0 : v > 1 ? 1 : v);
   const outCubic = v => 1 - Math.pow(1 - v, 3);
   /* Quadratic out, cubic in. A cubic exit spends most of its time doing nothing
@@ -80,7 +89,7 @@
   /* The palette lives in CSS so the page and the field cannot disagree about
      it; the renderer is handed whatever the stylesheet resolved. */
   const hex3 = h => {
-    const v = h.trim().replace('#', '');
+    const v = (h || '').trim().replace('#', '');
     const n = v.length === 3 ? v.split('').map(c => c + c).join('') : v;
     return [0, 2, 4].map(i => parseInt(n.slice(i, i + 2), 16) / 255);
   };

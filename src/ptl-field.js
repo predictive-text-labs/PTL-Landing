@@ -38,6 +38,33 @@
     ASPECT: 1.78,            // the long-side normalisation, uRes.x / 1.78
   };
 
+  /* ---- THE FIELD'S VOCABULARY ----------------------------------------------
+     draw() takes colours as normalised triples and is driven by curves the page
+     computes, so turning a stylesheet token into something it accepts is part of
+     using it — the same reason CLOSE is published above. Exported because BOTH
+     pages need them and about.html loads only this file.
+
+     They were written twice, and the two hex3s had already diverged: this one
+     expands three-digit hex and about.html's guarded a missing token, so
+     `--paper: #000` would have rendered on the front page and handed the shader
+     [NaN, NaN, NaN] here. Both guards are kept below; that is the whole point of
+     there being one copy. */
+  const clamp  = x => (x < 0 ? 0 : x > 1 ? 1 : x);
+  const lerp   = (a, b, u) => a + (b - a) * u;
+  const smooth = (a, b, x) => { const u = clamp((x - a) / (b - a)); return u * u * (3 - 2 * u); };
+  const hex3 = h => {
+    const v = (h || '').trim().replace('#', '');
+    const n = v.length === 3 ? v.split('').map(c => c + c).join('') : v;
+    return [0, 2, 4].map(i => parseInt(n.slice(i, i + 2), 16) / 255);
+  };
+  /* Both pages travel the type from --ink to --field-end on the resolve clock,
+     which is the field's own pair of tokens, so the mix belongs with them. */
+  const mixHex = (a, b, t) => {
+    const A = hex3(a), B = hex3(b);
+    const c = i => Math.round((A[i] + (B[i] - A[i]) * t) * 255);
+    return 'rgb(' + c(0) + ',' + c(1) + ',' + c(2) + ')';
+  };
+
   const VERT = `#version 300 es
   void main(){
     vec2 p = vec2((gl_VertexID << 1) & 2, gl_VertexID & 2);
@@ -750,5 +777,5 @@
     return { draw, gl, canvas, isDead: () => dead, isLost: () => lost };
   }
 
-  root.PTLField = { mount, CLOSE };
+  root.PTLField = { mount, CLOSE, clamp, lerp, smooth, hex3, mixHex };
 })(window);
