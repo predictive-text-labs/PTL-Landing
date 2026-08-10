@@ -123,42 +123,23 @@
       }
 
       /* THE PALETTE — one colourway, and this is it.
-     ------------------------------------------------------------------------
-     Every colour on the page, including the two the shader resolves its 1-bit
-     output to, comes from here. The renderer is handed --field and --paper at
-     draw time, so the film and the type can never disagree about the ground
-     they are on. --field is a separate token from --ink because the film's
-     colour and the writing's colour are allowed to differ: the field is an
-     event in the picture, not a change of voice in the copy.
+     Every colour, including the two the shader resolves its 1-bit output to,
+     comes from here: the renderer is handed --field and --paper at draw time,
+     so the film and the type cannot disagree about the ground they are on.
+     --field is a separate token from --ink because the film's colour and the
+     writing's are allowed to differ — the field is an event in the picture,
+     not a change of voice in the copy. --tint is the mark at its DIMMEST, the
+     dim end of the black-body ramp the shader walks up to --field.
 
-     --wash is the defocus dome. It used to be a brightness() term, which only
-     works when the paper is at one end of the range: on a MID-TONE ground,
-     brightening the backdrop pushes the paper itself past white and paints a
-     visible bright dome over the page. So the dome is now a translucent sheet
-     of the paper colour laid over a plain blur — which is what "lower the
-     contrast of whatever is behind the copy" actually means, and it is correct
-     for any ground, dark, light or mid. */
-      /* THE FILM IS A DUOTONE, and the values are measured rather than
-     chosen: sampled off photographs of the page running, the ground is a deep
-     indigo (#111228, consistent across six frames) and the marks are a warm
-     cream (#F5E1BA at the arch's crown, #E4C198 through the mid limb). Cool
-     shadow against warm highlight is what makes it read as a surface catching
-     light from a warm bulb instead of as a diagram.
+     The ground is PITCH BLACK — the fact ptl-field.js points back here for. It
+     was indigo for a long time; the greys were re-matched to black by
+     LUMINANCE rather than by eye, so the type sits exactly where it sat:
+     5.77:1 for the chrome's --dim, 7.10:1 for the body's --mid, both clear AA.
 
-     --tint is the mark at its DIMMEST. The shader ramps the mark's hue from
-     it up to --field as the form brightens, which is a black-body ramp: a
-     filament is orange when it is cool and goes pale as it heats. That ramp
-     is the "iridescence" — a single flat mark colour cannot produce it.
-
-     The ground is PITCH BLACK. It was a deep indigo for a long time, sampled
-     off photographs of the thing running, and the greys were re-authored on it
-     — each carrying a little of the paper's own hue, because pure neutrals
-     read cold and dirty against blue-violet. With the blue gone they are
-     neutral again, matched to the old ones by LUMINANCE rather than by eye so
-     the type sits exactly where it sat: #8A8398 -> #868686, #9A93A6 -> #969696,
-     #ADA6B8 -> #A9A9A9, rule #33334D -> #353535. Contrast improves slightly on
-     the way, because black is darker than the indigo was — 5.77:1 for the
-     chrome's --dim and 7.10:1 for the body's --mid, both clear AA. */
+     --wash is the defocus dome: a translucent SHEET of the paper colour over a
+     plain blur, not a brightness() term. Brightening only works when the paper
+     is at one end of the range; on a mid-tone ground it paints a visible bright
+     dome over the page instead of lowering the contrast behind the copy. */
       :root {
         --paper: #000000;
         --ink: #f4eada;
@@ -423,8 +404,13 @@
           line-height: 1.62;
         }
       }
-      /* The page declares viewport-fit=cover, so on a notched phone in landscape
-     the bar would otherwise lay itself into the cutout it opted into. */
+      /* The page declares viewport-fit=cover, so on a notched phone the bar
+     would otherwise lay itself into the cutout it opted into.
+     AFTER the 560px block on purpose, and unconditional: on a landscape phone
+     (max-height matches, max-width does not) it beats that block on all three
+     sides — 2.4rem, not 1.2/1.5 — which is the frame the bar was retuned on.
+     Do NOT fold it into the base rule above; about.html's is folded and that
+     is not the same rule. */
       .chrome {
         padding-left: max(2.4rem, env(safe-area-inset-left));
         padding-right: max(2.4rem, env(safe-area-inset-right));

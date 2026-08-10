@@ -737,13 +737,10 @@
     if (ticking) return;
     ticking = requestAnimationFrame(function step(ts) {
       ticking = 0;
-      /* Clamped, because a backgrounded tab hands back one enormous delta on
-         return and the field would jump a second and a half of sine. */
-      /* The clamp was written for the tab-return delta, but applied to every
-         frame it DILATED TIME on exactly the devices already struggling: at
-         15fps the ambient clock ran at 0.72 s/s. Only a genuinely absurd gap
-         is a returning tab; everything else is a slow frame and should count
-         for what it was. */
+      /* Clamped for the one enormous delta a backgrounded tab hands back, and
+         ONLY that: a gap past 0.5s is a returning tab, everything else is a
+         slow frame. Applied to every frame it dilated time on the devices
+         already struggling — at 15fps the ambient clock ran at 0.72 s/s. */
       const raw = lastTs ? (ts - lastTs) / 1000 : 0.016;
       const dt  = raw > 0.5 ? 0.016 : Math.min(raw, 0.25);
       lastTs = ts;
@@ -781,14 +778,11 @@
   });
 
   /* ---- the frame ---------------------------------------------------------
-     `typeof`, not a truthiness check: if the request for ptl-field.js failed,
-     PTLField is not a global holding undefined, it is an undeclared name, and
-     `PTLField && …` throws a ReferenceError rather than short-circuiting. It
-     threw here, mid-file, which is survivable — the no-js document was still
-     in place — except that the body had already been stretched to the film's
-     full height on the way past, leaving the fallback as one screen of words
-     at the top of a very long empty page. Nothing is committed to now until
-     the mount has been attempted. */
+     `typeof`, not truthiness: on a failed load PTLField is an undeclared name,
+     so `PTLField && …` throws a ReferenceError rather than short-circuiting.
+     It threw here, after the body had already been stretched to the film's
+     full height — leaving the fallback as one screen of words at the top of a
+     very long empty page. Nothing is committed to until the mount is done. */
   const field = typeof PTLField !== 'undefined'
     ? PTLField.mount(document.getElementById('c'), { mode: 'form' })
     : null;
