@@ -85,6 +85,9 @@
   uniform vec3      uTint;      // the mark at its DIMMEST, and the ground's bloom
   uniform float     uShadow;    // 1 = the mark casts one, 0 = it does not
   uniform float     uTone;      // 1 = the film is toned, 0 = strictly 1-bit
+  /* 1 = the ground is PAPER, 0 = it is a room. Derived from the paper's own
+     luminance by the page, so a light palette gets it without being asked. */
+  uniform float     uPrint;
   uniform vec2      uMouse;     // pointer, in the same uv space as the field
   uniform float     uAct;       // 0..1 — how much the pointer is allowed to act
   uniform float     uTime;      // seconds — the ambient clock, which scroll speeds up
@@ -590,6 +593,34 @@
        square; only the light around them is not. */
     float d = max(f.x, f.y);
     float e = markOf(C[4]);
+    /* THE STROKE HAS AN EDGE ON PAPER, AND THE DARK VARIANT DOES NOT WANT ONE.
+       ------------------------------------------------------------------------
+       Everything above this line is about colour, and none of it could fix
+       what the pale variants were being accused of. Measured across the arch's
+       crown, every square's interior is EXACTLY the ink — rgb(0,0,224) at every
+       step of a cut through the band — while the cell average runs 170 -> 45 ->
+       160. So nothing radiates: the ink is one colour the whole way across, and
+       what falls off from the spine to either side is the mark's SIZE. A
+       halftone of a soft-edged stroke is a glow, because that is what a
+       shrinking dot means.
+
+       On black that is exactly right — a smaller mark is less light, and light
+       does fall off. On paper it is wrong twice over: less ink is not a dimmer
+       stroke, it is a thinner one, and a printed stroke has a boundary. So the
+       tone response gets a contrast curve here and the band gets an edge,
+       which leaves the vertical ramp as the only gradient in the frame — the
+       one that is supposed to be read.
+
+       Measured on the same cut, the band's coverage was 33 28 53 80 75 75 82 71
+       53 30 8 per cell and is now 0 33 75 75 75 75 75 75 78 53 0 — six cells of
+       transition down to two, with a flat interior. 0.26/0.58: tighter than
+       this and the boundary starts to show the cell grid as a staircase, wider
+       and the glow comes back.
+
+       On e rather than on the form, so the GROUND keeps the smooth field: the
+       lattice's own structure and the ambient are solved off lumG and are not
+       part of this. */
+    e = mix(e, 0.90 * smoothstep(0.26, 0.58, e / 0.90), uPrint);
     /* A DROP SHADOW, WHICH IS AN OUTSIDE-ONLY THING.
        ------------------------------------------------------------------------
        The mark stays a flat, hard square. Blurring the mark ITSELF looks
@@ -837,8 +868,9 @@
        band reads as. Held flat below a quarter height, the red lands while
        the marks are still full strength, and stays red as they thin. */
     vec3  amber   = mix(uTint, uInk, 0.52);
-    float lo      = smoothstep(0.30, 0.52, vy);
-    float hi      = smoothstep(0.46, 0.72, vy);
+    float vyr     = vy;
+    float lo      = smoothstep(0.30, 0.52, vyr);
+    float hi      = smoothstep(0.46, 0.72, vyr);
     vec3  warm    = mix(mix(uTint, amber, lo), uInk, hi);
     /* uTone is the whole of variation 4: at 0 the mark is flat uInk with no
        ramp, and the bloom and spill below are zero, so the frame is ink or
@@ -853,8 +885,37 @@
        is not decoration: a thinning mark blends toward the ground, so if the
        ground stays cold the falloff turns grey no matter how red the ink is.
        Warm ground is what lets the limbs stay orange as they fade out. */
-    float bloom   = pow(clamp(lumG, 0.0, 1.0), 0.42) * lowBias * (1.0 - resolve) * uTone;
-    vec3  gnd     = mix(uPaper, uTint, bloom * 0.55);
+    float bloom   = pow(clamp(lumG, 0.0, 1.0), 0.42) * lowBias;
+    /* THE PAPER'S HALF OF IT, AND ON PAPER IT IS KEYED TO THE FRAME RATHER
+       THAN TO THE FORM.
+       Keying the ground to lumG is what makes the dark variant read as a lit
+       OBJECT: the light is the form's own, so it has to come off the form —
+       brightest along the stroke's spine, falling away to either side. On
+       paper that same term reads as a glow radiating out of the line, which
+       is a tube, not a print, and it fought the mark's ramp: the ramp runs up
+       the FRAME while the haze ran out of the LINE, so the two disagreed
+       about where the light was and the eye believed the nearer of them.
+
+       A sheet carries the light of the room it is in, and that light has a
+       direction — up from the floor, unchanged wherever the form happens to
+       be standing. So on paper the haze is a straight vertical wash on the
+       same axis as the ramp above it, and the frame finally makes one claim
+       instead of two: a single source under the picture, with the ink and the
+       stock both taking their colour from it.
+
+       0.16 AND NOT 0.42, WHICH IS WHERE IT WAS FIRST SET. That figure was
+       chosen on the front page, whose veil is an ellipse anchored at the
+       bottom of the frame with saturate(0) in it — so the floor of the frame,
+       which is exactly where this wash is strongest, was having most of its
+       colour taken out again before anyone saw it. The about page's veil is a
+       95deg linear sweep instead, covering the copy column on the left and
+       fading out by 82% across, so the same wash came through raw on the right
+       and laid a cyan band along the bottom of every screen there. The glow
+       the pale variants are for is carried by the MARKS; this is the sheet's
+       share of it, and the sheet's share is small. */
+    float wash    = pow(1.0 - vy, 1.55);
+    float haze    = mix(bloom * 0.55, wash * 0.16, uPrint) * (1.0 - resolve) * uTone;
+    vec3  gnd     = mix(uPaper, uTint, haze);
 
     /* SPILL BETWEEN CELLS, which the blur above cannot produce on its own.
        Every mark is solved inside its own cell and d saturates at the cell
@@ -871,8 +932,11 @@
        they are orange. A tight exponent keeps it welded to the form — at
        the 0.42 the wide haze uses, a nearly-empty cell would still pick up
        a few percent and the dark would stop being dark. */
+    /* On paper this is the last thing that still hugs the form, so it is the
+       last thing that can read as a glow around the line: it stays only as
+       far as dot gain goes, a few percent of the stock taking ink. */
     float spill   = pow(clamp(lumG, 0.0, 1.0), 1.1) * (1.0 - resolve) * uTone;
-    gnd           = mix(gnd, ink, spill * 0.42);
+    gnd           = mix(gnd, ink, spill * mix(0.42, 0.06, uPrint));
 
 
     fragColor = vec4(mix(gnd, ink, cover), 1.0);
@@ -958,7 +1022,7 @@
     const UNIFORMS = ['uRes', 'uT', 'uG', 'uCell', 'uGap', 'uGain', 'uMode',
                       'uSection', 'uTex', 'uLat', 'uFov', 'uMouse', 'uAct',
                       'uTime', 'uAmb', 'uInk', 'uInk2', 'uPaper', 'uTint',
-                      'uShadow', 'uTone', 'uResolve'];
+                      'uShadow', 'uTone', 'uResolve', 'uPrint'];
     function locate(p) {
       const m = {};
       for (const n of UNIFORMS) m[n] = gl.getUniformLocation(p, n);
@@ -1086,6 +1150,7 @@
       gl.uniform3f(uu.uTint, tint[0], tint[1], tint[2]);
       gl.uniform1f(uu.uShadow, o.shadow != null ? o.shadow : 1);
       gl.uniform1f(uu.uTone, o.tone != null ? o.tone : 1);
+      gl.uniform1f(uu.uPrint, o.print != null ? o.print : 0);
       const m = o.mouse || [0, 0];
       gl.uniform2f(uu.uMouse, m[0], m[1]);
       gl.uniform1f(uu.uAct, o.act != null ? o.act : 0);

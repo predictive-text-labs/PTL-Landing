@@ -111,6 +111,12 @@
     return [0, 2, 4].map(i => parseInt(n.slice(i, i + 2), 16) / 255);
   };
   let INK = [1, 1, 1], INK2 = [1, 1, 1], PAPER = [0, 0, 0], TINT = [0, 0, 0];
+  /* 1 where the ground is PAPER and 0 where it is a room, read off the paper's
+     own luminance rather than off the variant name — a palette that inverts
+     the ground should not also have to remember to say so. Smoothed rather
+     than a threshold so a genuinely mid ground lands between the two models
+     instead of snapping to whichever side of 0.5 it fell on. */
+  let PRINT = 0;
   /* The writing's own two ends. TYPE_A is what the type is while the film is
      toned; TYPE_B is where it lands, which is the same place the MARKS land —
      --field-end. Tying it to that token rather than to a literal white is what
@@ -124,7 +130,7 @@
      every variation but the first, because a dark halo on light paper is a
      smudge; the RAMP is a separate question, and the two pale grounds keep
      theirs. Read once: the variation cannot change without a reload. */
-  const TONE   = document.documentElement.dataset.v === '4' ? 0 : 1;
+  const TONE   = /^[34]$/.test(document.documentElement.dataset.v || '') ? 0 : 1;
   const palette = () => {
     const cs = getComputedStyle(document.documentElement);
     /* --field, not --ink: the film's colour and the writing's colour are
@@ -140,6 +146,9 @@
        toward white a frame at a time and never come back. */
     TYPE_A = (cs.getPropertyValue('--ink') || '#ffffff').trim();
     TYPE_B = (cs.getPropertyValue('--field-end') || TYPE_A).trim();
+    const pl = 0.2126 * PAPER[0] + 0.7152 * PAPER[1] + 0.0722 * PAPER[2];
+    PRINT = clamp((pl - 0.25) / 0.30);
+    PRINT = PRINT * PRINT * (3 - 2 * PRINT);
   };
 
   /* THE RESOLVE CLOCK — the one the shader used to own.
@@ -160,8 +169,29 @@
      An ease-OUT: it leaves at speed and spends the rest of the window
      arriving. K is the whole of the aggression — 2 is the ordinary ease-out,
      4 was too abrupt to read as a settle. */
-  const RES_A = 4 / 6, RES_B = 0.965, RES_K = 2.5;
-  const resolveAt = g => 1 - Math.pow(1 - clamp((g - RES_A) / (RES_B - RES_A)), RES_K);
+  /* EXCEPT ON THE BLUE, WHICH KEEPS THE OLD WINDOW.
+     Everything above is why the window opens where it does on the dark
+     variant: the argument is told in the warm and only the answer is white, so
+     the drain has to start early enough to be a passage rather than a switch.
+     The blue is not making that argument. Its colour is the state of the
+     thing being described — "the whole argument is blue and the colour
+     resolves at exactly the moment the form does" — so draining it from the
+     fourth beat spends it before the section that most wants it. That variant
+     therefore keeps what it had before the clock moved into JS: smoothstep
+     over the CLOSING of the mark, 0.885 to 0.985, symmetric, and late.
+
+     Read once — the variation cannot change without a reload. */
+  const LATE  = document.documentElement.dataset.v === '3';
+  const RES_A = LATE ? 0.885 : 4 / 6;
+  const RES_B = LATE ? 0.985 : 0.965;
+  const RES_K = 2.5;
+  const resolveAt = (g) => {
+    const u = clamp((g - RES_A) / (RES_B - RES_A));
+    /* The old one was a smoothstep, which eases in AND out; the dark
+       variant's leaves at speed and coasts. Keeping both rather than fitting
+       one curve to two intentions. */
+    return LATE ? u * u * (3 - 2 * u) : 1 - Math.pow(1 - u, RES_K);
+  };
 
   const mixHex = (a, b, t) => {
     const A = hex3(a), B = hex3(b);
@@ -712,6 +742,7 @@
          put 86% of the verb's ink under 4.5:1. */
       g: reduce ? 1 : p, section: idx, word: S[idx].key,
       cell: 12, gap: 0.12, gain: 1.0, fov: 0.70, shadow: SHADOW, tone: TONE,
+      print: PRINT,
       mouse: cur, act, ink: INK, ink2: INK2, paper: PAPER, tint: TINT,
       time: clock, amb: ambient(), resolve: res,
     });

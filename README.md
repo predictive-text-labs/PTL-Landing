@@ -60,9 +60,10 @@ variation 1.
                        carries a little of the same warm — all of which
                        resolves to white on hard black by the last frame
     /?v=2           2  inverted onto stone-300, the old site's own warm paper
-    /?v=3           3  a heavier, redder ground — taupe-400 — and the same
-                       black type, with the blue confined to the FILM,
-                       resolving to black as the mark closes
+    /?v=3           3  variation 4's contract on paper: the same strictly
+                       one-bit film, a redder step of stock — taupe-300 —
+                       and the same black type, with the blue confined to
+                       the FILM and resolving to black as the mark closes
     /?v=4           4  the control: white mark on black, strictly one bit.
                        No shadow, no hue ramp, no bloom, no feathered edge —
                        every pixel is either the ink or the paper
@@ -72,7 +73,30 @@ against. Variation 1 claims the field reads as an emulsion catching light
 rather than as a diagram; that claim is only worth something next to the
 version with none of it, which is what 4 is. Two switches carry the whole
 difference — `shadow` and `tone` in the draw options — so the two can be
-compared without a second renderer.
+compared without a second renderer. Variation 3 takes `tone` off as well: it
+is 4's contract with a colour in it.
+
+A third switch, `print`, is not a variation at all: it is what the toning
+MEANS on a light ground. On black the ground is zero, so everything added to
+it reads as light — a warm haze off the form, weighted toward the floor of the
+frame like a lamp below the picture. On paper the ground is the brightest
+thing in frame, so the same haze reads as dirt, and the same lamp puts its
+heaviest smudge exactly where the arch's legs are thinnest. The pale variants
+therefore get the print reading of those terms: the ground's haze becomes a
+straight vertical wash instead of a halo keyed to the form, it drops from half
+the tint to a few percent — dot gain instead of glow — and the tone response
+gets a contrast curve, because a printed stroke has a boundary where a lit one
+has a falloff. What is left is one gradient, running up the frame. It is
+derived from the paper's own luminance rather than named per variation, so a
+palette that inverts the ground gets it without having to remember to ask.
+
+Variation 3 is the same 1-bit contract as variation 4, on paper instead of on
+black, and keeping one thing: the mark's colour travels from `--field` to
+`--field-end` across the closing window, so the film is blue for the whole
+argument and neutral by the time the mark lands. The drain sits after the tone
+switch in the shader, which is why turning the toning off does not take it with
+it. Nothing else survives — no ramp, no haze, no bloom, no feathered edge, and
+no `--tint`, because on this variation nothing can read one.
 
 Every colour, including the two the shader resolves its 1-bit output to, comes
 from the `:root` blocks at the top of `index.html`; the renderer is handed
