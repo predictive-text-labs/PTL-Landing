@@ -582,8 +582,8 @@
      radius is constant and the mask decides how much of the blurred backdrop
      is allowed through, so the picture crosses from sharp to soft over a
      distance instead of at an edge. Same mechanism as .veil below, which is
-     why there is no new machinery here. 18.1px over the bottom 45% of the
-     frame, which is the mockup's 415px rect on a 932 phone.
+     why there is no new machinery here. 0 to 28px over the bottom half of the
+     frame, starting at the mark's own centre.
 
      Not in the shader, though it was built there first — as a depth term
      inside the mark's own feather. Two reasons it is here instead. That
@@ -609,11 +609,11 @@
           z-index: 1;
           pointer-events: none;
           opacity: calc(1 - var(--resolved, 0));
-          background: linear-gradient(180deg, transparent 55%, var(--deep) 100%);
-          backdrop-filter: blur(18.1px);
-          -webkit-backdrop-filter: blur(18.1px);
-          -webkit-mask-image: linear-gradient(180deg, transparent 55%, #000 100%);
-          mask-image: linear-gradient(180deg, transparent 55%, #000 100%);
+          background: linear-gradient(180deg, transparent 50%, var(--deep) 100%);
+          backdrop-filter: blur(28px);
+          -webkit-backdrop-filter: blur(28px);
+          -webkit-mask-image: linear-gradient(180deg, transparent 50%, #000 100%);
+          mask-image: linear-gradient(180deg, transparent 50%, #000 100%);
         }
       }
 
