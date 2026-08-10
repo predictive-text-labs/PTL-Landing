@@ -68,12 +68,10 @@
         font-weight: 100 900;
         font-display: block;
       }
-      /* Named by .backers, and until now not defined on this page — so the one
-     row of small caps that asks for Inter was falling out of the stack to
-     system-ui, the only system face on a page that is otherwise entirely
-     local. Not preloaded: a reader arriving the way this page is meant to be
-     arrived at came off `join us` in the film's closing lockup, which is set
-     in Inter, so it is already in cache. */
+      /* .backers asks for Inter; without this its row of small caps fell out of
+     the stack to system-ui, the only non-local face on the page. Not
+     preloaded — the reader arrives off `join us`, which is set in Inter and
+     already cached. */
       @font-face {
         font-family: Inter;
         src: url("/fonts/Inter.woff2") format("woff2");
@@ -121,19 +119,11 @@
         color: var(--paper);
       }
 
-      /* THE FILM, CONTINUED.
-     ------------------------------------------------------------------------
-     The same shader as the front page, on the same scroll clock. This is the
-     entire reason the page reads as the same site rather than a document that
-     happens to share a palette — not the fonts, not the tokens, not the
-     chrome. Those are agreement about details; this is the same object.
-
-     And it runs the film BACKWARDS first. The front page closes: a wide arch
-     collapsing to one small mark under MACHINES THAT DECIDE. Arriving here,
-     the mark is exactly where that page left it, and scrolling OPENS it again
-     — the argument that ended is being reopened — before closing it a second
-     time under `join us`, so the one action on this page sits beneath the
-     same closed mark as the one action on the front page. */
+      /* THE FILM, CONTINUED. The same shader as the front page, on the same
+     scroll clock — that, and not the fonts or the tokens, is what makes this
+     read as the same site rather than a document sharing a palette. And it
+     runs BACKWARDS: the mark starts exactly where the film left it, closed,
+     and scrolling opens it again. */
       #c {
         position: fixed;
         inset: 0;
@@ -143,18 +133,15 @@
         display: block;
         pointer-events: none;
       }
-      /* The defocus veil: a translucent sheet of the page's own ground over a
-     plain blur, saturate(0) so the blurred field cannot tint the paper.
+      /* The defocus veil: a sheet of the page's own ground over a plain blur,
+     saturate(0) so the blurred field cannot tint the paper.
 
-     MASKED TO THE LEFT, which is the whole trick. Laid flat across the
-     viewport it does not calm the field, it ERASES it — blur(30) plus a .72
-     sheet turns the halftone into a grey smudge and the page loses the one
-     thing that makes it this site. The type is flush left, so the veil is
-     too: the left of the frame is a calm ground to read on, the right is the
-     film at full strength, and the mask crossfades between them over a third
-     of the screen so there is no visible edge. The solid part has to clear
-     the intro's measure, which now runs to the middle of the frame. Masking the layer takes the
-     backdrop-filter with it, which a gradient background alone cannot do. */
+     MASKED TO THE LEFT, which is the trick — laid flat it does not calm the
+     field, it ERASES it. The type is flush left, so the veil is too: calm
+     ground under the copy, film at full strength to its right, crossfaded over
+     a third of the screen so there is no visible edge. The solid part has to
+     clear the intro's measure. Masking the LAYER is what carries the
+     backdrop-filter with it; a gradient background alone cannot. */
       .veil {
         position: fixed;
         inset: 0;
@@ -260,9 +247,8 @@
           padding: 1.5rem 1.2rem;
           padding-left: max(1.2rem, env(safe-area-inset-left));
           padding-right: max(1.2rem, env(safe-area-inset-right));
-          /* The shorthand above wipes the base rule's safe-area padding-top, and
-         the page declares viewport-fit=cover — without this the wordmark lays
-         itself into a notch. Same value as index.html. */
+          /* The shorthand above wipes the base rule's safe-area padding-top,
+         and viewport-fit=cover would then lay the wordmark into a notch. */
           padding-top: max(1.5rem, env(safe-area-inset-top));
         }
         .nav i {
@@ -292,17 +278,10 @@
         }
       }
 
-      /* THE BEATS.
-     ------------------------------------------------------------------------
-     The front page is not a page with sections; it is a sequence of frames
-     you scroll through, one statement at a time. Neither is this. Each beat
-     takes the height of the screen and holds ONE thought at display size, and
-     the scale climbs as the argument does — the reader is being carried
-     somewhere, and if the type does not climb with them it is just a wall of
-     small text with generous margins, which is what this page was.
-
-     No section headers. Five mono labels cut it into a brochure with five
-     chapters; the vertical space and the change of scale ARE the structure. */
+      /* THE BEATS. Frames, not sections: each takes the height of the screen and
+     holds ONE thought at display size, and the scale climbs as the argument
+     does. No section headers — the vertical space and the change of scale ARE
+     the structure, where five mono labels would make it a brochure. */
       .beat {
         min-height: 100vh;
         display: flex;
@@ -348,15 +327,11 @@
         font-style: normal;
       }
 
-      /* PEOPLE — names at a size you could read across a room, because on this
-     page the names are the credential. */
-      /* THREE COLUMNS AND TWO ROWS, BUT NOT THE FULL WRAP. Across the whole
-     88rem the third column landed out at the right edge of the screen,
-     past where anything else on the page reaches and out over the mark.
-     The bios are capped at 24rem whatever the grid does, so the width was
-     buying distance rather than words. Capped here, the six of them keep
-     their two rows and the block sits inside the same column the writing
-     above it does. */
+      /* PEOPLE — names at a size you could read across a room, because here the
+     names are the credential. Three columns, but capped short of the full
+     88rem: the bios cap at 24rem whatever the grid does, so the extra width
+     bought distance rather than words and pushed the third column out over the
+     mark. */
       .people {
         list-style: none;
         display: grid;
@@ -375,10 +350,9 @@
           gap: 2rem;
         }
       }
-      /* The names are set at the intro's size, not above it. Two Cormorant sizes
-     a few points apart in one frame reads as an accident rather than a
-     hierarchy; at the same size the paragraph and the names are one voice and
-     the mono note under each name is the only thing that steps down. */
+      /* At the intro's size, not above it: two Cormorant sizes a few points
+     apart in one frame read as an accident rather than a hierarchy, and the
+     mono note under each name is then the only thing that steps down. */
       .people .nm {
         font:
           300 clamp(1.02rem, 1.32vw, 1.16rem)/1.3 Cormorant,
@@ -397,9 +371,8 @@
         max-width: 24rem;
       }
 
-      /* Set at the intro's size, the same as the names. The backers are a
-     credential, not a headline — at display size they were the largest type
-     on a page whose own ask is smaller than they were. */
+      /* Also at the intro's size. The backers are a credential, not a headline —
+     at display size they were the largest type on the page. */
       .backers {
         list-style: none;
         display: flex;
@@ -445,36 +418,17 @@
         }
       }
 
-      /* JOIN US — set directly under the people, because the answer to "who is
-     us" is the six names above it. The link is the film's closing object at
-     close to the film's own size: Cormorant,
-     lowercase, no rule until the cursor is on it, and at the names' own size
-     — one Cormorant size for the whole section. No arrow, and nothing else
-     scaling it up: directly under six people at 18.6px it is a line you read,
-     not a button, and both the arrow and the larger size made it a button. */
-      /* The intro, which is now the first thing on the page: the reader came off
-     `join us` on the film, so the page opens by answering who "us" is rather
-     than restating the argument they just scrolled through. Cormorant at a
-     reading size — big enough to be the opening statement, small enough to be
-     two paragraphs rather than a headline. */
-      /* A MEASURE, NOT A WIDTH. 84ch rendered about 105 characters to the
-     line — nearly twice a comfortable one, and on a wide screen the second
-     line of each paragraph ran out past everything else on the page.
+      /* The intro is the first thing on the page: the reader came off `join us`
+     on the film, so it opens by answering who "us" is rather than restating
+     the argument they just scrolled through.
 
-     IN REM, THOUGH, AND THAT IS A CORRECTION. This was 54ch, on the reasoning
-     that ch is set in the text's own font and so holds if the type ever
-     changes size. It is not: ch resolves against THIS element's font, and
-     nothing gives the container one, so it was measuring the browser's
-     default serif — Times, 16px, a face that appears nowhere on this page —
-     while the paragraphs inside it are Cormorant at 18.56px. The measure was
-     therefore both wrong about itself and at the mercy of whatever the
-     visitor's system serves as `serif`, which is a strange thing for a fixed
-     line count to depend on. 29rem is the same 464px here, on every machine.
-
-     464px because the first paragraph breaks to four lines above 448 and the
-     fourth is two words. Measured across chromium, webkit and firefox: the
-     break is at exactly 448px in all three, so this carries 16px of slack
-     rather than sitting on the threshold. */
+     A MEASURE, NOT A WIDTH — and in rem, not ch. ch resolves against THIS
+     element's font, which nothing here sets, so it was measuring the browser's
+     default serif while the paragraphs inside are Cormorant at 18.56px. 29rem
+     is the same 464px on every machine, and 464 because the first paragraph
+     breaks to four lines — the fourth two words — above 448px in chromium,
+     webkit and firefox alike, so this carries 16px of slack rather than
+     sitting on the threshold. */
       .intro {
         max-width: 29rem;
         margin-bottom: 4.4rem;
@@ -498,8 +452,7 @@
 
       /* THE PRINCIPLES — twelve, so a table and not twelve cards. The only part
      of the page that is scanned rather than read, and last on purpose: a
-     reader still here has already decided they are interested, and now wants
-     to know what the days are like. */
+     reader still here wants to know what the days are like. */
       #principles {
         padding: 7rem 0 5rem;
       }
@@ -508,14 +461,10 @@
           padding: 4.6rem 0 3.4rem;
         }
       }
-      /* The last thing on the page, so it does not get a whole frame of its own —
-     a frame with four names in it and nothing after would read as the page
-     having failed to load the rest. */
-      /* THE ASK OWNS THE FRAME. min-height, not height: the line wraps on a
-     phone and a fixed height would clip it. svh rather than vh so the bar
-     appearing on a phone cannot push the line out of view — this section is
-     one short line with nothing under it, which is the one case where the
-     small viewport is the honest one. */
+      /* THE ASK OWNS A VIEWPORT: one line, nothing else in frame, so there is no
+     second thing to read at the moment the reader decides. min-height, not
+     height — the line wraps on a phone and a fixed height would clip it; svh
+     rather than vh so a bar appearing cannot push it out of view. */
       .ask {
         min-height: 100svh;
         text-align: center;
@@ -523,16 +472,14 @@
         display: grid;
         align-content: center;
       }
-      /* PINNED TO THE CIRCLE, NOT TO THE SECTION. The canvas is fixed to the
-     viewport, so the ring never moves with scroll — centring the line in its
-     own section only lands it in the ring at the one scroll offset where the
-     two happen to coincide, and the footer below guarantees that offset is
-     never reached. Sticky holds it at the ring's own height for as long as
-     the section is in frame.
+      /* PINNED TO THE CIRCLE, NOT TO THE SECTION. The canvas is fixed, so the
+     ring never moves with scroll: centring the line in its own section lands
+     it in the ring only at the offset where the two coincide, which the footer
+     guarantees is never reached. Sticky holds it at the ring's own height.
 
-     The height is the shader's, not a guess: form() puts the circle at uv
-     (0, 0.02) once g has settled, uv.y runs up from the viewport's middle,
-     and the normalisation is max(height, width / 1.78) — 56.18vw. */
+     That height is the shader's, not a guess: form() puts the circle at uv
+     (0, 0.02) once g has settled, uv.y runs up from the viewport's middle, and
+     the normalisation is max(height, width / 1.78) — 56.18vw. */
       .ask-w {
         position: sticky;
         top: calc(50svh - 0.02 * max(100svh, 56.18vw));
@@ -573,11 +520,9 @@
         }
       }
 
-      /* Centred, and the rule is gone: it was a left-aligned caption's hinge, and
-     a hinge on a centred line reads as a stray mark. */
-      /* Sits LOW. 6rem of air under the last line left the block floating in the
-     middle of the closing frame with a dead band beneath it; a colophon reads
-     as a colophon when it is near the edge it is printed against. */
+      /* Sits LOW: a colophon reads as one when it is near the edge it is printed
+     against, and 6rem of air under it left the block floating. Centred, and
+     with no hinge rule — a hinge on a centred line reads as a stray mark. */
       .closing {
         padding: 0 0 3rem;
         text-align: center;
@@ -644,21 +589,19 @@
         text-wrap: pretty;
       }
       /* The attribution runs on from the quote rather than under it: on its own
-     line, tracked and uppercased, it read as a third register in a cell that
-     only has room for two. Inline and in the body's own face, it is what it
-     is — the end of the sentence. */
+     line, tracked and uppercased, it read as a third register in a cell with
+     room for two. */
       .prin cite {
         font-style: normal;
         color: var(--dim);
         white-space: nowrap;
       }
 
-      /* ARRIVAL — each beat resolves as it comes up the screen, the way the
-     film's copy resolves out of the field. Opacity and a small rise only: the
-     film's mask wipe belongs to type emerging FROM the halftone, and pasted
-     onto a scrolling document it would read as an effect rather than as the
-     same object. `.fx` is added by script and only when motion is allowed, so
-     with JS off or motion reduced every word is simply present. */
+      /* ARRIVAL — each beat resolves as it comes up the screen. Opacity and a
+     small rise only: the film's mask wipe belongs to type emerging FROM the
+     halftone, and on a scrolling document it reads as an effect instead.
+     `.fx` is added by script and only when motion is allowed, so with JS off
+     or motion reduced every word is simply present. */
       .fx .up {
         opacity: 0;
         transform: translateY(1.4rem);
@@ -689,13 +632,10 @@
       </header>
 
       <main class="wrap">
-        <!-- The page's only h1. Every visible heading here is either a name or
-           a principle, so without this the document had no heading at all and
-           the twelve h3s hung off nothing. -->
+        <!-- The page's only h1: every visible heading here is a name or a
+           principle, so without this the twelve h2s hang off nothing. -->
         <h1 class="sr">About Predictive Text Labs</h1>
 
-        <!-- The notes are placeholders and say so, so a half-filled page cannot
-           be mistaken for a finished one. -->
         <section class="beat" aria-label="Team">
           <div>
             <div class="intro up">
@@ -817,9 +757,6 @@
           </ol>
         </section>
 
-        <!-- The ask owns a viewport of its own, the way the lockup does on the
-           front page: one line, nothing else in frame, so there is no second
-           thing to read at the moment the reader decides. -->
         <section class="ask" aria-label="Get in touch">
           <div class="ask-w">
             <a
@@ -866,8 +803,7 @@
         let reduce = reduceMQ.matches;
 
         /* The renderer's palette, read out of the stylesheet rather than
-     restated here: index.html's :root is the source, this page mirrors it, and
-     the film is handed whatever the browser resolved. */
+     restated here: index.html's :root is the source and this page mirrors it. */
         const hex3 = (h) => {
           const n = (h || "").trim().replace("#", "");
           return [0, 2, 4].map((i) => parseInt(n.slice(i, i + 2), 16) / 255);
@@ -876,8 +812,7 @@
           INK2 = [1, 1, 1],
           PAPER = [0, 0, 0],
           TINT = [0, 0, 0];
-        /* Declared here, not beside resolveAt below: palette() runs before that
-     block is reached, and a `let` read from above its own line throws. */
+        /* Outside the block below, which only assigns them. */
         let TYPE_A = "#ffffff",
           TYPE_B = "#ffffff";
         {
@@ -886,33 +821,27 @@
           INK2 = hex3(cs.getPropertyValue("--field-end"));
           TINT = hex3(cs.getPropertyValue("--tint"));
           PAPER = hex3(cs.getPropertyValue("--paper"));
-          /* Read from the ROOT rule, never from the element we write --ink-live
-       onto — reading back our own output would ratchet the type toward its
-       target a frame at a time and never return. */
+          /* From the ROOT rule, never the element we write --ink-live onto:
+       reading our own output back would ratchet the type toward its target a
+       frame at a time and never return. */
           TYPE_A = (cs.getPropertyValue("--ink") || "#ffffff").trim();
           TYPE_B = (cs.getPropertyValue("--field-end") || TYPE_A).trim();
         }
 
         /* `typeof`, not truthiness: on a failed load PTLField is an undeclared
-     name, so `PTLField && …` throws a ReferenceError rather than
-     short-circuiting. A null field is not a failure worth reacting to — the
-     page is a complete document without it. */
+     name, so `PTLField && …` throws rather than short-circuiting. A null field
+     is not a failure — the page is a complete document without it. */
         const field =
           typeof PTLField !== "undefined"
             ? PTLField.mount(document.getElementById("c"), { mode: "form" })
             : null;
 
         /* OPEN is where the mark sits when the reader lands: exactly where the
-     front page left it, closed. Scrolling opens it back out to WIDE and it
-     STAYS there.
-
-     It used to close again at the bottom, mirroring the film. That was right
-     when this page was nine screens of argument and wrong now it is two and a
-     half of names: a closing mark is a small dense object in the middle of
-     the frame, and the middle of the frame is where the second column of the
-     team grid lives — it parked itself on top of Alex Pan. Wide, the arch is
-     a ground rather than an object, and nothing it overlaps is anything but
-     texture. */
+     front page left it, closed. Scrolling opens it out to WIDE and it STAYS
+     there. It used to close again at the bottom, mirroring the film — but a
+     closing mark is a small dense object in the middle of the frame, which is
+     where the team grid's second column lives, and it parked itself on a name.
+     Wide, the arch is a ground and overlaps nothing but texture. */
         const OPEN = 0.94,
           WIDE = 0.3,
           OPENS_BY = 1.0;
@@ -924,11 +853,9 @@
         const lerp = (a, b, t) => a + (b - a) * t;
 
         /* Mostly linear, with only a soft start. A pure smoothstep flattens at
-     BOTH ends, so the last fifth of the page moved the arch by 0.04 and the
-     bottom of the document read as frozen — measured 0.20 mean pixel change
-     across the final stretch against 10.6 mid-page. Blended two thirds
-     toward linear it keeps a constant rate all the way down and still eases
-     off the top. */
+     BOTH ends, so the last fifth of the page read as frozen — 0.20 mean pixel
+     change against 10.6 mid-page. Two thirds toward linear holds a constant
+     rate all the way down and still eases off the top. */
         const gAt = (p) =>
           lerp(
             OPEN,
@@ -937,13 +864,11 @@
           );
 
         /* THIS PAGE KEEPS ITS OWN RESOLVE WINDOW, and has to. gAt runs the film
-     BACKWARDS — g falls from 0.94 to 0.30 as you scroll — where ptl-page.js's
-     clock runs up, so its window (welded to six beats this page does not have)
-     lands here as white and unshadowed for the top fifth: measured, the marks
-     went from R-B +64.7 to -2.8 a quarter of the way down. There is no shared
-     setting right for both. Eased IN, over the stretch the field actually
-     occupies, which leaves the duotone intact and lets it resolve as the field
-     recedes behind the document. */
+     BACKWARDS — g falls from 0.94 to 0.30 — where ptl-page.js's clock runs up,
+     so its window lands here as white and unshadowed for the top fifth: the
+     marks went from R-B +64.7 to -2.8 a quarter of the way down. No shared
+     setting is right for both. Eased IN, over the stretch the field actually
+     occupies, so the duotone survives and resolves as the field recedes. */
         const RES_A = 0.55,
           RES_B = 0.985;
         const resolveAt = (g) =>
@@ -956,34 +881,23 @@
         };
 
         /* And it RECEDES as the page stops being a film and becomes a document.
-     The principles are a full-width table of twelve cells; there is no right
-     half to give the field, and at full strength the arch's descending limb
-     wrote itself straight through "Dream in ripples" and "Come with
-     solutions". Gain is the honest control for this — it takes the marks down
-     in size rather than fading a layer over the top, so what is left is the
-     same field, quieter, instead of the same field behind gauze.
+     The principles are a full-width table; there is no right half to give the
+     field, and at full strength the arch's descending limb wrote itself
+     through the cells. Gain is the honest control — it takes the marks down in
+     SIZE rather than fading a layer over the top, so what is left is the same
+     field, quieter, instead of the same field behind gauze.
 
-     BOTH TRACKS NOW RUN TO THE BOTTOM. They used to finish at 0.45 and 0.60
-     of the scroll, so from three fifths of the way down the field was a
-     still image and the rest of the page scrolled past a frozen picture —
-     which is exactly where it stopped looking alive. Stretched, everything
-     is the same shape, just slower, and the arch is still opening on the
-     last screen. smoothstep's own slope goes to zero at the end, so it
-     arrives rather than stopping dead. */
-        /* A power curve, not a smoothstep, and it runs the whole page. The two
-     requirements pull opposite ways: the field has to be quiet by the time
-     the principles table arrives, and it has to still be MOVING at the
-     bottom. A smoothstep cannot do both — it flattens at the end, so it was
-     already at its floor two thirds down. An exponent under one falls
-     steeply first and then trails, so it is at 0.42 over the principles,
-     which is where the smoothstep put it, and still descending 0.19 -> 0.10
-     across the last screen. */
+     A power curve, not a smoothstep, and it runs the whole page: the field has
+     to be quiet by the time the principles arrive AND still be MOVING at the
+     bottom. A smoothstep flattens at the end and sat on its floor two thirds
+     down; an exponent under one is at 0.42 over the principles and still
+     descending 0.19 -> 0.10 across the last screen. */
         const gainAt = (p) =>
           lerp(1.0, 0.1, Math.pow(clamp((p - 0.18) / 0.82), 0.55));
 
-        /* The ambient clock, as on the film: a real-time clock that reaches ONLY
-     the size of the halftone marks, sped up by how fast the reader scrolls.
-     It cannot move the composition, because nothing positional reads it. */
+        /* The ambient clock, as on the film: real time, sped up by scroll speed,
+     reaching ONLY the size of the halftone marks. It cannot move the
+     composition, because nothing positional reads it. */
         const AMB_IDLE = 1.0,
           AMB_GAIN = 5.5,
           AMB_DECAY = 0.86;
@@ -1023,23 +937,22 @@
           if (ticking) return;
           ticking = requestAnimationFrame(function step(ts) {
             ticking = 0;
-            /* Only a gap past 0.5s is a returning tab; everything else is a slow
-     frame and counts for what it was. Same clamp as ptl-page.js. */
+            /* A gap past 0.5s is a returning tab; anything else is a slow frame
+     and counts for what it was. Same clamp as ptl-page.js. */
             const raw = lastTs ? (ts - lastTs) / 1000 : 0.016;
             const dt = raw > 0.5 ? 0.016 : Math.min(raw, 0.25);
             lastTs = ts;
             if (!reduce) {
-              /* Per second, not per frame: AMB_DECAY is tuned at 60Hz, so once a
+              /* Per second, not per frame: AMB_DECAY is tuned at 60Hz, so per
      frame the boost bled off twice as fast at 120Hz. */
               vel *= Math.pow(AMB_DECAY, dt * 60);
               clock += dt * (AMB_IDLE + AMB_GAIN * Math.min(vel, 1.4));
             }
             render();
-            /* Only while there is something to draw on. The clock reaches
-     exactly one thing — the size of the halftone marks — so with no renderer
-     mounted, or one that died with its context, this was holding the
-     compositor open at 60fps to advance a number nobody reads. render()
-     already returns immediately in both cases; this is the loop agreeing. */
+            /* Only while there is something to draw on: with no renderer, or one
+     that died with its context, this held the compositor open at 60fps to
+     advance a number nobody reads. render() already returns immediately in
+     both cases; this is the loop agreeing. */
             if (field && !field.isDead() && !reduce && !document.hidden) tick();
           });
         }
@@ -1068,8 +981,8 @@
 
         /* ARRIVAL. Added by script only, so a reader with JS off gets the whole
      page at full opacity rather than an empty one. IntersectionObserver
-     because a scroll handler measuring every element is the classic way to
-     make a page like this stutter. */
+     because a scroll handler measuring every element is how a page like this
+     stutters. */
         if (!reduce && "IntersectionObserver" in window) {
           document.body.classList.add("fx");
           const io = new IntersectionObserver(
@@ -1084,16 +997,13 @@
           );
           for (const el of document.querySelectorAll(".up")) io.observe(el);
 
-          /* THE LAST THING ON THE PAGE CANNOT CLEAR A BOTTOM DEAD ZONE.
-       The -10% margin is what stops elements popping in the instant they
-       touch the bottom edge, and it works for everything with page beneath
-       it. The footer has none: on a tall viewport the document simply does
-       not scroll far enough to lift it out of that band, so it sat at
-       opacity 0 forever. Measured at 1728x1080 and 2000x1250 — fully in
-       view at maximum scroll, never revealed; the backers were invisible.
-       Rather than loosen the margin for every element on the page, anything
-       still hidden when the reader actually reaches the bottom is simply
-       shown. */
+          /* THE LAST THING ON THE PAGE CANNOT CLEAR A BOTTOM DEAD ZONE. The
+       -10% margin stops elements popping in the instant they touch the bottom
+       edge, and works for everything with page beneath it. The footer has
+       none: on a tall viewport the document never scrolls far enough to lift
+       it out of that band, so the backers sat at opacity 0 forever (measured
+       at 1728x1080 and 2000x1250). Rather than loosen the margin for every
+       element, anything still hidden at the bottom is simply shown. */
           addEventListener(
             "scroll",
             () => {
@@ -1116,7 +1026,7 @@
           reduce = reduceMQ.matches;
           /* Turning reduce back OFF left the loop dead for the rest of the
      visit: step() self-terminates while reduce is true and nothing else
-     re-arms it, so the field stopped breathing until a reload. */
+     re-arms it. */
           if (was && !reduce) tick();
           if (reduce) {
             document.body.classList.remove("fx");

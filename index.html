@@ -53,11 +53,8 @@
     />
     <meta name="twitter:image" content="https://ptl.inc/og.png" />
 
-    <!-- Only the two faces on the FIRST FRAME are preloaded — the roman and the
-     mono. font-display:block means an unloaded face renders nothing at all,
-     so anything the opening frame sets has to be here; the comment below is
-     why the other two are deliberately not. Four faces ship, 147KB, all
-     local; these two are 64KB of it. -->
+    <!-- Only the faces the FIRST FRAME sets: font-display:block renders an
+     unloaded face as nothing at all. -->
     <link
       rel="preload"
       href="/fonts/Cormorant.woff2"
@@ -72,13 +69,11 @@
       type="font/woff2"
       crossorigin
     />
-    <!-- Cormorant-Italic and Inter are NOT preloaded. They are used only by the
-     closing lockup, eleven viewport-heights down, and at top priority they
-     contended with the roman that gates the LCP: measured on Slow 4G, the
-     roman finished 86ms AFTER an italic nothing could see yet. Dropping the
-     two preloads took LCP from 1640ms to 1260ms — 23% — with FCP unchanged at
-     156ms. The @font-face rules still fetch them, at normal priority, when
-     the finale first needs them. -->
+    <!-- Cormorant-Italic and Inter are NOT preloaded. Used only by the closing
+     lockup eleven viewport-heights down, at top priority they contended with
+     the roman that gates the LCP: dropping them took LCP 1640ms -> 1260ms on
+     Slow 4G with FCP unchanged. @font-face still fetches them, at normal
+     priority, when the finale needs them. -->
 
     <script type="application/ld+json">
       {
@@ -110,11 +105,9 @@
         font-weight: 100 900;
         font-display: block;
       }
-      /* The third face, and the only one not in the original kit. The closing claim
-     is a neo-grotesque, which neither Cormorant nor a monospace can stand in
-     for: it is uniform-stroke uppercase, and a mono at display size shows its
-     fixed advances badly (the I in MACHINES sits in a hole). Inter, variable,
-     latin subset, 48KB, local — no third-party request on this page. */
+      /* A uniform-stroke neo-grotesque for the closing claim, which neither
+     Cormorant nor a mono can stand in for — a mono at display size holes out
+     the I in MACHINES. Local, latin subset, 48KB: no third-party request. */
       @font-face {
         font-family: Inter;
         src: url("/fonts/Inter.woff2") format("woff2");
@@ -122,24 +115,14 @@
         font-display: block;
       }
 
-      /* THE PALETTE — one colourway, and this is it.
-     Every colour, including the two the shader resolves its 1-bit output to,
-     comes from here: the renderer is handed --field and --paper at draw time,
-     so the film and the type cannot disagree about the ground they are on.
-     --field is a separate token from --ink because the film's colour and the
-     writing's are allowed to differ — the field is an event in the picture,
-     not a change of voice in the copy. --tint is the mark at its DIMMEST, the
-     dim end of the black-body ramp the shader walks up to --field.
-
-     The ground is PITCH BLACK — the fact ptl-field.js points back here for. It
-     was indigo for a long time; the greys were re-matched to black by
-     LUMINANCE rather than by eye, so the type sits exactly where it sat:
-     5.77:1 for the chrome's --dim, 7.10:1 for the body's --mid, both clear AA.
-
-     --wash is the defocus dome: a translucent SHEET of the paper colour over a
-     plain blur, not a brightness() term. Brightening only works when the paper
-     is at one end of the range; on a mid-tone ground it paints a visible bright
-     dome over the page instead of lowering the contrast behind the copy. */
+      /* THE PALETTE. Every colour comes from here, including the two the shader
+     resolves its 1-bit output to: the renderer is handed --field and --paper at
+     draw time, so film and type cannot disagree about their ground. --field is
+     separate from --ink because the film's colour and the writing's are allowed
+     to differ; --tint is the mark at its DIMMEST, the low end of the shader's
+     black-body ramp. The greys are matched to the black ground by LUMINANCE,
+     not by eye: --dim 5.77:1, --mid 7.10:1, both clear AA. --wash is the
+     defocus dome — a translucent SHEET of the paper colour, not brightness(). */
       :root {
         --paper: #000000;
         --ink: #f4eada;
@@ -159,9 +142,9 @@
         padding: 0;
         box-sizing: border-box;
       }
-      /* --ink-live is --ink travelling to --field-end on the resolve clock, set
-     from JS each frame. The fallback is the whole no-JS story: without script
-     the type is simply --ink and nothing is lost. */
+      /* --ink-live is --ink travelling to --field-end on the resolve clock,
+     written from JS each frame. The fallback is the whole no-JS story: without
+     script the type is simply --ink. */
       html,
       body {
         background: var(--paper);
@@ -172,14 +155,11 @@
         overflow-x: hidden;
       }
 
-      /* The argument, in the markup. -----------------------------------------
-     Every visible word on this page is drawn by script into containers that
-     are choreographed against scroll, which would leave a crawler, a link
-     preview and a screen reader with a page containing no words at all. So
-     the copy lives HERE, as ordinary semantic HTML, and the script reads it
-     out of the DOM rather than carrying its own copy of it. One source of
-     truth; the rendered version is marked aria-hidden so it is not announced
-     twice. */
+      /* THE ARGUMENT, IN THE MARKUP. Every visible word is drawn by script into
+     scroll-choreographed containers, which would leave a crawler, a link
+     preview and a screen reader with no words at all. The copy lives here
+     instead, as ordinary semantic HTML, and the script reads it out of the DOM;
+     the rendered version is aria-hidden so it is not announced twice. */
       .story {
         position: absolute;
         width: 1px;
@@ -205,11 +185,9 @@
         height: 100%;
         display: block;
       }
-      /* The type is NOT inside .stage. .stage has to clip — it holds the canvas —
-     and with the copy inside it, raising the browser's base font size grew the
-     bottom-anchored block up past the top edge and the overflow rule deleted
-     it. Content that is merely too big must still be readable; content that is
-     clipped away is gone. Same fixed frame, no clip. */
+      /* The type is NOT inside .stage: .stage has to clip, and with the copy
+     inside it a raised base font size grew the bottom-anchored block past the
+     top edge and overflow deleted it. Too big is readable; clipped is gone. */
       .type {
         position: fixed;
         inset: 0;
@@ -219,21 +197,15 @@
       .type a {
         pointer-events: auto;
       }
-      /* The LAYER is transparent to the pointer; the WORDS are not. Without this
-     the copy is text you cannot put a cursor in — no I-beam, no selection, no
-     copying a line out of it — because the whole layer above the canvas was
-     waved through. Only the text boxes take the pointer back: the empty frame
-     around them stays transparent, so nothing intercepts a scroll and the
-     mark keeps reading the pointer (which it does from window, so events
-     landing on the copy still reach it by bubbling). The finale's lines are
-     handled in fadeLine, which knows when a line has faded out from under
-     itself and should stop hit-testing an empty band. */
+      /* The LAYER is transparent to the pointer; the WORDS are not — otherwise
+     the copy cannot be selected or copied. Only the text boxes take the pointer
+     back, so nothing intercepts a scroll and the mark keeps reading the pointer
+     from window. fadeLine stops hit-testing a band once its line has faded. */
       .blk h1,
       .blk p {
         pointer-events: auto;
       }
-      /* And selection is drawn, not left to the UA's blue — one more inversion,
-     which is the whole vocabulary of the page. */
+      /* Selection is drawn, not left to the UA's blue: one more inversion. */
       ::selection {
         background: var(--ink);
         color: var(--paper);
@@ -264,8 +236,7 @@
         letter-spacing: 0.24em;
       }
       /* --dim, not --ink. White-on-the-field measured 1.00:1 for 15% of the
-     scroll on a foldable's unfolded panel, where this element is visible;
-     the weight carries the emphasis instead. */
+     scroll on a foldable's unfolded panel; the weight carries the emphasis. */
       .nav b {
         color: var(--dim);
         font-weight: 500;
@@ -276,10 +247,10 @@
         background: var(--rule);
         font-style: normal;
       }
-      /* The only interactive element on the page, so it has to announce itself as
-     one on hover and on keyboard focus alike. The underline is offset clear of
-     the caps rather than crowding them, and the trailing letter-space is pulled
-     back so the rule stops with the last letter instead of running past it. */
+      /* The page's only interactive element, so it has to announce itself on
+     hover and on keyboard focus alike. The underline sits clear of the caps and
+     the trailing letter-space is pulled back so the rule stops with the last
+     letter. */
       .nav a {
         position: relative;
         color: var(--dim);
@@ -289,9 +260,9 @@
         -webkit-tap-highlight-color: transparent;
       }
       /* The drawn box is 45.7 x 10.9. A pseudo-element rather than padding,
-     because .chrome is an align-items:center flex row and the underline's
-     offset is calibrated — this changes the hit rectangle and moves nothing.
-     ~58 x 44, which is the platform minimum with no layout consequence. */
+     because .chrome is a centred flex row and the underline's offset is
+     calibrated: this grows the hit target to ~58 x 44, the platform minimum,
+     and moves nothing. */
       .nav a::after {
         content: "";
         position: absolute;
@@ -301,9 +272,9 @@
         height: 44px;
         transform: translateY(-50%);
       }
-      /* On a phone there is no hover, so the page's only control was pixel-
-     identical to the inert wordmark beside it — same colour, size, family and
-     weight, no underline. The affordance has to exist without a cursor. */
+      /* No hover on a phone, where the page's only control was pixel-identical
+     to the inert wordmark beside it. The affordance has to exist without a
+     cursor. */
       @media (hover: none) {
         .nav a {
           color: var(--ink);
@@ -321,8 +292,7 @@
       }
       /* A real ring, not a 1px underline sitting on the film: the substituted
      underline measured 82.8% of its ink below 3:1 at the worst beat. The
-     paper-coloured spread is what makes the ring legible over the halftone
-     rather than over whatever happens to be behind it. */
+     paper-coloured spread is what makes the ring legible over the halftone. */
       .nav a:focus-visible {
         outline: 2px solid var(--ink);
         outline-offset: 0.35em;
@@ -330,19 +300,12 @@
         text-decoration: none;
       }
 
-      /* NARROW SCREENS — the counter goes.
-     ------------------------------------------------------------------------
-     The wordmark needs ~205px at this tracking and the right-hand group ~140px
-     with the counter in it; a 390px phone has 313px after padding, so the bar
-     wrapped and interleaved the company name with the section number. Shrinking
-     the type would have saved all three elements by making all three worse, and
-     the tracking is most of what makes this bar read as a mark rather than a
-     nav. So the counter — the only one of the three that is decoration rather
-     than a job — is dropped instead, along with its rule, and the wordmark and
-     the link keep their size and their letterspacing.
-
-     nowrap on both is the belt: if a future string does overflow, it overflows
-     visibly instead of silently folding in half. */
+      /* NARROW SCREENS — the counter goes. The wordmark needs ~205px at this
+     tracking and the right-hand group ~140px with the counter; a 390px phone
+     has 313px after padding, so the bar wrapped. Shrinking the type would save
+     all three by making all three worse, and the tracking is most of what makes
+     this bar read as a mark rather than a nav. nowrap is the belt: an overflow
+     overflows visibly. */
       .chrome .wm,
       .nav {
         white-space: nowrap;
@@ -350,20 +313,15 @@
       .wm br {
         display: none;
       }
-      /* On a desktop the form never reaches the header. On a phone — and on any
-     short viewport — it does, and the bar ends up set over pure white cells.
-     A scrim of the page's own ground, only there. */
-      /* .82 was the one value that destroyed the thing it was protecting. The
-     chrome's ink is --dim, mid-grey: it reads 5.03:1 on black AND 4.17:1 on
-     white, so it survives both extremes — and dies only on the MID-TONES an
-     82% scrim manufactures. Measured, 96.7% of ABOUT's core pixels fell below
-     3:1 at the worst beat, median 1.41:1; with the scrim removed entirely,
-     6.1%. It was the cause, not the cure, for ~2 viewport-heights of scroll on
-     every phone.
+      /* On a phone, and on any short viewport, the form reaches the header and
+     the bar is set over pure white cells. A scrim of the page's own ground,
+     only there.
 
-     Full paper to 72% instead. The type sits 29-60% down an 83px bar, so this
-     covers both wordmark lines and the link and still fades out at the bar's
-     bottom edge. Built from --paper, so it is the page's own ground. */
+     FULL paper to 72%, not a partial scrim: --dim reads 5.03:1 on black and
+     4.17:1 on white, so it survives both extremes and dies only on the
+     MID-TONES a partial scrim manufactures — measured, 96.7% of ABOUT's core
+     pixels below 3:1 at the worst beat against 6.1% with none at all. The type
+     sits 29-60% down an 83px bar. */
       @media (max-width: 560px), (max-height: 560px) {
         .chrome::before {
           content: "";
@@ -378,9 +336,8 @@
           );
         }
       }
-      /* max-height too: a landscape phone is 844 wide and never matched, so it
-     got the desktop bar — 87.7px, 22% of a 390-tall frame, and section 03's
-     headline cleared it by 10px. */
+      /* max-height too: a landscape phone is 844 wide, never matched, and got
+     the desktop bar — 87.7px, 22% of a 390-tall frame. */
       @media (max-width: 560px), (max-height: 560px) {
         .chrome {
           padding: 1.5rem 1.2rem;
@@ -393,10 +350,8 @@
         .nav {
           gap: 0;
         }
-        /* Stacked, and broken where the name breaks — PREDICTIVE / TEXT LABS,
-       not wherever the measure happened to run out. Leading has to open up
-       too: the bar is set at line-height 1, which is right for one line and
-       far too tight for two. */
+        /* Broken where the NAME breaks, not where the measure ran out; and the
+       leading has to open with it, the bar being set at line-height 1. */
         .wm br {
           display: inline;
         }
@@ -404,13 +359,11 @@
           line-height: 1.62;
         }
       }
-      /* The page declares viewport-fit=cover, so on a notched phone the bar
-     would otherwise lay itself into the cutout it opted into.
-     AFTER the 560px block on purpose, and unconditional: on a landscape phone
-     (max-height matches, max-width does not) it beats that block on all three
-     sides — 2.4rem, not 1.2/1.5 — which is the frame the bar was retuned on.
-     Do NOT fold it into the base rule above; about.html's is folded and that
-     is not the same rule. */
+      /* viewport-fit=cover, so the bar would otherwise lay itself into the
+     cutout. AFTER the 560px block on purpose and unconditional: on a landscape
+     phone (max-height matches, max-width does not) it beats that block on all
+     three sides, at the 2.4rem the bar was retuned on. Do NOT fold it into the
+     base rule; about.html's is folded and is not this rule. */
       .chrome {
         padding-left: max(2.4rem, env(safe-area-inset-left));
         padding-right: max(2.4rem, env(safe-area-inset-right));
@@ -424,33 +377,22 @@
         }
       }
 
-      /* DEPTH OF FIELD, DOWNWARD.
-     ------------------------------------------------------------------------
-     The picture is lit from above, and the floor of the frame is that light
-     on water: what separates a reflection from the thing reflected is focus.
-     So the frame holds its edge at the top and loses it toward the bottom,
-     over a ramp that also deepens the ground — blur alone reads as fog, and
-     the darkening is what makes it read as depth.
+      /* DEPTH OF FIELD, DOWNWARD. The floor of the frame is light on water, and
+     what separates a reflection from the thing reflected is focus — so the
+     frame loses its edge toward the bottom, over a ramp that also deepens the
+     ground: blur alone reads as fog, the darkening is what reads as depth.
 
-     A backdrop-filter with a MASK, which is what makes it progressive: the
-     radius is constant and the mask decides how much of the blurred backdrop
-     is allowed through, so the picture crosses from sharp to soft over a
-     distance instead of at an edge. Same mechanism as .veil below, which is
-     why there is no new machinery here. 0 to 28px over the bottom half of the
-     frame, starting at the mark's own centre.
+     The MASK is what makes it progressive — constant radius, the mask deciding
+     how much blurred backdrop comes through — so it crosses from sharp to soft
+     over a distance rather than at an edge. Same mechanism as .veil below.
 
-     Not in the shader, though it was built there first — as a depth term
-     inside the mark's own feather. It is here instead because softening the
-     MARK is the trade this page refuses everywhere else, while softening the
-     FRAME leaves every mark the shape it was drawn.
+     Not in the shader, where it was first a depth term inside the mark's own
+     feather: softening the FRAME leaves every mark the shape it was drawn, and
+     softening the MARK is the trade this page refuses.
 
-     ON THE FILM'S OWN CLOCK. --resolved is the number the type resolves on,
-     published by ptl-page.js; at the close it is 1 and this is gone. The last
-     frame is sharp to the floor, which is the point of the last frame. */
-      /* PHONE ONLY. On a wide frame the mark keeps the upper two thirds and the
-     copy has the floor, so there is no depth to describe down there — the
-     bottom of the frame is where the argument is written, and blurring it
-     would be blurring the ground the words stand on. */
+     --resolved is the film's own clock, published by ptl-page.js: at the close
+     it is 1 and this is gone. PHONE ONLY — on a wide frame the copy has the
+     floor, and blurring it would blur the ground the words stand on. */
       @media (max-width: 560px) {
         .deep {
           position: absolute;
@@ -474,28 +416,18 @@
         }
       }
 
-      /* A dome of defocus rising off the bottom edge.
-     ------------------------------------------------------------------------
-     The ellipse is centred at 50% 100% — the very bottom of the viewport — so
-     only its top half is ever on screen and the rest of the circle is cut off
-     below the fold. That gives a semicircular ground for the copy that has no
-     visible shape of its own: no top edge to read as a card, no left or right
-     edge at all, just density falling away as you move up and out.
+      /* A dome of defocus rising off the bottom edge. Centred at 50% 100%, so
+     only its top half is ever on screen: a ground for the copy with no shape of
+     its own — no top edge to read as a card, no side edges, just density
+     falling away.
 
-     It works WITH the shader's keep-out rather than replacing it, which is why
-     both are here. The keep-out handles the centre column, where the copy
-     actually sits and where a hard mark would be unreadable. This handles
-     everything that merely drifts NEAR the copy — the arch's legs, the outer
-     ring of the lattice — which the keep-out deliberately leaves sharp. */
-      /* saturate(0) so the defocus carries VALUE and not HUE. The wash is already
-     the paper colour, but it is translucent on purpose — a defocus, not an
-     eraser — and the ~28% of the field still showing through arrives with its
-     own colour. That colour is warm — --field is a cream and --tint an orange
-     — so without this the dome behind the copy comes out tinted: a third
-     colour, on a page that has two. Desaturating the backdrop first means what
-     bleeds through is only light and dark, and the dome reads as the paper
-     defocused. NOT a no-op, and not removable: it changes what is drawn on
-     every frame the dome is over the field. */
+     It works WITH the shader's keep-out, which handles the centre column where
+     the copy sits; this handles what merely drifts NEAR it — the arch's legs,
+     the lattice's outer ring — which the keep-out leaves sharp.
+
+     saturate(0) so the defocus carries VALUE and not HUE: the ~28% of the field
+     showing through the wash is warm, and would otherwise tint the dome a third
+     colour on a two-colour page. Not a no-op. */
       .veil {
         position: absolute;
         inset: 0;
@@ -518,13 +450,11 @@
         );
       }
 
-      /* Short viewports need a far bigger dome — the copy occupies most of a
-     landscape phone, and 68% of 390px puts the mask's opaque core below where
-     the words start. This is a media query and NOT max(68%,26rem) inside the
-     gradient: Chromium does not parse a CSS math function in a gradient size,
-     drops the whole mask-image as invalid, and then backdrop-filter blurs the
-     entire page with nothing masking it. WebKit accepts it, which is exactly
-     how it shipped. */
+      /* Short viewports need a far bigger dome: 68% of a 390px frame puts the
+     mask's opaque core below where the words start. A media query and NOT
+     max(68%,26rem) inside the gradient — Chromium drops a math function there
+     as invalid, taking the whole mask with it, and backdrop-filter then blurs
+     the page unmasked. WebKit accepts it, which is how it shipped. */
       @media (max-height: 620px) {
         .veil {
           -webkit-mask-image: radial-gradient(
@@ -542,39 +472,27 @@
         }
       }
 
-      /* ON A PHONE THE DOME IS ONLY FOR THE ENDING.
-     The defocus exists to give bottom-anchored copy a ground. On a phone the
-     copy is no longer bottom-anchored — it sits in the disc — so through the
-     whole argument the dome has nothing under it to serve, and what it does
-     instead is smother the bottom of the form: the ring's lower arc lands in
-     the middle of the mask's opaque core and comes back as a smudge, which is
-     why the frame read as an arch floating over an empty band rather than as
-     a circle.
-
-     The ending is the exception, and it is the whole reason this fades rather
-     than being deleted. The finale IS on the floor — .fin-a/b/c are positioned
-     by finale() against the bottom of the frame — so it needs exactly the
-     ground the beats do not.
-
-     --ending is published by ptl-page.js as a plain number, 0 through the
-     film and 1 across the finale's entrance. The page states how far into the
-     ending it is; this rule decides what that is worth on a phone. On a wide
-     frame nothing reads the property and the dome is unconditional, as
-     before. */
+      /* ON A PHONE THE DOME IS ONLY FOR THE ENDING. The defocus exists to give
+     bottom-anchored copy a ground; on a phone the copy sits in the disc
+     instead, so the dome smothers the ring's lower arc into a smudge — which is
+     why the frame read as an arch over an empty band rather than a circle. The
+     finale IS on the floor (.fin-a/b/c are placed by finale() against the
+     bottom of the frame) and does need that ground, hence a fade rather than a
+     deletion. --ending is published by ptl-page.js; on a wide frame nothing
+     reads it and the dome is unconditional. */
       @media (max-width: 560px) {
         .veil {
           opacity: var(--ending, 0);
         }
       }
 
-      /* The top bound is what keeps a grown block off the chrome, and it has to
-     be written against the chrome's RENDERED height — which doubles with the
-     root font too, so a plain rem bound would not clear a two-line wordmark.
-     max(…, env()) tracks it because the chrome's own padding is written the
-     same way. */
+      /* The top bound keeps a grown block off the chrome, and has to be written
+     against the chrome's RENDERED height — which doubles with the root font, so
+     a plain rem bound would not clear a two-line wordmark. max(…, env()) tracks
+     it because the chrome's own padding is written the same way. */
       .copy {
-        /* Named once, because the mobile rule below has to subtract exactly
-       this to get back to viewport coordinates. */
+        /* Named once: the mobile rule below subtracts exactly this to get back
+       to viewport coordinates. */
         --copy-top: calc(max(1.5rem, env(safe-area-inset-top)) + 4.5rem);
         position: absolute;
         left: 50%;
@@ -585,16 +503,12 @@
         bottom: 4.2rem;
       }
       /* NO overflow-y:auto here, deliberately, and it was tried. The descender
-     fix below pads each line by .18em and pulls it back with a negative
-     margin — which nets to zero for LAYOUT but not for scrollHeight, so the
-     block measures 269 against a 266 client height at every size. With
-     `overflow-y:auto` that 3px makes it a live scroll container at DEFAULT
-     text size, and a wheel starting over the copy was swallowed by a
-     container with 3px to give: measured, scrollY 0 -> 0 where it should be
-     0 -> 900. overscroll-behavior:contain made it worse, not better.
-     The reachability of over-large text is carried instead by the viewport
-     cap on the type below and by .copy's top bound above, which together stop
-     the block outgrowing the frame in the first place. */
+     fix below nets to zero for LAYOUT but not for scrollHeight, so the block
+     measures 269 against a 266 client height — enough to make it a live scroll
+     container at DEFAULT text size, where a wheel starting over the copy was
+     swallowed by a container with 3px to give (scrollY 0 -> 0 where it should
+     be 0 -> 900). Over-large text is held instead by the viewport cap on the
+     type below and .copy's top bound above. */
       .blk {
         position: absolute;
         left: 50%;
@@ -606,13 +520,10 @@
       .blk.on {
         visibility: visible;
       }
-      /* WHERE THE COPY IS, AS A NUMBER THE SCRIPT CAN READ.
-     The shader clears a band at the bottom of the frame so the copy has
-     somewhere clean to sit — see uKeep in ptl-field.js. Which band that should
-     be is not the shader's business, it is this rule's: below, the copy stops
-     being on the floor. Rather than have the script carry its own copy of the
-     breakpoint and the two drift, the breakpoint stays here, once, and the
-     script reads the answer off the root. */
+      /* WHERE THE COPY IS, AS A NUMBER THE SCRIPT CAN READ. The shader clears a
+     band for the copy (uCopy in ptl-field.js); WHICH band is this rule's
+     business, since below, the copy stops being on the floor. The breakpoint
+     stays here once and the script reads the answer off the root. */
       :root {
         --phone: 0;
       }
@@ -622,44 +533,27 @@
         }
       }
 
-      /* ON A PHONE THE COPY SITS IN THE CIRCLE, NOT ON THE FLOOR.
-     Bottom-anchoring is right on a landscape frame: the mark fills the upper
-     half, the copy takes the lower, and the two are in balance. Portrait
-     inverts that. The mark becomes a band across the top with a deep dark
-     disc under it, the copy is pinned 4.2rem off the bottom edge, and the
-     middle of the frame — the part the form is actually drawing — is empty,
-     with the words crowded into the last fifth as if they had fallen there.
+      /* ON A PHONE THE COPY SITS IN THE CIRCLE, NOT ON THE FLOOR. Bottom-
+     anchoring balances a landscape frame; portrait inverts it, leaving the
+     middle of the frame — the part the form is actually drawing — empty, with
+     the words crowded into the last fifth.
 
-     48dvh IS THE CIRCLE'S CENTRE, not an eyeballed nudge. The form is a ring
-     of radius r about (0.5W, 0.5H - cy*base), and cy is
-     track(g, 0.00, 0.30, -0.80, 0.02) — it reaches 0.02 by the end of the
-     first beat and holds there for the rest of the film, so the centre is
-     fixed at 0.5H - 0.02*base. In portrait base is the height (the long side,
-     max(H, W/1.78)), which makes it 0.48H. Checked against the render at
-     three scroll positions: the predicted underside of the crown lands within
-     a few px of the measured one. The circle itself cannot be measured
-     directly here — at 390 wide its inner edge runs off both sides of the
-     frame, which is exactly why this is derived rather than eyeballed.
+     48dvh IS THE CIRCLE'S CENTRE, derived rather than eyeballed: the ring is
+     centred at 0.5H - cy*base, and cy = track(g, 0.00, 0.30, -0.80, 0.02)
+     reaches 0.02 by the end of the first beat and holds, so in portrait, where
+     base is the height, the centre is 0.48H. (It cannot be measured directly —
+     at 390 wide the ring's inner edge runs off both sides of the frame.)
 
-     dvh, not vh: the shader's base comes from the canvas's own height, which
-     follows the URL bar, and vh does not. (The warning against dvh in
-     ptl-page.js is about the DOCUMENT's height, where a bar that hides
-     mid-scroll would move the film under the reader. This is one offset in a
-     fixed layer that is meant to track the canvas.) --copy-top comes back off
-     because .blk is positioned inside .copy, not against the frame.
+     dvh, not vh: the shader's base is the canvas's own height, which follows
+     the URL bar. --copy-top comes back off because .blk sits inside .copy.
 
-     The finale keeps the floor and is untouched: it is .fin-a/b/c in a layer
-     of its own, positioned by finale() in JS, not a .blk. The closing lockup
-     is the one moment that IS bottom-weighted on purpose — the mark has
-     closed above it and the words land beneath.
+     Portrait only — a landscape phone is 390 tall with the arch across most of
+     it, and this would lay the copy onto the bright of the mark. The finale
+     keeps the floor: .fin-a/b/c are placed by finale(), not .blk.
 
-     Portrait only. A landscape phone is 390 tall with the arch across most of
-     it, and this would lay the copy straight onto the bright of the mark.
-
-     One side effect, stated: .blk h1's 0.32em of ascender padding used to
-     grow the box upward off a fixed bottom edge and move nothing. Off a
-     centre it moves the glyphs down by half of it, about 5px here. Constant
-     across every beat, so it reads as position rather than as drift. */
+     Side effect: .blk h1's 0.32em of ascender padding moved nothing off a fixed
+     bottom edge; off a centre it lowers the glyphs ~5px, constant across every
+     beat. */
       @media (max-width: 560px) {
         .blk {
           top: calc(50dvh - var(--copy-top));
@@ -667,32 +561,18 @@
           transform: translate(-50%, -50%);
         }
       }
-      /* THE BOX MUST CONTAIN THE INK.
-     ------------------------------------------------------------------------
-     A mask clips its element to `mask-clip`, which defaults to the border box,
-     and at this line-height Cormorant's descenders hang below the content box
-     — so the tail of every g and y was being sliced off flat. No mask-repeat
-     value rescues that: the clip happens before the layers are even consulted.
-     `mask-clip:no-clip` is the declaration that means what we want and it
-     parses in all three engines, but only Firefox actually honours it; on
-     Chromium and WebKit the element is still cropped to the border box.
+      /* THE BOX MUST CONTAIN THE INK. A mask clips to `mask-clip`, which
+     defaults to the border box, and at this line-height Cormorant's descenders
+     hang below the content box — so the tail of every g and y was sliced off
+     flat. `mask-clip:no-clip` parses in all three engines but is honoured only
+     by Firefox, so the box is grown to hold the overhang and pulled back by the
+     same amount: just a bigger box, and the margins net out under collapsing.
 
-     So the box is grown to hold the overhang instead, and pulled back by the
-     same amount so nothing moves. That works everywhere because it is not a
-     masking feature at all — it is just a bigger box. The margin nets out
-     under collapsing too (a negative and a positive collapse to their sum,
-     and the padding adds it straight back), so the measured gap down to the
-     body is exactly what it was.
-
-     The top needs it too, but only on the headline and only sometimes: at the
-     landscape-phone measure the Cormorant ascenders overflow upward and
-     Chromium was shaving 68 device px off them, where WebKit and Firefox laid
-     them out just inside. It gets padding with no compensating margin, because
-     .blk is anchored to its BOTTOM — the block simply grows upward and not one
-     glyph moves. That does shift the border-box origin the 12px lattice is
-     laid from, which re-phases the halftone by a fraction of a cell; the
-     lattice is a dissolve texture with no registration to anything, so that
-     costs nothing, and a cropped ascender is not nothing. */
+     The top needs it on the headline only, where Chromium shaved 68 device px
+     off the ascenders at the landscape-phone measure. No compensating margin,
+     because .blk is anchored to its BOTTOM and simply grows upward — which
+     re-phases the 12px lattice by a fraction of a cell. The lattice registers
+     to nothing, so that costs nothing; a cropped ascender is not nothing. */
       .blk h1,
       .blk p {
         padding-bottom: 0.18em;
@@ -701,44 +581,26 @@
       .blk h1 {
         padding-top: 0.32em;
       }
-      /* Two things at once.
-     The vw term needed 869px before it engaged, so the headline was a FIXED
-     30.4px at every width from 320 to 430 — at 320 that set as six lines of
-     15-19 characters. 7.1vw engages across the whole phone range: 22.7px at
-     320, 30.5px at 430, so the largest phone keeps today's size and the
-     smallest gets a real reduction.
-     And the min() OUTSIDE the clamp is what stops a raised text size deleting
-     the copy. .blk is bottom-anchored inside a position:fixed layer, so the
-     block grows UPWARD past y=0 where there is no scroll container and no
-     overflow — at 200% text size 76% of one headline was simply gone, with no
-     scroll position that could recover it. min() inside the clamp does not
-     work: the rem floor wins and nothing changes. */
-      /* AND A MEASURE OF ITS OWN, NARROWER THAN THE COLUMN.
-     At .copy's full 60rem the two long beats — COMMIT and PRICE — set as two
-     lines of nearly sixty characters, a paragraph measure on type this size,
-     while the opening beat beside them ran to three. Three lines each is the
-     shape the argument wants: one rhythm from beat to beat, and no line long
-     enough to need a return sweep.
+      /* Two things at once. The vw term needed 869px before it engaged, so the
+     headline was a FIXED 30.4px from 320 to 430 — six lines of 15-19 characters
+     at 320. 7.1vw engages across the phone range: 22.7px at 320, 30.5px at 430.
+     And the min() OUTSIDE the clamp stops a raised text size deleting the copy:
+     .blk is bottom-anchored in a fixed layer, so the block grows past y=0 where
+     there is no scroll container — at 200% text size 76% of one headline was
+     gone. Inside the clamp it does nothing; the rem floor wins. */
+      /* AND A MEASURE OF ITS OWN, NARROWER THAN THE COLUMN. At .copy's full
+     60rem the two long beats set as two lines of nearly sixty characters while
+     the opening beat ran to three; three lines each is the shape the argument
+     wants.
 
-     IN em, AND THAT IS THE WHOLE TRICK. The size above is capped by 5.6vh, so
-     the headline is 51px on a tall screen and 43px on a 768-high laptop — and
-     a measure in rem holds a fixed number of PIXELS while the type shrinks
-     underneath it, which is a different number of characters to the line. Set
-     in px it worked at 900 high and dropped PRICE back to two lines at 768.
-     em resolves against the element's own font-size, so the measure is a
-     character count and the line count stops depending on the window's
-     height. Measured at 900, 982, 1080 and 768 high: the window is 13.5em to
-     18em, the SAME window at every one of them.
-
-     16em, not an edge: below 13.5 the opening beat breaks to four, above 18
-     the two long ones fall back to two, and everything between renders
-     3/2/2/3/3 alike, because text-wrap:balance minimises the longest line
-     once the count is fixed. The middle is where an edit to the copy can move
-     without taking the composition with it.
-
-     It binds only while the column is wider than it — around 930px and up.
-     Below that 86vw is already narrower and the viewport sets the count, as
-     it did before. */
+     IN em, AND THAT IS THE WHOLE TRICK. The size above is capped by 5.6vh, so a
+     measure in rem holds a fixed number of PIXELS while the type shrinks under
+     it — in px it worked at 900 high and dropped PRICE to two lines at 768. em
+     makes the measure a character count, so the line count stops depending on
+     the window's height: 13.5em to 18em is the same window at 768, 900, 982 and
+     1080. 16em is the middle of that, not an edge — below 13.5 the opening beat
+     breaks to four, above 18 the long ones fall back to two. Binds only above
+     about 930px; below that 86vw is narrower and the viewport sets the count. */
       .blk h1 {
         font:
           300 min(clamp(1.55rem, 7.1vw, 3.2rem), 5.6vh)/1.14 Cormorant,
@@ -749,8 +611,8 @@
         margin-left: auto;
         margin-right: auto;
       }
-      /* `balance` sets the paragraph at the narrowest measure that still holds its
-     line count, so a two-line body is two EVEN lines rather than a long one
+      /* `balance` sets the paragraph at the narrowest measure that still holds
+     its line count, so a two-line body is two EVEN lines rather than a long one
      and a stub. max-width is the ceiling it balances within. */
       .blk p {
         margin-top: 1.9rem;
@@ -764,30 +626,22 @@
         margin-left: auto;
         margin-right: auto;
       }
-      /* And on a phone it sits closer to what it qualifies. 1.9rem is a wide
-     frame's gap, where the block has the whole floor to breathe on; inside a
-     centred block on a phone it reads as a break between two thoughts rather
-     than as one thought and its footnote. Written AFTER the rule it overrides
-     rather than up with the other phone rules: same specificity, so source
-     order is the whole argument. */
+      /* Closer to what it qualifies on a phone: 1.9rem is a wide frame's gap,
+     where the block has the whole floor to breathe on; inside a centred block
+     it reads as a break between two thoughts. Written AFTER the rule it
+     overrides — same specificity, so source order is the whole argument. */
       @media (max-width: 560px) {
         .blk p {
           margin-top: 0.95rem;
         }
       }
 
-      /* THE FINALE — one sentence, three registers, two destinations.
-     ------------------------------------------------------------------------
-     Everywhere else a section is a paragraph that resolves and disintegrates
-     in place. The last one is a lockup that MOVES: the name and the verb ride
-     up and out of frame, and the claim rises into a fixed spot beneath the
-     mark and stays there while the mark closes.
-
-     So it is built as two independently-positioned groups, not one block —
-     .fin-a (the name + the verb) and .fin-b (the claim). They travel together
-     while they are one lockup, then .fin-a is handed a second move and leaves.
-     Their spacing while joined is measured from the DOM, so the joined state
-     is exactly what normal flow would have produced. */
+      /* THE FINALE — one sentence, three registers, two destinations. Every
+     other section resolves and disintegrates in place; this one MOVES, the name
+     and the verb riding up and out of frame while the claim rises into a fixed
+     spot beneath the mark and stays. Hence two independently-positioned groups
+     rather than one block, with their joined spacing measured from the DOM so
+     it is exactly what normal flow would have given. */
       .finale {
         position: absolute;
         inset: 0;
@@ -808,43 +662,26 @@
         will-change: transform;
       }
 
-      /* THE ONE THING YOU CAN DO.
-     ------------------------------------------------------------------------
-     The page has no CTA by design — it is an argument, not a funnel — so the
-     single action it offers arrives only after the argument has finished
-     making itself: the mark has closed, the claim has come to rest, and the
-     film is holding still. Then this.
+      /* THE ONE THING YOU CAN DO. The page has no CTA by design — it is an
+     argument, not a funnel — so its single action arrives only once the
+     argument is over: the mark closed, the claim at rest, the film still.
 
-     Set as text, not as a filled block. The block was the loudest object on
-     the page by a distance — the only solid shape in a composition made of
-     marks and thin type — and it read as a product page's button dropped onto
-     the end of an essay. As a rule the same as the chrome's, in the same face
-     and tracking, it is legible as an action without claiming to be the point.
+     Set as text, not as a filled block: the block was the only solid shape in a
+     composition made of marks and thin type, and read as a product page's
+     button on the end of an essay. In Cormorant, the face the lockup opens
+     with, so the page closes in the voice it opened in rather than in the
+     chrome's mono, which is the register for labels and machinery. Sentence
+     case and untracked, so it cannot read as a second headline.
 
-     Set in Cormorant, which is the brand's own face and the one the lockup
-     above opens with — so the last thing on the page is in the same voice as
-     the first, rather than in the chrome's mono, which is the register the
-     page uses for labels and machinery. Sentence case, untracked: a tracked
-     uppercase line here would read as a second headline arguing with the
-     claim two lines above it.
+     No letter-spacing, so text-decoration hugs the glyphs and, not being
+     layout, appears on hover without moving anything. The arrow is an atomic
+     inline all three engines skip, so its hairline and the underline never
+     join.
 
-     No rule at rest. It carries none of the mono's letter-spacing now, so
-     text-decoration hugs the glyphs and there is no trailing space to throw
-     the rule off centre — and because text-decoration is not layout, the
-     underline can appear on hover without anything moving. The rule stops at
-     the words: the arrow is an atomic inline, which all three engines skip
-     rather than draw through, so the hairline under the type and the hairline
-     of the arrow never join into one long stroke.
-
-     Deliberately NOT .fade. The lockup's lines arrive through a mask wipe
-     because they are type resolving out of the field; this is not part of the
-     argument, it is what is offered once the argument is over, and a wipe read
-     as one more piece of choreography. It just rises and fades — see
-     floatCta(). */
-      /* opacity:0 because the value is entirely JS-driven — the CSS default of 1
-     made the link flash fully lit the instant the finale mounted. The
-     transition is gone with it: floatCta() rate-limits the arrival itself now,
-     on one clock with the rise, which the transition was tearing apart. */
+     NOT .fade: a mask wipe belongs to type resolving out of the field. This
+     rises and fades instead, in floatCta() — which owns the opacity (hence 0
+     here; the CSS default of 1 flashed the link lit as the finale mounted) and
+     rate-limits the arrival on one clock with the rise. */
       .cta {
         display: inline-block;
         padding: 0.55rem 0.3rem;
@@ -866,18 +703,12 @@
         outline: none;
       }
 
-      /* The arrow is DRAWN, not typed. None of the four faces this page ships
-     carries U+2192, so a typed arrow would fall out of the stack to whatever
-     the system serves as `serif` — a Times arrow, heavier and stubbier than
-     anything else on the line, next to Cormorant at weight 300. Drawn, it is
-     one hairline: non-scaling-stroke pins it to exactly 1px, the same 1px the
-     hover rule underneath it is drawn at, so the two read as the same
-     instrument. vertical-align:middle is the definition we want here — the
-     box's centre against the baseline plus half the parent's x-height — which
-     puts the shaft through the middle of the lowercase, and keeps the arrow
-     entirely above the baseline so it cannot deepen the line box.
-     pointer-events:none so the anchor, not the path, is what the cursor
-     finds. */
+      /* The arrow is DRAWN, not typed: no face this page ships carries U+2192,
+     so a typed arrow falls out of the stack to the system `serif` — a Times
+     arrow beside Cormorant at 300. non-scaling-stroke pins it to exactly 1px,
+     the same 1px the hover underline uses, so the two read as one instrument.
+     vertical-align:middle puts the shaft through the lowercase and keeps the
+     arrow off the baseline, so it cannot deepen the line box. */
       .cta .arw {
         width: 0.95em;
         height: 0.292em;
@@ -900,9 +731,8 @@
           serif;
         letter-spacing: -0.008em;
       }
-      /* The hinge. Small, tracked, grey — the same register as the corner marks,
-     so the verb reads as connective tissue between two statements rather than
-     as a third statement. */
+      /* The hinge. Small, tracked, grey — the corner marks' register, so the
+     verb reads as connective tissue rather than as a third statement. */
       .l2 {
         margin-top: 0.81rem;
         font:
@@ -917,29 +747,20 @@
       /* The claim. All-caps neo-grotesque, light, widely tracked, closed by a
      blinking terminal block instead of a period.
 
-     The block must not push the words off centre — the sentence is centred and
-     the cursor hangs off its right, exactly as a caret does at the end of a
-     line you have finished typing. That is what the text-indent buys:
+     The block must not push the words off centre — it hangs off the right, as a
+     caret does at the end of a line you have finished typing. The compensation
+     is cursor margin (.26) + cursor width (.60) + the text's own trailing
+     letter-space (.145) = 1.005em, exactly what the cursor would drag the line
+     left by, so the INK is centred rather than the line box. Tracking lives on
+     the inner span so the block cannot pick up a stray letter-space and break
+     that sum.
 
-       indent = cursor margin (.26) + cursor width (.60) + the text's own
-                trailing letter-space (.145) = 1.005em
-
-     which is precisely the distance the cursor would otherwise drag the line
-     left, so subtracting it back centres the INK rather than the line box.
-     Tracking lives on the inner span, not here, so the block can never pick up
-     a stray letter-space and break that sum.
-
-     It is a negative margin on the CURSOR and not a text-indent on the block,
-     because text-indent only ever applies to the first line. The moment the
-     claim wrapped — which it does at phone widths — the compensation landed on
-     the line without the cursor on it and the two lines were centred on axes
-     an em apart. The margin travels with the cursor, so it is correct on
-     whichever line the cursor ends up on. */
-      /* padding+margin for the same reason as .blk h1's descender fix above: the
-     caret is pulled OUTSIDE the line box by margin-right:-1.005em, and .fade's
-     mask clips to the border box, so at 320px the entire terminal block was
-     sliced off — 770 device px of ink, the sentence's full stop. The pair nets
-     to zero, so not one glyph moves. */
+     A negative margin on the CURSOR, not a text-indent on the block:
+     text-indent applies only to the first line, so once the claim wrapped — as
+     it does at phone widths — the two lines were centred an em apart. The
+     padding+margin pair is the descender fix again, the caret being pulled
+     outside a line box whose border box .fade's mask clips to; it nets to
+     zero. */
       .l3 {
         font:
           300 clamp(1.15rem, 2.8vw, 2.5rem)/1.25 Inter,
@@ -952,36 +773,26 @@
       .l3 .t {
         letter-spacing: 0.145em;
       }
-      /* ON A PHONE THE CLAIM IS AS BIG AS ONE LINE ALLOWS.
-     The desktop clamp's floor is 1.15rem, and on a narrow frame that is what
-     binds — the last words of the film set smaller than the sentence above
-     them. The ceiling here is the fit itself: measured, MACHINES THAT DECIDE
-     in Inter 300 with this tracking is 14.94 times the font-size wide, and the
-     lockup is 86vw, so 86 / 14.94 = 5.76vw is exactly the size at which it
-     fills the line — 5.6vw with a hair of slack, because a wrap here costs a
-     line of the film's last frame.
-
-     Set halfway between that ceiling and the 1.15rem floor it used to take,
-     which is where it reads: at the ceiling the claim outweighed the name
-     above it. The mean of the two rules rather than a third number, so it
-     still moves with the frame. 5.6vw stays in the min() as a hard ceiling:
-     below about 300px the rem floor is itself wider than the line, so the mean
-     of the two would wrap where the fit alone would not. The rem cap is only a
-     backstop against a very large root size. */
+      /* ON A PHONE THE CLAIM IS AS BIG AS ONE LINE ALLOWS. The desktop clamp's
+     1.15rem floor binds on a narrow frame, setting the film's last words
+     smaller than the sentence above them. The ceiling is the fit: MACHINES THAT
+     DECIDE in Inter 300 at this tracking is 14.94 times the font-size wide and
+     the lockup is 86vw, so 86 / 14.94 = 5.76vw fills the line — 5.6vw with a
+     hair of slack, a wrap here costing a line of the film's last frame. Set
+     halfway between that and the 1.15rem floor, where it reads; at the ceiling
+     the claim outweighed the name. 5.6vw stays a hard ceiling because below
+     ~300px the rem floor is itself wider than the line. */
       @media (max-width: 560px) {
         .l3 {
           font-size: min(2.2rem, 5.6vw, calc((1.15rem + 5.6vw) / 2));
         }
       }
-      /* An empty inline-block takes its baseline from its bottom margin edge, so
-     `vertical-align:baseline` seats it on the baseline. Taller than the caps
-     (.93 against a .727em cap height) and narrower than square: a terminal
-     cell is a standing rectangle, and a true square read as a dot.
-
-     Being taller than the caps means the baseline is the WRONG datum — sitting
-     on it, the block overhangs the cap line and reads high. The negative bottom
-     margin drops it by (.93 - .727) / 2 so the block's centre and the cap
-     band's centre coincide, which is where the eye actually looks. */
+      /* An empty inline-block takes its baseline from its bottom margin edge,
+     so `vertical-align:baseline` seats it there. Taller than the caps (.93
+     against a .727em cap height) and narrower than square — a terminal cell is
+     a standing rectangle, and a square read as a dot. Taller makes the baseline
+     the wrong datum, so the negative margin drops it by (.93 - .727) / 2 onto
+     the cap band's centre. */
       .l3 .cur {
         display: inline-block;
         vertical-align: baseline;
@@ -993,8 +804,8 @@
         background: var(--ink-live, var(--ink));
         animation: caret 1.06s step-end infinite;
       }
-      /* Bounded. A 2x22px block toggling forever was 97% of the closing screen's
-     remaining power draw, on the one screen the reader is meant to sit on. */
+      /* Bounded. A 2x22px block toggling forever was 97% of the closing
+     screen's remaining power draw, on the one screen the reader sits on. */
       .fin-b .cur {
         animation-iteration-count: 12;
       }
@@ -1012,21 +823,13 @@
         }
       }
 
-      /* THE FINALE'S TRANSITION — not the halftone resolve.
-     ------------------------------------------------------------------------
-     Every other section condenses its type out of the grid, because that is
-     the argument those sections make: the picture and the words on one
-     lattice. The ending is not an argument, it is a sign-off, and it wants to
-     arrive the way a title card arrives — softly. So the finale opts out.
-
-     Three things move together, in and out:
-       --rv  a mask that wipes up the line, revealing it from the baseline
-       --ex  a second mask, intersected, that erases it the same way
-       opacity, and a small translate, both driven alongside.
-
-     The masks are what keep it from reading as a plain CSS fade: the line
-     resolves and dissolves with a direction, bottom-up, in the same sense the
-     lockup is travelling. */
+      /* THE FINALE'S TRANSITION — not the halftone resolve. Every other section
+     condenses its type out of the grid, which is the argument those sections
+     make; the ending is a sign-off and arrives the way a title card does. --rv
+     wipes the line up from the baseline, --ex is a second mask, intersected,
+     that erases it the same way. The masks are what keep it from reading as a
+     plain CSS fade: it resolves and dissolves with a direction, bottom-up, in
+     the sense the lockup travels. */
       .fade {
         will-change: opacity, transform;
         -webkit-mask-image:
@@ -1055,24 +858,18 @@
         mask-composite: intersect;
       }
 
-      /* KINETIC TYPE, in this page's own grammar.
-     ------------------------------------------------------------------------
-     The first attempt slid each word up out of a mask. It worked, and it was
-     wrong: sliding is the default move of every motion-design template there
-     is, and nothing else on this page slides. Everything else here is a rigid
-     lattice of squares whose SIZE carries the image — so the type arrives that
-     way too. It is a halftone of itself that resolves.
+      /* KINETIC TYPE, in this page's own grammar. The first attempt slid each
+     word up out of a mask; it worked, and it was wrong — sliding is the default
+     move of every motion-design template there is, and nothing else on this
+     page slides. Everything else is a rigid lattice of squares whose SIZE
+     carries the image, so the type arrives that way too: a halftone of itself
+     that resolves.
 
-     Three mask layers, intersected:
-       1. vertical stripes of width --mk on a 12px pitch
-       2. horizontal stripes of width --mk on a 12px pitch
-          (1 n 2 = squares of --mk on the same 12px lattice as the field)
-       3. a soft sweep at --sw giving the reveal a direction
-
-     Growing --mk from 0 to 12px makes the letterforms condense out of the grid
-     and close up solid; shrinking it back disintegrates them into it. The 12px
-     pitch is the field's own cell size, so the type and the picture are
-     literally on the same grid. */
+     Three intersected layers: vertical and horizontal stripes of width --mk on
+     a 12px pitch, meeting as squares of --mk, plus a soft sweep at --sw giving
+     the reveal a direction. Growing --mk to 12px condenses the letterforms out
+     of the grid; shrinking it disintegrates them back. The 12px pitch is the
+     field's own cell size, so type and picture are literally on one grid. */
       .kin {
         -webkit-mask-image:
           linear-gradient(90deg, #000 var(--mk), transparent 0),
@@ -1169,11 +966,10 @@
       <div class="finale" id="finale">
         <div class="fin-a" id="finA"></div>
         <div class="fin-b" id="finB"></div>
-        <!-- tabindex="-1" because this whole layer is aria-hidden: it is a
-           rendered duplicate of #story, and a focusable control inside
-           aria-hidden content is a trap — reachable by keyboard, invisible to
-           a screen reader. The chrome's ABOUT link is the same destination and
-           is announced properly, so this one is for the mouse. -->
+        <!-- tabindex="-1" because this layer is aria-hidden: a focusable
+           control inside aria-hidden content is a trap, reachable by keyboard
+           and invisible to a screen reader. The chrome's ABOUT link is the same
+           destination, announced properly. -->
         <div class="fin-c" id="finC">
           <a class="cta" id="cta" href="/about.html" tabindex="-1"
             >join us<svg class="arw" viewBox="0 0 26 8" aria-hidden="true">
@@ -1184,11 +980,9 @@
     </div>
 
     <main class="story" id="story">
-      <!-- The six beats were six h1s and nothing else, so heading navigation
-           gave a screen-reader user six equal-rank siblings with no way to
-           tell the claim from the beats supporting it. One page-level h1, and
-           the beats demote to h2. #story is clipped, so nothing visible
-           moves. -->
+      <!-- Six h1s gave heading navigation six equal-rank siblings with no way
+           to tell the claim from the beats supporting it. One page-level h1,
+           beats demote to h2; #story is clipped, so nothing visible moves. -->
       <h1 class="sr">Predictive Text Labs — Machines that Decide</h1>
       <section data-key="DECIDE">
         <h2>
@@ -1196,10 +990,10 @@
           government and business.
         </h2>
       </section>
-      <!-- data-in / data-out are "start,length" in section-local time, and
-         override the defaults for this beat only. This one clears out
-         early and the next arrives quickly, because the gap between the
-         question and the answer was reading as a pause. -->
+      <!-- data-in / data-out are "start,length" in section-local time,
+         overriding the defaults for one beat. This one clears early and the
+         next arrives quickly: the gap between question and answer read as a
+         pause. -->
       <section data-key="WHEN" data-out="0.64,0.20">
         <h2>The question is not whether this future arrives, but when.</h2>
       </section>
@@ -1222,11 +1016,10 @@
           to decisions that matter.
         </h2>
       </section>
-      <!-- The finale is the one section set as a lockup rather than a sentence:
-         three registers, and two destinations. The name and the verb leave,
-         the claim stays. No period on the last line — a blinking terminal
-         block stands in for it, which is a full stop still waiting for the
-         next input. -->
+      <!-- The one section set as a lockup rather than a sentence: three
+         registers, two destinations. The name and the verb leave, the claim
+         stays. No period — a blinking terminal block stands in for it, a full
+         stop still waiting for the next input. -->
       <section data-key="DECIDE" data-finale>
         <h2>
           <span class="ln">Predictive Text Labs.</span>
