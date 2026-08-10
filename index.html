@@ -402,10 +402,26 @@
      the bar, and it is the layer whose position a lagging transform would be
      measured against.
 
-     -webkit-touch-callout is the guard because only iOS has both the behaviour
-     and the property, so no other engine gives up a fixed layer for a
-     hand-carried one it has no need of. */
-      @supports (-webkit-touch-callout: none) {
+     THE GUARD IS THREE THINGS, and each one is load-bearing.
+     -webkit-touch-callout because only iOS has the behaviour, so no other
+     engine gives up a fixed layer for a carried one it has no need of.
+     100lvh because iOS Safari before 15.4 does not have it: this rule also
+     replaces bottom:0 with bottom:auto, and a dropped height would leave the
+     stage sized by content — every child is absolutely positioned, so the film
+     would be one pixel tall and gone. A vh fallback declaration cannot save it
+     either, because the height carries a var(): it is validated after
+     substitution, and failing there means unset, not the previous declaration.
+     And a scroll timeline because that is what carries the layer. Doing it
+     from script instead is not a lesser version of this, it is a broken one —
+     a transform contributes to scrollable overflow, so a hand-written
+     translateY(scrollY) on a layer taller than the viewport re-extends the
+     document every frame and the page never reaches its end.
+
+     Together they mean this only ever applies to Safari 26, which is the only
+     thing that has the bar in the first place. Every older iOS keeps exactly
+     the page it had. */
+      @supports (-webkit-touch-callout: none) and (height: 100lvh) and
+        (animation-timeline: scroll()) {
         .stage {
           --film-bleed: 140px;
           position: absolute;
@@ -428,11 +444,9 @@
         }
         /* The follow, run where the scrolling is. --film-travel is the
            document's own scrollable distance, published by PTLField.pin. */
-        @supports (animation-timeline: scroll()) {
-          .stage {
-            animation: film-follow linear both;
-            animation-timeline: scroll(root block);
-          }
+        .stage {
+          animation: film-follow linear both;
+          animation-timeline: scroll(root block);
         }
       }
       @keyframes film-follow {

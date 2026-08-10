@@ -783,9 +783,9 @@
      Guarded like every other reach for PTLField in this file, and for the
      reason given above mount: the name is undeclared when the script is
      missing, so touching it at all is a ReferenceError, not a falsy read. */
-  const followFilm = typeof PTLField !== 'undefined'
-    ? PTLField.pin(document.querySelector('.stage'))
-    : () => {};
+  if (typeof PTLField !== 'undefined') {
+    PTLField.pin(document.querySelector('.stage'));
+  }
   let raf = 0, shown = -1, remeasure = false, lastW = innerWidth;
   let endU = -1;                          // last published --ending
   let resU = '';                          // last published --resolved
@@ -801,11 +801,6 @@
   let still = false;
 
   function render() {
-    /* Here rather than in frame(), because this is the one place that draws:
-       the ambient loop reaches it too, and during a scroll with ambient
-       running frame() is skipped entirely. A drawn film that did not move
-       with the page would be worse than either. */
-    followFilm();
     const max  = document.documentElement.scrollHeight - innerHeight;
     /* The film's own scroll, which is the document minus the tail. Everything
        the film does is a function of THIS, so the tail cannot stretch a single

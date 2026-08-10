@@ -238,8 +238,15 @@
      nothing above the bar moves.
 
      The veil stays fixed: it is the defocus sheet the copy is read on, its
-     mask is written against the frame, and it has no business under the bar. */
-      @supports (-webkit-touch-callout: none) {
+     mask is written against the frame, and it has no business under the bar.
+
+     The guard is three conditions for the reasons the front page gives at
+     length: iOS only, 100lvh because before 15.4 the height would be dropped
+     and this rule has already taken bottom:0 away, and a scroll timeline
+     because carrying the layer from script would re-extend the document on
+     every frame and the page would never end. */
+      @supports (-webkit-touch-callout: none) and (height: 100lvh) and
+        (animation-timeline: scroll()) {
         #c {
           --film-bleed: 140px;
           position: absolute;
@@ -248,11 +255,9 @@
           height: calc(100lvh + var(--film-bleed));
           will-change: transform;
         }
-        @supports (animation-timeline: scroll()) {
-          #c {
-            animation: film-follow linear both;
-            animation-timeline: scroll(root block);
-          }
+        #c {
+          animation: film-follow linear both;
+          animation-timeline: scroll(root block);
         }
       }
       @keyframes film-follow {
@@ -1002,10 +1007,9 @@
         /* A no-op on every engine that still has the film fixed; on iOS it is
            what carries the unfixed film down the document. This page's height
            is the document's own, so there is nothing to wait for. */
-        const followFilm =
-          typeof PTLField !== "undefined"
-            ? PTLField.pin(document.getElementById("c"))
-            : () => {};
+        if (typeof PTLField !== "undefined") {
+          PTLField.pin(document.getElementById("c"));
+        }
 
         /* OPEN is where the mark sits when the reader lands: exactly where the
      front page left it, closed. Scrolling opens it back out to WIDE and it
@@ -1112,7 +1116,6 @@
         let ticking = 0;
 
         function render() {
-          followFilm();
           if (!field || field.isDead()) return;
           const max = root.scrollHeight - innerHeight;
           const p = max > 0 ? clamp(window.scrollY / max) : 0;

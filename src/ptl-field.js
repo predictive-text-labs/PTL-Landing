@@ -1291,33 +1291,29 @@
   /* CARRYING AN UNFIXED FILM DOWN THE DOCUMENT.
      --------------------------------------------------------------------------
      The film cannot be position:fixed on iOS 26 — see --film-bleed in the page
-     for why — so where the page has unfixed it, it has to be carried by hand.
+     for why — so where the page has unfixed it, something has to carry it. The
+     page does that with a scroll timeline; all this publishes is the distance,
+     which is the document's own scrollable length.
 
-     Where the browser will run that on its own compositor, it must: a transform
-     written from script lags a fling, and the picture would swim against the
-     copy, which is still fixed and does not lag. A scroll timeline is the same
-     translation expressed as an animation, so it runs where the scrolling does.
-     Script is the fallback, and it is stepped from the same frame that draws the
-     film, so the two cannot disagree with each other even when both lag.
-
-     Returns that per-frame step, which is a no-op when the compositor has it —
-     deliberately not `travel`, which reads scrollHeight and would cost a forced
-     layout on every drawn frame to re-learn a number that moves once a session.
+     THERE IS DELIBERATELY NO SCRIPT FALLBACK. Writing the transform by hand is
+     not a lesser version of the timeline, it is a broken one: a transform
+     contributes to scrollable overflow, so translating a layer taller than the
+     viewport by scrollY puts its bottom permanently past the document's, which
+     extends scrollHeight, which moves the end further away — every frame, for
+     as long as the reader keeps going. The page would have no bottom. The
+     page's own @supports requires a scroll timeline for exactly this reason, so
+     an engine that cannot run one never unfixes the layer and never gets here.
 
      No-op unless the page actually unfixed the layer, so every other engine
      keeps the fixed layer it has no reason to give up. */
   function pin(el) {
-    if (!el || getComputedStyle(el).position !== 'absolute') return () => {};
+    if (!el || getComputedStyle(el).position !== 'absolute') return;
     const travel = () => el.style.setProperty(
       '--film-travel',
       Math.max(0, document.documentElement.scrollHeight - root.innerHeight) + 'px',
     );
     travel();
     root.addEventListener('resize', travel);
-    if (root.CSS && CSS.supports('animation-timeline', 'scroll()')) return () => {};
-    return () => {
-      el.style.transform = 'translate3d(0,' + root.scrollY + 'px,0)';
-    };
   }
 
   root.PTLField = { mount, pin, CLOSE };
