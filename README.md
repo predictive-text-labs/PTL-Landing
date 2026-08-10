@@ -117,9 +117,9 @@ the switch come out.
 
 ## Deploy
 
-Static, published from the repository root. Both `netlify.toml` and
-`vercel.json` set an empty build command — there is nothing to compile, so
-there is nothing that can fail at deploy time.
+Static, published from the repository root by Netlify. `netlify.toml` sets an
+empty build command — there is nothing to compile, so there is nothing that
+can fail at deploy time.
 
 Caching follows from there. With no build step the filenames are not
 content-hashed, so nothing is served `immutable`: fonts get thirty days, and
