@@ -1010,9 +1010,15 @@
             ? PTLField.mount(document.getElementById("c"), { mode: "form" })
             : null;
         /* A no-op on every engine that still has the film fixed; on iOS it is
-           what carries the unfixed film down the document. This page's height
-           is the document's own, so there is nothing to wait for. */
-        if (typeof PTLField !== "undefined") {
+           what carries the unfixed film down the document.
+
+           Keyed to the FIELD, not to the namespace. mount() returns null when
+           there is no WebGL2 or the program will not build, and an unfixed
+           canvas with no renderer in it is all cost and no picture — a
+           composited layer, a scroll animation and a taller buffer, carrying
+           nothing. The page is a complete document without the film; it should
+           be the plain one it always was. */
+        if (field) {
           PTLField.pin(document.getElementById("c"));
         }
 
