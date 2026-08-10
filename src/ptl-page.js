@@ -389,7 +389,53 @@
        it also cannot exceed 3.75% of the height — the button has to fit under
        the claim without the pair being crushed. */
     ctaGap = Math.min(FIN.CTA_GAP * rem, innerHeight * 0.0375);
+    alignHeads();
   };
+
+  /* ONE LINE THROUGH EVERY HEADLINE.
+     ------------------------------------------------------------------------
+     The blocks are bottom-anchored, which aligns them by the bottom of
+     whatever each one contains. That is not what the eye reads: a two-line
+     headline and a three-line headline with a sub-line under it share an edge
+     nobody can see, and their words sit 107px apart down the frame. The beat
+     that reaches highest looks placed and the rest look like they slipped.
+
+     So the shared thing is the HEADLINE'S CENTRE, and the line is not a number
+     — it is wherever the deepest beat already puts it. Every other beat rises
+     to meet that one; nothing is ever pushed down, and the beat with the most
+     in it does not move at all. Re-derived on every measure, so a re-wrap at a
+     new width moves the line rather than stranding it.
+
+     The sub-line is deliberately outside the centring. It hangs below the
+     headline as it always did; centring the whole block instead would drop the
+     one beat that has one by half its height and break the line it defines.
+
+     Phones keep their own rule — the copy is centred in the frame there by the
+     stylesheet, so this hands the elements back and stays out of it. */
+  const inkCentre = (el) => {
+    const cs = getComputedStyle(el);
+    const pt = parseFloat(cs.paddingTop) || 0;
+    const pb = parseFloat(cs.paddingBottom) || 0;
+    return el.offsetTop + pt + (el.offsetHeight - pt - pb) / 2;
+  };
+  const alignHeads = () => {
+    const heads = blocks.filter(b => b.head);
+    for (const b of heads) { b.el.style.top = ''; b.el.style.bottom = ''; }
+    if (phone) return;
+    const box = copy.clientHeight;
+    const at = heads.map(b => ({ b, h: b.el.offsetHeight, y: inkCentre(b.head) }));
+    const line = Math.min(...at.map(a => box - a.h + a.y));
+    for (const a of at) {
+      a.b.el.style.top = `${(line - a.y).toFixed(1)}px`;
+      a.b.el.style.bottom = 'auto';
+    }
+  };
+  /* The faces are font-display:block, so the first measure can land on
+     fallback metrics and the line would be derived from a headline that is
+     about to change height. Nothing else here is that sensitive to it — the
+     old bottom anchor did not care what the block measured — so this re-derives
+     the line alone rather than forcing a whole remeasure. */
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(alignHeads);
 
   /* The shader's own normalisation, in JS. baseOf() in ptl-field.js is the
      original; this is the only other copy and both are written from CLOSE, so
