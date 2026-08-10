@@ -370,28 +370,74 @@
       .type a {
         pointer-events: auto;
       }
-      /* Safari 26 tints its own chrome from the page rather than letting the
-     page paint there: it looks for a `position: fixed` element against each
-     viewport edge and takes that element's `background-color`. The bar at the
-     bottom of an iPhone is the result, and it is why the film appears to stop
-     short of the edge — it is not clipped, it is covered.
+      /* THE FILM REACHES THE BOTTOM OF THE SCREEN.
+     ------------------------------------------------------------------------
+     iOS 26 lays a translucent bar over the last ~60pt of the screen and shows
+     whatever the page has painted there through it. The film could not be
+     that, because it is `position: fixed`: WebKit sizes fixed boxes to the
+     LAYOUT viewport and clips their layer to it, so the picture stopped short
+     and what showed through the glass was the page's own ground — the black
+     band under the film.
 
-     Two rules, and they are one idea. `.stage` gets the ground as a real
-     background-color so Safari has the page's own colour to read; it is behind
-     an opaque canvas, so nothing on the page can see it. And .stage takes an
-     opacity a thousandth off 1, which is what stops Safari treating a
-     full-screen fixed layer as a plain fill it can clip. `.type` is
-     deliberately NOT in either rule: it is the topmost fixed layer at the same
-     edge and it has to stay transparent for the film to show through, so
-     promoting it only offers Safari a transparent layer to sample — which is
-     read as light, and returns a white bar.
+     Measured on iOS 26.5, 402x874pt: innerHeight is 754, and a fixed child
+     told to overhang by 200px is cut off exactly at the boundary rather than
+     painting past it. No viewport unit reaches the rest either — 100lvh is
+     also 754, because the pocket the bar sits in never retracts, so the LARGE
+     viewport does not include it. Nothing sized against the viewport can get
+     there while the layer is fixed.
+
+     The SCROLLING layer is not clipped. So on iOS the film is absolutely
+     positioned and carried down the document instead (PTLField.pin), with
+     --film-bleed of extra picture hung below the frame to fill the pocket.
+     The renderer is told those rows are bleed and keeps composing against the
+     frame — uOrigin in ptl-field.js — so nothing above the bar moves by a
+     pixel. The bleed is generous: it only has to be at least the pocket, and
+     rows nobody can see cost one shader pass each.
+
+     What this does NOT buy is a clean window. The glass attenuates the last
+     ~35pt, so the film reads through it rather than in it. That is Safari's
+     material and there is no lever on it.
+
+     `.type` stays fixed on purpose. It is the copy, it must never slide under
+     the bar, and it is the layer whose position a lagging transform would be
+     measured against.
 
      -webkit-touch-callout is the guard because only iOS has both the behaviour
-     and the property, so no other engine pays for a layer it does not need. */
+     and the property, so no other engine gives up a fixed layer for a
+     hand-carried one it has no need of. */
       @supports (-webkit-touch-callout: none) {
         .stage {
-          background: var(--paper);
-          opacity: 0.999;
+          --film-bleed: 140px;
+          position: absolute;
+          top: 0;
+          bottom: auto;
+          height: calc(100lvh + var(--film-bleed));
+          will-change: transform;
+        }
+        /* The canvas fills the taller box — it is the film, and the bleed is
+           what it is for. Everything else in .stage is measured in PERCENTAGES
+           OF THE FRAME and has to stay that way: the dome's mask is centred at
+           50% 100%, which means the bottom of what the reader sees, and .deep's
+           ramp runs from half of it. Left to inherit the taller box they would
+           both quietly slide 140px down the picture they were tuned against.
+           So they keep the frame's height, and the bleed carries film alone —
+           which is all that can be seen through the bar anyway. */
+        .stage > .deep,
+        .stage > .veil {
+          bottom: var(--film-bleed);
+        }
+        /* The follow, run where the scrolling is. --film-travel is the
+           document's own scrollable distance, published by PTLField.pin. */
+        @supports (animation-timeline: scroll()) {
+          .stage {
+            animation: film-follow linear both;
+            animation-timeline: scroll(root block);
+          }
+        }
+      }
+      @keyframes film-follow {
+        to {
+          transform: translateY(var(--film-travel, 0px));
         }
       }
       /* The LAYER is transparent to the pointer; the WORDS are not. Without this

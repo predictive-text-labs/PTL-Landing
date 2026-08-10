@@ -69,7 +69,14 @@
   precision highp float;
   out vec4 fragColor;
 
+  /* uRes is THE FRAME — what the reader is composed against — and not
+     necessarily the whole buffer. On iOS the buffer is given extra rows below
+     the frame so the film can paint into the strip the toolbar sits over (see
+     --film-bleed in the page). uOrigin is where the frame's bottom-left sits
+     inside that buffer, so every measurement below still means what it says:
+     a share of the frame, unmoved by how much bleed is hung underneath it. */
   uniform vec2      uRes;
+  uniform vec2      uOrigin;    // frame's bottom-left within the buffer, device px
   uniform float     uT;         // 0..1 progress through this section
   uniform float     uCell;      // grid cell size in device px
   uniform float     uGap;       // black gutter between cells
@@ -463,7 +470,7 @@
      positional — so one id in, one size out, and a fragment can ask about its
      neighbours on the same terms it asks about itself. */
   vec2 cellUv(vec2 id){
-    return ((id + 0.5) * uCell - 0.5 * uRes) / baseOf();
+    return ((id + 0.5) * uCell - uOrigin - 0.5 * uRes) / baseOf();
   }
 
   /* THE PICTURE, SAMPLED AT ONE CELL. This is the only place the form is ever
@@ -525,7 +532,7 @@
        field on a letterboxed canvas instead of cropping it, which shrank the
        subject to a stamp in the middle of a very wide empty frame. */
     float base = baseOf();
-    vec2 uv = (centre - 0.5 * uRes) / base;
+    vec2 uv = (centre - uOrigin - 0.5 * uRes) / base;
     float halfH = 0.5 * uRes.y / base;
 
     /* THE GROUND IS THE SAME PICTURE THE MARKS ARE, AT THE SAME RESOLUTION.
@@ -1036,6 +1043,9 @@
        defaults, and leaving the cache populated would let size() decide there
        was nothing to re-apply. */
     let w = 0, h = 0;
+    /* The frame is the part of the buffer the reader sees. `bleed` is the rows
+       hung below it, which exist only to be painted over by browser chrome. */
+    let bleed = 0, frameH = 0;
     /* Set only if a REBUILD fails — the context came back and would not take
        the program. Nothing can be drawn again after that, so the page stops
        asking rather than calling draw() on every scroll frame forever. */
@@ -1067,7 +1077,7 @@
       return p;
     }
 
-    const UNIFORMS = ['uRes', 'uT', 'uG', 'uCell', 'uGap', 'uGain', 'uMode',
+    const UNIFORMS = ['uRes', 'uOrigin', 'uT', 'uG', 'uCell', 'uGap', 'uGain', 'uMode',
                       'uSection', 'uTex', 'uLat', 'uFov', 'uMouse', 'uAct',
                       'uTime', 'uAmb', 'uInk', 'uInk2', 'uPaper', 'uTint',
                       'uShadow', 'uTone', 'uResolve', 'uPrint', 'uCopy', 'uLift'];
@@ -1183,6 +1193,14 @@
       const nh = Math.round(canvas.clientHeight * dpr);
       if (nw === w && nh === h) return;
       w = canvas.width = nw; h = canvas.height = nh;
+      /* Read only when the size actually changed — getComputedStyle every
+         frame would cost a style resolve per draw for a number that moves
+         about once a session. */
+      const css = parseFloat(
+        getComputedStyle(canvas).getPropertyValue('--film-bleed'),
+      );
+      bleed  = Math.min(h - 1, Math.max(0, Math.round((css || 0) * dpr)));
+      frameH = h - bleed;
       gl.viewport(0, 0, w, h);
     }
 
@@ -1193,7 +1211,8 @@
       gl.useProgram(p);
       gl.uniform1i(uu.uTex, 0);
       gl.uniform1i(uu.uLat, 1);
-      gl.uniform2f(uu.uRes, w, h);
+      gl.uniform2f(uu.uRes, w, frameH);
+      gl.uniform2f(uu.uOrigin, 0, bleed);
       gl.uniform1f(uu.uT, t);
       gl.uniform1f(uu.uG, o.g != null ? o.g : t);
       gl.uniform1f(uu.uCell, (o.cell != null ? o.cell : 12) * dpr);
@@ -1269,5 +1288,37 @@
     return { draw, setWord, gl, canvas, isDead: () => dead, isLost: () => lost };
   }
 
-  root.PTLField = { mount, CLOSE };
+  /* CARRYING AN UNFIXED FILM DOWN THE DOCUMENT.
+     --------------------------------------------------------------------------
+     The film cannot be position:fixed on iOS 26 — see --film-bleed in the page
+     for why — so where the page has unfixed it, it has to be carried by hand.
+
+     Where the browser will run that on its own compositor, it must: a transform
+     written from script lags a fling, and the picture would swim against the
+     copy, which is still fixed and does not lag. A scroll timeline is the same
+     translation expressed as an animation, so it runs where the scrolling does.
+     Script is the fallback, and it is stepped from the same frame that draws the
+     film, so the two cannot disagree with each other even when both lag.
+
+     Returns that per-frame step, which is a no-op when the compositor has it —
+     deliberately not `travel`, which reads scrollHeight and would cost a forced
+     layout on every drawn frame to re-learn a number that moves once a session.
+
+     No-op unless the page actually unfixed the layer, so every other engine
+     keeps the fixed layer it has no reason to give up. */
+  function pin(el) {
+    if (!el || getComputedStyle(el).position !== 'absolute') return () => {};
+    const travel = () => el.style.setProperty(
+      '--film-travel',
+      Math.max(0, document.documentElement.scrollHeight - root.innerHeight) + 'px',
+    );
+    travel();
+    root.addEventListener('resize', travel);
+    if (root.CSS && CSS.supports('animation-timeline', 'scroll()')) return () => {};
+    return () => {
+      el.style.transform = 'translate3d(0,' + root.scrollY + 'px,0)';
+    };
+  }
+
+  root.PTLField = { mount, pin, CLOSE };
 })(window);

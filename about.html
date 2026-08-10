@@ -224,20 +224,40 @@
           mask-image: none;
         }
       }
-      /* Safari 26 tints its own chrome from the page rather than letting the
-     page paint there: it looks for a `position: fixed` element against each
-     viewport edge and takes that element's `background-color`. The film is the
-     fixed layer against both edges here, so it is the one that answers, and it
-     answers with the page's own ground. The opacity a thousandth off 1 is what
-     stops Safari treating a full-screen fixed layer as a plain fill it can
-     clip. The veil is left alone: it sits over the film and has to stay
-     translucent, and a translucent layer offered to Safari is read as light.
-     -webkit-touch-callout is the guard because only iOS has both the behaviour
-     and the property, so no other engine pays for a layer it does not need. */
+      /* THE FILM REACHES THE BOTTOM OF THE SCREEN. The front page carries the
+     long version of this; the short one is that iOS 26 lays a translucent bar
+     over the last ~60pt of the screen, and a `position: fixed` layer is sized
+     to the layout viewport and clipped there, so the film stopped short and
+     the glass showed the page's own ground instead. No viewport unit reaches
+     the rest — 100lvh measures 754 on an 874pt screen, because the pocket the
+     bar sits in never retracts.
+
+     The scrolling layer is not clipped, so the film is unfixed and carried
+     down the document (PTLField.pin) with --film-bleed of extra picture below
+     the frame. ptl-field.js composes against the frame, not the buffer, so
+     nothing above the bar moves.
+
+     The veil stays fixed: it is the defocus sheet the copy is read on, its
+     mask is written against the frame, and it has no business under the bar. */
       @supports (-webkit-touch-callout: none) {
         #c {
-          background: var(--paper);
-          opacity: 0.999;
+          --film-bleed: 140px;
+          position: absolute;
+          top: 0;
+          bottom: auto;
+          height: calc(100lvh + var(--film-bleed));
+          will-change: transform;
+        }
+        @supports (animation-timeline: scroll()) {
+          #c {
+            animation: film-follow linear both;
+            animation-timeline: scroll(root block);
+          }
+        }
+      }
+      @keyframes film-follow {
+        to {
+          transform: translateY(var(--film-travel, 0px));
         }
       }
 
@@ -979,6 +999,13 @@
           typeof PTLField !== "undefined"
             ? PTLField.mount(document.getElementById("c"), { mode: "form" })
             : null;
+        /* A no-op on every engine that still has the film fixed; on iOS it is
+           what carries the unfixed film down the document. This page's height
+           is the document's own, so there is nothing to wait for. */
+        const followFilm =
+          typeof PTLField !== "undefined"
+            ? PTLField.pin(document.getElementById("c"))
+            : () => {};
 
         /* OPEN is where the mark sits when the reader lands: exactly where the
      front page left it, closed. Scrolling opens it back out to WIDE and it
@@ -1085,6 +1112,7 @@
         let ticking = 0;
 
         function render() {
+          followFilm();
           if (!field || field.isDead()) return;
           const max = root.scrollHeight - innerHeight;
           const p = max > 0 ? clamp(window.scrollY / max) : 0;
