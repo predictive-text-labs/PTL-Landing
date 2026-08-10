@@ -197,12 +197,37 @@
   const RES_A = LATE ? 0.885 : 4 / 6;
   const RES_B = LATE ? 0.985 : C.TO;
   const RES_K = 2.5;
+  /* AND IT LANDS EARLIER ON A PHONE. The same window, slid back so that it
+     CLOSES where it used to open — the top of PRICE. On a wide frame the drain
+     is a passage the reader watches through the last two beats; on a phone the
+     colour and the depth blur under it are the loudest things in a small
+     frame, and carrying them to the final mark meant the ending had to
+     out-shout the film instead of following it. So the phone spends the colour
+     by the line that names what the company does, and the last two beats are
+     already white.
+
+     Not applied to the blue: its colour is the state of the thing being
+     described rather than a passage, and it resolves with the form by
+     construction — see the note above. */
+  const RES_SPAN = C.TO - 4 / 6;
   const resolveAt = (g) => {
-    const u = clamp((g - RES_A) / (RES_B - RES_A));
+    const mob = phone && !LATE;
+    const a = mob ? 4 / 6 - RES_SPAN : RES_A;
+    const b = mob ? 4 / 6 : RES_B;
+    const u = clamp((g - a) / (b - a));
     /* The old one was a smoothstep, which eases in AND out; the dark
        variant's leaves at speed and coasts. Keeping both rather than fitting
-       one curve to two intentions. */
-    return LATE ? u * u * (3 - 2 * u) : 1 - Math.pow(1 - u, RES_K);
+       one curve to two intentions.
+
+       The phone's runs the other way — ease IN, the same exponent mirrored.
+       Its window is short and lands two beats early, and an ease-out spends
+       the colour in the first third of it, so the drain was over before the
+       reader had scrolled through the beat it belongs to. Easing in holds the
+       warm most of the way and then goes, which is a film ending rather than
+       a light being switched off. */
+    return LATE ? u * u * (3 - 2 * u)
+         : mob  ? Math.pow(u, RES_K)
+                : 1 - Math.pow(1 - u, RES_K);
   };
 
   const mixHex = (a, b, t) => {
@@ -333,12 +358,23 @@
     CTA: [1.259, 0.095],
     CTA_RISE: 0.042,      // how far it floats up, as a fraction of the frame
     CTA_GAP: 1.4,         // below the claim, in rem, capped against short frames
+    /* How long the defocus dome takes to arrive under the lockup, in the same
+       units. It is fully there before the claim is — the claim's own window
+       opens at 0.095 — so the words land on a ground rather than watching one
+       appear behind them. Only the phone reads it; see .veil in the page. */
+    DOME: 0.14,
   };
   const easeIn = u => u * u;             // accelerates out of frame
 
   let ha = 0, gap = 0, ctaGap = 0;
+  /* Whether the copy is inside the mark or under it. The page does not own the
+     breakpoint — the stylesheet does, next to the rule that actually moves the
+     copy — so this reads the answer rather than restating the query. */
+  let phone = false;
   const measure = () => {
     palette();
+    phone = getComputedStyle(document.documentElement)
+              .getPropertyValue('--phone').trim() === '1';
     /* The CSS default is 1 and .cta carries a transition, so on first entering
        the finale the link rendered at FULL opacity and faded back out over
        ~120ms — giving away, 2.15 viewport-heights early, the exact thing TAIL
@@ -355,15 +391,48 @@
     ctaGap = Math.min(FIN.CTA_GAP * rem, innerHeight * 0.0375);
   };
 
+  /* The shader's own normalisation, in JS. baseOf() in ptl-field.js is the
+     original; this is the only other copy and both are written from CLOSE, so
+     a retune moves them together. */
+  const fieldBase = H => Math.max(H, innerWidth / C.ASPECT);
+  /* On a phone the mark sits on the frame's centre rather than above it, and
+     this file has to agree with the shader about that or the closing lockup is
+     placed against a mark that is not where it thinks. */
+  const lift = () => (phone ? 0 : 1);
+
+  /* WHERE THE COPY IS, for the shader to keep clear of — (centre, half-height,
+     half-width, falloff), the first two as a fraction of the frame's height
+     and the third in the shader's own uv, which is normalised on `base`.
+
+     FLOOR is the bottom of a landscape frame written in those terms: a band
+     centred below the bottom edge whose taper reaches zero 9% under the
+     middle. Every wide viewport gets it for the whole film, and it draws what
+     the three constants in the shader used to draw, to the pixel.
+
+     A phone gets NONE instead — nothing cleared at all. The copy there is not
+     under the mark, it is inside it, sitting in the ring's own void; clearing
+     a band as well took out the lower arc and the lattice beneath it and left
+     the film 190px short of the bottom edge. Parting the form around the words
+     instead was tried and reverted: on a frame this narrow the words are as
+     big as the circle, so the hole ate the ring's shoulders and what was left
+     read as an egg. The words simply sit on the picture, where the picture is
+     already black.
+
+     The ending is the exception at both sizes, and it travels: the lockup IS
+     on the floor, so as it arrives the phone's box crosses from NONE to FLOOR
+     on the same ramp that brings the dome up. */
+  const FLOOR = [-0.40, 0.10, 0.40, 0.21];
+  const NONE  = [-9, 0.01, 0.01, 0.02];   // a band nine frames below: clears nothing
+
   /* The mark's lower edge in screen px — the same arithmetic as form()'s
      radius track, restricted to the last section, where every track but the
      closing one has already reached its end value.
 
      The constants are C's, above — the field's, not this file's. */
   function markBottom(g, H) {
-    const base = Math.max(H, innerWidth / C.ASPECT);
+    const base = fieldBase(H);
     const r = C.R - C.DR * smooth(C.FROM, C.TO, g);
-    return 0.5 * H - C.CY * base + (r + C.BW) * base;
+    return 0.5 * H - C.CY * lift() * base + (r + C.BW) * base;
   }
 
   function finale(b, t, H, ct) {
@@ -709,6 +778,7 @@
   document.body.classList.remove('no-js');
   document.body.style.height = ((S.length * PER + TAIL) * 100) + 'vh';
   let raf = 0, shown = -1, remeasure = false, lastW = innerWidth;
+  let endU = -1;                          // last published --ending
   /* True once the film has finished closing. Past PTLField.CLOSE.TO the
      fragment program is a pure function of constants — the ambient term is
      multiplied by (1 - smoothstep(0.86, 0.965, g)), exactly zero there, and
@@ -777,6 +847,23 @@
        held at its end too. */
     const res = resolveAt(reduce ? 1 : p);
     document.documentElement.style.setProperty('--ink-live', mixHex(TYPE_A, TYPE_B, res));
+    /* The same number, unmixed, for the rules that need the CURVE rather than
+       a colour off it — .deep, whose blur is part of the film and has to leave
+       on the film's clock rather than a second one of its own. */
+    document.documentElement.style.setProperty('--resolved', res.toFixed(3));
+
+    /* How far into the ending we are, published rather than applied: the
+       stylesheet decides who wants it. On a phone the defocus dome is only for
+       the finale, which is the one section whose copy is on the floor; on a
+       wide frame the dome is unconditional and nothing reads this. A pure
+       function of scroll like every other cue, so scrubbing back up takes the
+       dome away again rather than leaving it on a timer. Written only when it
+       changes — it is 0 for five sixths of the page. */
+    const end = b.fin ? (reduce ? 1 : outCubic(clamp(t / FIN.DOME))) : 0;
+    if (end !== endU) {
+      endU = end;
+      document.documentElement.style.setProperty('--ending', end.toFixed(3));
+    }
 
     /* isDead() means the context came back and would not take the program —
        draw() would return immediately anyway, but there is no reason to build
@@ -787,6 +874,14 @@
          bright arc swept up through a lockup that reduce pins in place, which
          put 86% of the verb's ink under 4.5:1. */
       g: reduce ? 1 : p, section: idx, word: S[idx].key,
+      /* The keep-out band is for copy on the floor. On a phone there is none
+         until the ending, so it rides the ending's own ramp and the film gets
+         the whole frame back for the argument itself. */
+      /* The parting travels from the middle to the floor as the ending
+         arrives, because that is where the copy goes: the finale's lockup is
+         the one phone frame whose words are under the mark rather than in it. */
+      copy: phone ? NONE.map((v, i) => v + (FLOOR[i] - v) * end) : FLOOR,
+      lift: lift(),
       cell: 12, gap: 0.12, gain: 1.0, fov: 0.70, shadow: SHADOW, tone: TONE,
       print: PRINT,
       mouse: cur, act, ink: INK, ink2: INK2, paper: PAPER, tint: TINT,

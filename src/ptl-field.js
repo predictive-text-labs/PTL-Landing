@@ -94,6 +94,8 @@
   uniform float     uAmb;       // 0..1 — how much ambient motion is allowed
   uniform sampler2D uLat;       // the picture, already sampled once per cell
   uniform float     uResolve;   // 0..1 — how far the film has resolved
+  uniform vec4      uCopy;      // the copy's box: (centre, half-height, half-width, falloff)
+  uniform float     uLift;      // 1 the mark rides above centre, 0 it sits on it
 
   /* A LUMINANCE IN A BYTE PAIR. The lattice pass writes to an RGBA8 target —
      the one colour-renderable format WebGL2 guarantees without an extension —
@@ -151,6 +153,21 @@
     return mix(v0, v1, smoothstep(a, b, g));
   }
 
+  /* THE NORMALISATION, AND THE ONLY COPY OF IT.
+     Dividing by the height widens the horizontal field on a letterboxed canvas
+     instead of cropping it, which stops the subject shrinking to a stamp in
+     the middle of a very wide empty frame. On a portrait frame the same rule
+     scales the form to the HEIGHT, so the ring is wider than the phone and its
+     left and right run off the edges — deliberately. Capping it to the width
+     was tried and reverted: it fixes a silhouette nobody was looking at and
+     costs the whole film its scale, including the closing mark, which came out
+     42% smaller than it is meant to be. The number lives in CLOSE at the top of
+     this file, because ptl-page.js does this arithmetic too, to know where the
+     mark's lower edge is. */
+  float baseOf(){
+    return max(uRes.y, uRes.x / 1.78);
+  }
+
   float form(vec2 uv, float g){
     /* The circle. Centre and radius are one continuous path from "colossal and
        mostly off-frame" to "a single mark at the middle". */
@@ -169,7 +186,13 @@
 
     /* The end values of these two tracks, and of bw below, are mirrored in
        CLOSE at the top of this file — see the note there before retuning. */
-    float cy = track(g, 0.00, 0.30, -0.80, 0.02);   // CLOSE.CY
+    /* uLift is the END of this track only — the opening's -0.80 is what puts
+       the reader inside a colossal circle and is not negotiable. The 0.02 it
+       settles at lifts the mark to leave room UNDER it for copy, which on a
+       phone is not where the copy is; there the page passes 0 and the mark
+       comes to rest on the frame's own centre, with the words in the middle
+       of it. */
+    float cy = track(g, 0.00, 0.30, -0.80, 0.02 * uLift);   // CLOSE.CY
     float r  = track(g, 0.00, 0.30,  1.12, 0.34)
              - track(g, 0.30, 0.50,  0.00, 0.07)      // WHEN: tightens
              + track(g, 0.52, 0.66,  0.00, 0.05)      // COMMIT: breathes out
@@ -307,7 +330,16 @@
        is a soft grey smear, and the thing that makes this page work is that
        every mark is hard. Parting around the copy is better because the field
        stays sharp everywhere it is visible. */
-    float column = 1.0 - smoothstep(0.40, 0.74, abs(uv.x));
+    /* uCopy IS THE BOX THE WORDS OCCUPY, and the page measures it — this used
+       to be three constants that described the bottom of a landscape frame,
+       which is only where the copy is when the frame is landscape. On a phone
+       the copy sits in the middle, and a keep-out aimed at the floor cleared
+       the one part of the picture that had nothing in front of it while
+       leaving the marks that were directly under the headline. The tapers are
+       falloff is the box's own fourth number, 0.21 on the floor — which with
+       the 1.62 the sides take is the shipped 0.34 — so a wide frame, where the
+       page passes the floor box, draws exactly what it drew before. */
+    float column = 1.0 - smoothstep(uCopy.z, uCopy.z + uCopy.w * 1.62, abs(uv.x));
     /* uv is normalised by 'base', which is the LONG side — in landscape that is
        the width, so uv.y stops meaning "share of the visible frame" and the
        keep-out drifts off the bottom of a short viewport. On an 844x390 phone
@@ -316,9 +348,10 @@
        converts back to a fraction of the actual height, so the band is always
        the same share of what the reader can see. On a viewport at or taller
        than 16:9 this is exactly uv.y and nothing changes. */
-    float base   = max(uRes.y, uRes.x / 1.78);
+    float base   = baseOf();
     float sy     = uv.y * base / uRes.y;
-    float clear  = 1.0 - smoothstep(-0.09, -0.30, sy) * column;
+    float band   = 1.0 - smoothstep(uCopy.y, uCopy.y + uCopy.w, abs(sy - uCopy.x));
+    float clear  = 1.0 - band * column;
 
     return max(ring, lat) * clear;
   }
@@ -430,7 +463,7 @@
      positional — so one id in, one size out, and a fragment can ask about its
      neighbours on the same terms it asks about itself. */
   vec2 cellUv(vec2 id){
-    return ((id + 0.5) * uCell - 0.5 * uRes) / max(uRes.y, uRes.x / 1.78);
+    return ((id + 0.5) * uCell - 0.5 * uRes) / baseOf();
   }
 
   /* THE PICTURE, SAMPLED AT ONE CELL. This is the only place the form is ever
@@ -438,7 +471,7 @@
      the whole frame — marks, shadows, ground — is built from this lattice of
      samples and nothing else. */
   float formAt(vec2 id){
-    float base  = max(uRes.y, uRes.x / 1.78);
+    float base  = baseOf();
     float halfH = 0.5 * uRes.y / base;
     vec2  uvc   = cellUv(id);
     float l = uMode == 0 ? form(uvc, uG)
@@ -491,7 +524,7 @@
     /* Normalise on the long side. Dividing by height widens the horizontal
        field on a letterboxed canvas instead of cropping it, which shrank the
        subject to a stamp in the middle of a very wide empty frame. */
-    float base = max(uRes.y, uRes.x / 1.78);
+    float base = baseOf();
     vec2 uv = (centre - 0.5 * uRes) / base;
     float halfH = 0.5 * uRes.y / base;
 
@@ -693,6 +726,12 @@
        the last frame is a hard edge with one pixel of antialiasing at every
        DPR instead of a hard edge that crawls on a 1x display. One gs unit is
        half a cell, so one device pixel is 2/uCell of it. */
+    /* The reflection is NOT here, and it was: a depth term inside this feather
+       softened the mark itself toward the floor of the frame. It is a layer
+       over the canvas instead — .deep in the page — because a feather cannot
+       exist on variation 4, where uTone takes this to the floor by contract,
+       and an effect the one-bit control cannot have is an effect the control
+       cannot control for. */
     float wSoft = max(e * mix(0.20, 0.02, resolveU), 1.0 / uCell);
     /* Variation 4 has no feather either. The original mark was a hard step()
        and the softness is one of the things that variation exists to control
@@ -1031,7 +1070,7 @@
     const UNIFORMS = ['uRes', 'uT', 'uG', 'uCell', 'uGap', 'uGain', 'uMode',
                       'uSection', 'uTex', 'uLat', 'uFov', 'uMouse', 'uAct',
                       'uTime', 'uAmb', 'uInk', 'uInk2', 'uPaper', 'uTint',
-                      'uShadow', 'uTone', 'uResolve', 'uPrint'];
+                      'uShadow', 'uTone', 'uResolve', 'uPrint', 'uCopy', 'uLift'];
     function locate(p) {
       const m = {};
       for (const n of UNIFORMS) m[n] = gl.getUniformLocation(p, n);
@@ -1179,6 +1218,9 @@
       gl.uniform1f(uu.uTime, o.time != null ? o.time : 0);
       gl.uniform1f(uu.uAmb, o.amb != null ? o.amb : 0);
       gl.uniform1f(uu.uResolve, o.resolve != null ? o.resolve : 0);
+      const box = o.copy || [-0.40, 0.10, 0.40, 0.21];   // the floor, the default
+      gl.uniform4f(uu.uCopy, box[0], box[1], box[2], box[3]);
+      gl.uniform1f(uu.uLift, o.lift != null ? o.lift : 1);
     }
 
     function draw(t, o) {
