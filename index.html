@@ -370,6 +370,23 @@
       .type a {
         pointer-events: auto;
       }
+      /* iOS 26 clips a full-screen `position: fixed` layer to the band between
+     Safari's status bar and its floating toolbar, so the film stopped short of
+     both edges and the page's own black showed through — at the bottom of the
+     frame, which is the one place this page has no picture to lose. The clip is
+     not the safe area: `viewport-fit=cover` is already set and the chrome bar,
+     also fixed, draws where it should. Safari only clips a fixed layer it can
+     treat as a plain fill; an opacity below 1 sends it through the compositor
+     instead and it paints the whole screen. 0.999 is the smallest step off 1
+     that is still off it, and against this ground it is not a colour.
+     -webkit-touch-callout is the guard because only iOS has both the bug and
+     the property, so no other engine pays for a layer it does not need. */
+      @supports (-webkit-touch-callout: none) {
+        .stage,
+        .type {
+          opacity: 0.999;
+        }
+      }
       /* The LAYER is transparent to the pointer; the WORDS are not. Without this
      the copy is text you cannot put a cursor in — no I-beam, no selection, no
      copying a line out of it — because the whole layer above the canvas was
