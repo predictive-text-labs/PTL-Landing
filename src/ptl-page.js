@@ -151,6 +151,18 @@
     PRINT = PRINT * PRINT * (3 - 2 * PRINT);
   };
 
+  /* WHERE THE MARK ENDS UP, as the field publishes it. Three things in this
+     file are pinned to the close — the resolve window's far edge, the line
+     that has to stay clear of the mark, and the flag that shuts the ambient
+     loop down once the frame is final — and all three used to carry 0.965 as
+     their own literal. The field owns that geometry, and the note above CLOSE
+     in ptl-field.js records what happened last time the two came apart.
+
+     The fallback only matters if ptl-field.js failed to load, in which case
+     there is no mark to clear, nothing to draw, and no value to be wrong. */
+  const C = (typeof PTLField !== 'undefined' && PTLField.CLOSE) ||
+            { FROM: 0.86, TO: 0.965, R: 0.27, DR: 0.24, CY: 0.02, BW: 0.045, ASPECT: 1.78 };
+
   /* THE RESOLVE CLOCK — the one the shader used to own.
      ------------------------------------------------------------------------
      It moved up here because the TYPE resolves on it too, and two languages
@@ -183,7 +195,7 @@
      Read once — the variation cannot change without a reload. */
   const LATE  = document.documentElement.dataset.v === '3';
   const RES_A = LATE ? 0.885 : 4 / 6;
-  const RES_B = LATE ? 0.985 : 0.965;
+  const RES_B = LATE ? 0.985 : C.TO;
   const RES_K = 2.5;
   const resolveAt = (g) => {
     const u = clamp((g - RES_A) / (RES_B - RES_A));
@@ -337,8 +349,9 @@
     ha  = finA.offsetHeight;
     gap = FIN.GAP * rem;
     /* Capped against the viewport as well as set in rem: on a landscape phone
-       a fixed 3.4rem below the claim is a large share of the whole frame, and
-       the button has to fit under it without the pair being crushed. */
+       a fixed 1.4rem below the claim is a large share of the whole frame, so
+       it also cannot exceed 3.75% of the height — the button has to fit under
+       the claim without the pair being crushed. */
     ctaGap = Math.min(FIN.CTA_GAP * rem, innerHeight * 0.0375);
   };
 
@@ -346,13 +359,7 @@
      radius track, restricted to the last section, where every track but the
      closing one has already reached its end value.
 
-     The constants are the field's, not this file's: it owns the geometry and
-     publishes the end state as PTLField.CLOSE, so retuning the close there
-     moves the line that has to stay clear of it. The fallback only matters if
-     ptl-field.js failed to load, in which case there is no mark to clear and
-     the value is unused. */
-  const C = (typeof PTLField !== 'undefined' && PTLField.CLOSE) ||
-            { FROM: 0.86, TO: 0.965, R: 0.27, DR: 0.24, CY: 0.02, BW: 0.045, ASPECT: 1.78 };
+     The constants are C's, above — the field's, not this file's. */
   function markBottom(g, H) {
     const base = Math.max(H, innerWidth / C.ASPECT);
     const r = C.R - C.DR * smooth(C.FROM, C.TO, g);
@@ -440,7 +447,7 @@
      read as one more flourish on a frame that is supposed to have stopped
      moving. Opacity and a rise, on a smoothstep so it is gentle at both ends
      rather than launching and braking. */
-  let ctaU = 0, ctaSettling = false;
+  let ctaU = 0, ctaSettling = false, ctaTs = 0;
   function floatCta(t, H) {
     if (!cta) return;
     const target = smooth(FIN.CTA[0], FIN.CTA[0] + FIN.CTA[1], t);
@@ -450,10 +457,20 @@
        while CSS was still easing the fade, and 0.0px of the 39px rise survived
        to the frame where the link became half-visible. The arrival was not one
        at any realistic swipe speed, and it ran backwards too. This guarantees
-       ~22 frames of rise-and-fade however hard the flick is, keeps both
+       ~0.37s of rise-and-fade however hard the flick is, keeps both
        properties on one clock, and settles deterministically both ways. */
-    ctaU = target < ctaU ? Math.max(target, ctaU - 0.09)
-                         : Math.min(target, ctaU + 0.06);
+    /* Per second, not per frame — the same correction the ambient clock
+       above needed. Both rates were tuned against 60Hz, so they stay written
+       in 60ths and are scaled by the time actually elapsed; on a 120Hz screen
+       the arrival was running at double speed, which is the flourish the rate
+       limit exists to prevent. Clamped, because this is driven from the
+       scroll path as well, and a flick after a pause would otherwise hand it
+       the whole pause in one step. */
+    const now = performance.now();
+    const k = ctaTs ? Math.min((now - ctaTs) / 1000, 0.05) * 60 : 1;
+    ctaTs = now;
+    ctaU = target < ctaU ? Math.max(target, ctaU - 0.09 * k)
+                         : Math.min(target, ctaU + 0.06 * k);
     /* One flag, set from the only place that knows. Deriving this at the call
        site got it wrong twice: `ctaU > 0` is false on the very first frame of
        an arrival, and the finale's `.on` class is not on the element this
@@ -573,11 +590,27 @@
      it stays lifted through a flick and settles back on its own. */
   const AMB_IDLE = 1.0;    // clock seconds per real second, untouched
   const AMB_GAIN = 5.5;    // extra, at full scroll speed
-  const AMB_DECAY = 0.86;  // how fast the boost bleeds off, per frame
+  const AMB_DECAY = 0.86;  // how fast the boost bleeds off, per 60th of a second
   let clock = 0, lastTs = 0, vel = 0, lastY = 0;
   /* Ambient motion is motion, so prefers-reduced-motion turns it off outright
-     and the page goes back to being driven by scroll alone. */
-  const ambient = () => (reduce ? 0 : 1);
+     and the page goes back to being driven by scroll alone.
+
+     …and so does having nothing to move. The breathe reaches exactly one
+     thing, the size of the halftone marks, so with no renderer mounted — no
+     WebGL2, or ptl-field.js missing — the loop was holding the compositor
+     open at 60fps to advance a clock nothing reads and redraw type that only
+     scroll can move. That is the same waste `still` exists to stop, on the
+     machines least able to afford it. Scroll, the pointer and the link's
+     arrival all keep their own paths into the loop, so nothing that can still
+     move stops moving.
+
+     A field that died with its context is the same case: draw() returns
+     immediately after that, so the loop would be spinning against a picture
+     that can no longer change.
+
+     `field` is declared below, after the mount: this is only ever CALLED from
+     a frame, and the first frame is scheduled at the foot of the file. */
+  const ambient = () => (reduce || !field || field.isDead() ? 0 : 1);
 
   /* One frame loop, for everything that is not scroll position: the ambient
      clock and the pointer light easing toward the cursor. It runs continuously
@@ -686,8 +719,7 @@
        undefined and this function threw on every frame of the bounce. */
     const p    = clamp(window.scrollY / film);
     const span = 1 / S.length;
-    still = p >= ((typeof PTLField !== 'undefined' && PTLField.CLOSE)
-                    ? PTLField.CLOSE.TO : 0.965);
+    still = p >= C.TO;
     const idx  = Math.min(S.length - 1, Math.floor(p / span));
     const t    = (p - idx * span) / span;
     /* The button's clock: t while the film is running, and then t past 1,

@@ -113,8 +113,9 @@
      way, inside the noise. It is here because it is what makes the invariant
      true — the shading pass evaluates NOTHING positional, it only reads — and
      because eighteen transcendentals a pixel is a bill a phone pays even when
-     SwiftShader does not. One byte is plenty: it spans 0.85 to 1.15, so a step
-     is a thousandth of a mark. */
+     SwiftShader does not. One byte is plenty: it spans 0.88 to 1.135 — the
+     breathe itself only reaches 0.898..1.102 — so a step is a thousandth of a
+     mark. */
   float encBrt(float b){ return clamp((b - 0.88) / 0.255, 0.0, 1.0); }
   float decBrt(float e){ return 0.88 + e * 0.255; }
 
@@ -945,7 +946,15 @@
   /* THE LATTICE PASS. One texel per cell, and nothing else in it. Built by
      cutting the main shader at its main() so the two can never drift: same
      uniforms, same form, same tail cut, by construction rather than by care. */
-  const COMMON   = FRAG.slice(0, FRAG.indexOf('  void main(){'));
+  const CUT = FRAG.indexOf('  void main(){');
+  /* If the cut ever misses, slice(0, -1) hands back the WHOLE shader minus its
+     last character and the lattice program is built with two main()s in it —
+     which surfaces, several hundred lines away, as a GLSL error about a
+     redefinition. The sentinel is literal text including its indentation, so a
+     formatter reaching inside this template is all it takes. Say which thing
+     broke, here, rather than leaving the compiler to describe the symptom. */
+  if (CUT < 0) throw new Error('PTLField: FRAG has no "  void main(){" to cut at');
+  const COMMON   = FRAG.slice(0, CUT);
   const FRAG_LAT = COMMON + `void main(){
     /* One cell of border all round, so texel (0,0) is cell (-1,-1). */
     vec2 id = floor(gl_FragCoord.xy) - 1.0;
@@ -1074,7 +1083,20 @@
       drawn = null;                     // the TYPE texture went with the context
       w = h = 0;                        // and so did the viewport
     }
-    build();
+    /* Every caller reads this as "a field, or null" and branches once. The
+       restore path already honours that — it catches and marks the field dead
+       — but the FIRST build did not, so a driver that takes the context and
+       then refuses the program threw out of mount(), past the null check, and
+       took the rest of the calling script with it. On the front page that
+       aborts before the choreography is armed and leaves the reader the static
+       no-js document; the two failures are the same failure, and the page
+       already knows how to survive one of them. */
+    try {
+      build();
+    } catch (e) {
+      console.error('PTLField: could not build the program', e);
+      return null;
+    }
 
     canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); lost = true; });
     canvas.addEventListener('webglcontextrestored', () => {

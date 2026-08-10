@@ -7,9 +7,13 @@ that is **drawn, not filmed**.
 
 No video, no image sequence, no animation library, no framework, no build step.
 The whole film is one WebGL2 fragment shader — `src/ptl-field.js` — and scroll
-is the clock the argument runs on. Every position on the page is a pure
-function of `scrollY`, so there is nothing to seek, buffer or decode; dragging
-the scrollbar backwards runs the film backwards exactly.
+is the clock the argument runs on. The composition is a pure function of
+`scrollY` — every beat, every line, every track in the form — so there is
+nothing to seek, buffer or decode; dragging the scrollbar backwards runs the
+film backwards exactly. The one thing that is not is the interaction: the mark
+leans toward the pointer by about twenty pixels, which rides on top of the
+scroll-determined position rather than replacing it, and is off entirely under
+`prefers-reduced-motion` and on a coarse pointer.
 
 The film ends before the page does. The last stretch of scroll — `TAIL` in
 `src/ptl-page.js` — is deliberately dead: the mark has closed, the claim has
@@ -39,7 +43,7 @@ size modulation reads as print.
 ## Files
 
     index.html          the page: chrome, the copy, and all of its CSS
-    about.html          placeholder
+    about.html          the about page: the team, the backers, the principles
     src/ptl-field.js    the renderer — one shader, three treatments (FORM ships)
     src/ptl-page.js     the choreography: scroll -> section -> type and field
     fonts/              Cormorant (+italic), Geist Mono, Inter — all local
@@ -52,13 +56,14 @@ reads it out of the DOM. One source of truth. Edit the copy there.
 
 ## Variations
 
-Four colourways, selected with a query parameter; `?v=` anything else is
-variation 1.
+Four colourways: variation 1 is the default and has no query at all, and 2, 3
+and 4 are selected with a query parameter. `?v=` anything else is variation 1.
 
     /               1  a toned film on black: the mark's hue ramps with its
                        brightness, it casts a drop shadow, and the ground
-                       carries a little of the same warm — all of which
-                       resolves to white on hard black by the last frame
+                       carries a little of the same warmth — all three drain
+                       away together, leaving white on hard black by the last
+                       frame
     /?v=2           2  inverted onto stone-300, the old site's own warm paper
     /?v=3           3  variation 4's contract on paper: the same strictly
                        one-bit film, a redder step of stock — taupe-300 —

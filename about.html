@@ -75,6 +75,18 @@
         font-weight: 100 900;
         font-display: block;
       }
+      /* Named by .backers, and until now not defined on this page — so the one
+     row of small caps that asks for Inter was falling out of the stack to
+     system-ui, the only system face on a page that is otherwise entirely
+     local. Not preloaded: a reader arriving the way this page is meant to be
+     arrived at came off `join us` in the film's closing lockup, which is set
+     in Inter, so it is already in cache. */
+      @font-face {
+        font-family: Inter;
+        src: url("/fonts/Inter.woff2") format("woff2");
+        font-weight: 100 900;
+        font-display: block;
+      }
 
       /* THE PALETTE — mirrored from index.html, which is the source. The film
      tokens are here too now, because this page runs the film. */
@@ -355,48 +367,6 @@
         }
       }
 
-      /* The line the page opens on, and the largest thing on it — the front
-     page's own closing register, so the two read as one sentence with a click
-     in the middle. */
-      .open {
-        font:
-          italic 300 clamp(2.5rem, 7vw, 5.8rem)/1.06 Cormorant,
-          serif;
-        letter-spacing: -0.014em;
-        max-width: 15ch;
-        text-wrap: balance;
-      }
-      .open em {
-        font-style: normal;
-      }
-
-      /* The argument: three frames, each one claim, at a size that says these are
-     claims and not paragraphs. */
-      .say {
-        font:
-          300 clamp(1.65rem, 3.9vw, 3.2rem)/1.2 Cormorant,
-          serif;
-        letter-spacing: -0.01em;
-        max-width: 22ch;
-        text-wrap: balance;
-      }
-      .say + .say {
-        margin-top: 1.05em;
-      }
-      .say .q {
-        color: var(--mid);
-      }
-      /* The line the page turns on. Alone on its frame, italic, and the only
-     thing allowed to rival the opening line. */
-      .turn {
-        font:
-          italic 300 clamp(2.1rem, 5.6vw, 4.6rem)/1.1 Cormorant,
-          serif;
-        letter-spacing: -0.012em;
-        max-width: 17ch;
-        text-wrap: balance;
-      }
-
       /* Not a header — a caption, in the chrome's own register. It labels the
      group under it without announcing a chapter. */
       .cap {
@@ -554,31 +524,6 @@
         }
       }
 
-      .cta {
-        display: inline-block;
-        margin-top: 3.4rem;
-        padding: 0.4rem 0.3rem;
-        color: var(--ink);
-        text-decoration: none;
-        font:
-          300 clamp(1.02rem, 1.32vw, 1.16rem)/1.3 Cormorant,
-          serif;
-        letter-spacing: 0.005em;
-        text-underline-offset: 0.19em;
-        text-decoration-thickness: 1px;
-        transition: opacity 0.18s ease;
-      }
-      .cta:hover,
-      .cta:focus-visible {
-        text-decoration: underline;
-        outline: none;
-      }
-      @media (prefers-reduced-motion: reduce) {
-        .cta {
-          transition: none;
-        }
-      }
-
       /* THE PRINCIPLES — twelve, so a table and not twelve cards. The only part
      of the page that is scanned rather than read, and last on purpose: a
      reader still here has already decided they are interested, and now wants
@@ -708,7 +653,7 @@
         letter-spacing: 0.2em;
         color: var(--dim);
       }
-      .prin h3 {
+      .prin h2 {
         margin-top: 0.9rem;
         font:
           italic 300 clamp(1.12rem, 1.85vw, 1.42rem)/1.24 Cormorant,
@@ -827,12 +772,12 @@
           <ol class="prin">
             <li>
               <p class="n">01</p>
-              <h3>Be a trader</h3>
+              <h2>Be a trader</h2>
               <p>Know your cost, return, risk, and horizon.</p>
             </li>
             <li>
               <p class="n">02</p>
-              <h3>Know Correlation and Causation</h3>
+              <h2>Know Correlation and Causation</h2>
               <p>
                 Correlation tells us where to look. Causation shows us if it’s
                 there.
@@ -840,17 +785,17 @@
             </li>
             <li>
               <p class="n">03</p>
-              <h3>Dream in ripples</h3>
+              <h2>Dream in ripples</h2>
               <p>See cascading impacts and plan for them.</p>
             </li>
             <li>
               <p class="n">04</p>
-              <h3>Anticipate the puck</h3>
+              <h2>Anticipate the puck</h2>
               <p>Predict the future and build for it.</p>
             </li>
             <li>
               <p class="n">05</p>
-              <h3>Have ideas</h3>
+              <h2>Have ideas</h2>
               <p>
                 'Bad ideas are good, good ideas are terrific, no ideas are
                 terrible.'
@@ -858,12 +803,12 @@
             </li>
             <li>
               <p class="n">06</p>
-              <h3>Come with solutions</h3>
+              <h2>Come with solutions</h2>
               <p>Anyone can spot problems. You are here to solve them.</p>
             </li>
             <li>
               <p class="n">07</p>
-              <h3>Do it</h3>
+              <h2>Do it</h2>
               <p>
                 Indecision kills progress. Most things are reversible. Calculate
                 the risk and do it.
@@ -871,12 +816,12 @@
             </li>
             <li>
               <p class="n">08</p>
-              <h3>Explore the unexplored</h3>
+              <h2>Explore the unexplored</h2>
               <p>One cannot grow on a path well travelled.</p>
             </li>
             <li>
               <p class="n">09</p>
-              <h3>What is your mentality?:</h3>
+              <h2>What is your mentality?:</h2>
               <p>
                 Own mistakes. Back yourself to learn from them. Optimize for
                 optimism.
@@ -884,7 +829,7 @@
             </li>
             <li>
               <p class="n">10</p>
-              <h3>Celebrate your mistakes with us</h3>
+              <h2>Celebrate your mistakes with us</h2>
               <p>
                 Never waste a good failure. Share the lesson and we’ll celebrate
                 you.
@@ -892,12 +837,12 @@
             </li>
             <li>
               <p class="n">11</p>
-              <h3>Be concise</h3>
+              <h2>Be concise</h2>
               <p>Get straight to the point.</p>
             </li>
             <li>
               <p class="n">12</p>
-              <h3>Tell a joke</h3>
+              <h2>Tell a joke</h2>
               <p>The future is intense. Say something funny.</p>
             </li>
           </ol>
@@ -1148,14 +1093,31 @@
           if (ticking) return;
           ticking = requestAnimationFrame(function step(ts) {
             ticking = 0;
-            const dt = lastTs ? Math.min((ts - lastTs) / 1000, 0.05) : 0.016;
+            /* The clamp exists for the one enormous delta a backgrounded tab
+     hands back on return. Applied to EVERY frame it dilated time on exactly
+     the devices already struggling — at 15fps the ambient clock ran at
+     0.75 s/s. Only a genuinely absurd gap is a returning tab; everything else
+     is a slow frame and should count for what it was. The same reading as
+     ptl-page.js, which found it first. */
+            const raw = lastTs ? (ts - lastTs) / 1000 : 0.016;
+            const dt = raw > 0.5 ? 0.016 : Math.min(raw, 0.25);
             lastTs = ts;
             if (!reduce) {
-              vel *= AMB_DECAY;
+              /* Per second, not per frame: AMB_DECAY is tuned at 60Hz, and
+     multiplied once a frame the scroll boost bled off twice as fast on a
+     120Hz screen as on a 60Hz one — the same gesture meaning different
+     things on different hardware, which is what rating the boost by
+     distance was supposed to stop. */
+              vel *= Math.pow(AMB_DECAY, dt * 60);
               clock += dt * (AMB_IDLE + AMB_GAIN * Math.min(vel, 1.4));
             }
             render();
-            if (!reduce && !document.hidden) tick();
+            /* Only while there is something to draw on. The clock reaches
+     exactly one thing — the size of the halftone marks — so with no renderer
+     mounted, or one that died with its context, this was holding the
+     compositor open at 60fps to advance a number nobody reads. render()
+     already returns immediately in both cases; this is the loop agreeing. */
+            if (field && !field.isDead() && !reduce && !document.hidden) tick();
           });
         }
 
@@ -1227,7 +1189,12 @@
         }
 
         reduceMQ.addEventListener("change", () => {
+          const was = reduce;
           reduce = reduceMQ.matches;
+          /* Turning reduce back OFF left the loop dead for the rest of the
+     visit: step() self-terminates while reduce is true and nothing else
+     re-arms it, so the field stopped breathing until a reload. */
+          if (was && !reduce) tick();
           if (reduce) {
             document.body.classList.remove("fx");
             for (const el of document.querySelectorAll(".up"))
