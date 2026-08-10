@@ -604,13 +604,17 @@
      arrival all keep their own paths into the loop, so nothing that can still
      move stops moving.
 
-     A field that died with its context is the same case: draw() returns
-     immediately after that, so the loop would be spinning against a picture
-     that can no longer change.
+     A field that died with its context is the same case, and so is one whose
+     context has merely GONE: draw() returns immediately for both, so the loop
+     would be spinning against a picture that cannot change. A lost context is
+     not always given back — a driver reset on a visible tab can sit there —
+     and this page is nothing but that context, so it is worth not burning a
+     core waiting. The restore listener below is what starts the clock again;
+     without it this optimisation would be a freeze.
 
      `field` is declared below, after the mount: this is only ever CALLED from
      a frame, and the first frame is scheduled at the foot of the file. */
-  const ambient = () => (reduce || !field || field.isDead() ? 0 : 1);
+  const ambient = () => (reduce || !field || field.isDead() || field.isLost() ? 0 : 1);
 
   /* One frame loop, for everything that is not scroll position: the ambient
      clock and the pointer light easing toward the cursor. It runs continuously
@@ -685,11 +689,21 @@
      under reduced motion the ambient loop has already self-terminated — so
      the film simply vanished until the reader happened to scroll. A LOST
      context is the mirror: the last frame freezes and reads as truth. Both
-     directions want exactly one frame. */
+     directions want exactly one frame.
+
+     The restore wants the CLOCK back as well, not just a frame. ambient() is
+     0 for the whole of a loss, so by the time the context returns the loop
+     has long since self-terminated and one redraw would hand the reader a
+     correct, permanently still picture. tick() is safe on the other side of
+     that too: if the rebuild failed, the field is dead, ambient() is still 0
+     and the step shuts down again after the single frame it owes. */
   {
     const cv = document.getElementById('c');
-    if (field && cv) for (const ev of ['webglcontextrestored', 'webglcontextlost']) {
-      cv.addEventListener(ev, () => { remeasure = true; frame(); });
+    if (field && cv) {
+      cv.addEventListener('webglcontextlost', () => { remeasure = true; frame(); });
+      cv.addEventListener('webglcontextrestored', () => {
+        remeasure = true; frame(); tick();
+      });
     }
   }
   document.body.classList.remove('no-js');

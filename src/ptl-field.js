@@ -1219,7 +1219,12 @@
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     }
 
-    return { draw, setWord, gl, canvas, isDead: () => dead };
+    /* isLost is the RECOVERABLE half of isDead: the context has gone but the
+       browser may still offer it back, and draw() returns immediately for
+       both. The page needs the two apart: dead is terminal, and is where it
+       stops asking for good, whereas lost is where it stops asking UNTIL the
+       restore event — which is its cue to start again. */
+    return { draw, setWord, gl, canvas, isDead: () => dead, isLost: () => lost };
   }
 
   root.PTLField = { mount, CLOSE };
