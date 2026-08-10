@@ -8,17 +8,17 @@
    what reads cheap. Area proportional to luminance means sqrt() on the side;
    every pixel is still pure black or pure white.
 
-   Three treatments share that output stage: FORM, one abstract form in screen
-   space, no world and no camera; ARCH, raymarched concrete flying past; TYPE,
-   Cormorant rendered to a texture and halftoned on the same grid.
+   FORM is what feeds that output stage, and all that does: one abstract form
+   in screen space, no world and no camera. Raymarched geometry and halftoned
+   type were built against it and lost, and went with the switch that chose
+   between them.
 
-   Drawn rather than filmed, for exact art direction (a near mass is an unlit
-   silhouette because RANGE says so) and zero scroll latency — a video scrub
-   measured 90ms median, spiking past 600ms.
+   Drawn rather than filmed, for exact art direction and zero scroll latency —
+   a video scrub measured 90ms median, spiking past 600ms.
 
    USAGE
-     const f = PTLField.mount(canvas, { mode: 'form' });
-     f.draw(0.42, { section: 2, cell: 12 });
+     const f = PTLField.mount(canvas);
+     f.draw(0.42, { cell: 12 });
    ========================================================================== */
 (function (root) {
   'use strict';
@@ -49,15 +49,10 @@
   out vec4 fragColor;
 
   uniform vec2      uRes;
-  uniform float     uT;         // 0..1 progress through this section
   uniform float     uCell;      // grid cell size in device px
   uniform float     uGap;       // black gutter between cells
   uniform float     uGain;
-  uniform int       uMode;      // 0 FORM  1 ARCH  2 TYPE
-  uniform int       uSection;   // 0..5
   uniform float     uG;         // 0..1 across the WHOLE page — FORM runs on this
-  uniform sampler2D uTex;       // TYPE only
-  uniform float     uFov;
   uniform vec3      uInk;       // the mark, at the top of the page
   uniform vec3      uInk2;     // the mark, at the bottom of it
   uniform vec3      uPaper;     // the ground
@@ -260,101 +255,8 @@
     return max(ring, lat) * clear;
   }
 
-  /* ---- ARCH ----------------------------------------------------------------
-     The storyboard's world, raymarched. Kept whole so the three treatments are
-     a fair comparison rather than one of them a sketch.                       */
-  float sdBox(vec3 p, vec3 b){
-    vec3 q = abs(p) - b;
-    return length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0);
-  }
-
-  float map(vec3 p){
-    float d = 1e9;
-    /* Floating, never standing — unbounded void, no ground. It pays
-       compositionally: the masses have visible bottom edges converging toward
-       the horizon, leaving a black wedge along the frame's floor for type. */
-    vec3 q = p;
-    q.z = mod(q.z + 13.0, 26.0) - 13.0;
-    float sway = float(uSection) * 1.7;
-    d = min(d, sdBox(q - vec3(-21.0 - sway, 11.0, 0.0), vec3(2.6, 15.0, 2.6)));
-    d = min(d, sdBox(q - vec3( 21.0 + sway, 11.0, 0.0), vec3(2.6, 15.0, 2.6)));
-
-    vec3 g = p - vec3(0.0, 6.0, 168.0);
-    d = min(d, sdBox(g - vec3(-8.0,  0.0, 0.0), vec3(1.6, 12.0, 1.6)));
-    d = min(d, sdBox(g - vec3( 8.0,  0.0, 0.0), vec3(1.6, 12.0, 1.6)));
-    d = min(d, sdBox(g - vec3( 0.0, 13.4, 0.0), vec3(9.9, 1.5, 1.6)));
-    return d;
-  }
-
-  /* Nothing is lit closer than NEAR, so a mass arriving at the lens goes to
-     silhouette rather than to a lit grey slab. */
-  float range(float t){
-    return smoothstep(30.0, 74.0, t) * (1.0 - smoothstep(150.0, 260.0, t));
-  }
-
-  /* ONE MARK'S SHADOW, and the only place the metric is argued. p is relative
-     to that mark's centre, in cell units.
-
-     Not Chebyshev: the metric whose circles ARE squares gave every mark a
-     square halo whose corners met across a cell in hard rectangular patches,
-     worse the more blur. Distance to a BOX is Euclidean outside and therefore
-     round at the corners, at the same cost. A wide blur loses a square anyway,
-     so the metric follows the blur — hug the box while it is tight, go radial
-     as it grows past.
-
-     ZERO SPREAD, ALL BLUR, SCALED WITH THE MARK: sg is proportional with no
-     constant term. Spread grows the shape before blurring, which is a plateau,
-     and a floor would hand a one-pixel mark a fixed halo and haze over the
-     falloff, which is nothing but small marks. */
-  float castShadow(vec2 p, float e, float sg){
-    float dBox = length(max(abs(p) - e, vec2(0.0)));
-    float dRad = max(length(p) - e, 0.0);
-    float rnd  = clamp(sg / max(e, 1e-4), 0.0, 0.55);
-    return exp(-mix(dBox, dRad, rnd) / sg);
-  }
-
-  float arch(vec2 uv, float halfH, float t){
-    vec3 ro = vec3(0.0, 0.0, t * 125.0);
-    /* A shifted lens — the architectural photographer's rising front. Parks the
-       vanishing point above centre so the lower frame stays black. */
-    vec3 rd = normalize(vec3((uv - vec2(0.0, halfH * 0.50)) * uFov, 1.0));
-
-    float d, k = 0.0;
-    bool hit = false;
-    for (int i = 0; i < 96; i++){
-      d = map(ro + rd * k);
-      if (d < 0.012 * k){ hit = true; break; }
-      k += d * 0.85;
-      if (k > 260.0) break;
-    }
-    if (!hit) return 0.0;
-
-    vec3 p = ro + rd * k;
-    vec2 e = vec2(0.02, 0.0);
-    vec3 n = normalize(vec3(map(p + e.xyy) - map(p - e.xyy),
-                            map(p + e.yxy) - map(p - e.yxy),
-                            map(p + e.yyx) - map(p - e.yyx)));
-    vec3 L = normalize(vec3(0.62, 0.16, 0.77));
-    float lam = pow(max(dot(n, L), 0.0), 1.5);
-    float rim = pow(1.0 - abs(dot(n, rd)), 5.0);
-    return (lam * 0.95 + rim * 0.30) * range(k);
-  }
-
-  /* ---- TYPE ----------------------------------------------------------------
-     The word as the picture: Cormorant white on black, displaced by a warp that
-     eases out as the section resolves, so it arrives out of distortion rather
-     than fading in. Same grid, same marks, different subject.                 */
-  float typeField(vec2 uv, float t){
-    float ease = pow(1.0 - clamp(t, 0.0, 1.0), 1.7);
-    vec2 p = uv;
-    p /= mix(1.55, 1.22, smoothstep(0.0, 0.85, t));  // settles out of a push-in
-    p.y -= 0.34;   // sits high, so the headline below it stays on clean black
-    p.x += sin(p.y * 5.2 + ease * 7.0) * 0.10 * ease;
-    p.y += sin(p.x * 3.1) * 0.03 * ease;
-    vec2 tc = p * vec2(0.5, -0.5) + 0.5;
-    if (tc.x < 0.0 || tc.x > 1.0 || tc.y < 0.0 || tc.y > 1.0) return 0.0;
-    return texture(uTex, tc).r;
-  }
+  /* ---- THE MARKS -----------------------------------------------------------
+     One sample per cell, the mark it is drawn as, and that mark's shadow.    */
 
   /* THE MARK ANY GIVEN CELL CARRIES, in cell units. Out of main because a
      shadow is cast by a MARK, and the marks falling on a fragment are mostly
@@ -369,11 +271,7 @@
      evaluated. A halftone has exactly one sample per cell by definition, and
      the whole frame — marks, shadows, ground — is built from this lattice. */
   float formAt(vec2 id){
-    float halfH = halfHOf();
-    vec2  uvc   = cellUv(id);
-    float l = uMode == 0 ? form(uvc, uG)
-            : uMode == 1 ? arch(uvc, halfH, uT)
-                         : typeField(uvc, uT);
+    float l = form(cellUv(id), uG);
     /* Cut the tail. A near-constant 2% over a large area renders as a perfectly
        regular lattice of isolated marks — wallpaper across the frame and
        through the headline. This dim carries no form, so it is off, not dim. */
@@ -409,6 +307,27 @@
   /* ...and the mark a cell's texel gets drawn as, in cell units. */
   float markOf(vec3 t){
     return sqrt(clamp(decLum(t.rg), 0.0, 1.0)) * (1.0 - uGap) * decBrt(t.b);
+  }
+
+  /* ONE MARK'S SHADOW, and the only place the metric is argued. p is relative
+     to that mark's centre, in cell units.
+
+     Not Chebyshev: the metric whose circles ARE squares gave every mark a
+     square halo whose corners met across a cell in hard rectangular patches,
+     worse the more blur. Distance to a BOX is Euclidean outside and therefore
+     round at the corners, at the same cost. A wide blur loses a square anyway,
+     so the metric follows the blur — hug the box while it is tight, go radial
+     as it grows past.
+
+     ZERO SPREAD, ALL BLUR, SCALED WITH THE MARK: sg is proportional with no
+     constant term. Spread grows the shape before blurring, which is a plateau,
+     and a floor would hand a one-pixel mark a fixed halo and haze over the
+     falloff, which is nothing but small marks. */
+  float castShadow(vec2 p, float e, float sg){
+    float dBox = length(max(abs(p) - e, vec2(0.0)));
+    float dRad = max(length(p) - e, 0.0);
+    float rnd  = clamp(sg / max(e, 1e-4), 0.0, 0.55);
+    return exp(-mix(dBox, dRad, rnd) / sg);
   }
 
   void main(){
@@ -642,10 +561,7 @@
     return s;
   }
 
-  const MODES = { form: 0, arch: 1, type: 2 };
-
-  function mount(canvas, opt) {
-    opt = opt || {};
+  function mount(canvas) {
     const gl = canvas.getContext('webgl2', { antialias: false, alpha: false });
     if (!gl) return null;
 
@@ -654,7 +570,7 @@
        the browser never offers to restore at all, and a page whose entire
        picture is one shader would stay blank for the session while the type
        kept choreographing over nothing. */
-    let prog = null, u = {}, tex = null, drawn = null, lost = false;
+    let prog = null, u = {}, lost = false;
     /* The lattice pass and its target: one texel per cell plus a cell of
        border. lw/lh cache its size the way w/h cache the canvas's. */
     let latProg = null, ul = {}, latTex = null, fbo = null, lw = 0, lh = 0;
@@ -705,7 +621,6 @@
       if (!gl.isContextLost()) {          // else: two INVALID_OPERATIONs per restore
         if (prog) gl.deleteProgram(prog);
         if (latProg) gl.deleteProgram(latProg);
-        if (tex) gl.deleteTexture(tex);
         if (latTex) gl.deleteTexture(latTex);
         if (fbo) gl.deleteFramebuffer(fbo);
       }
@@ -729,17 +644,7 @@
                               gl.TEXTURE_2D, latTex, 0);
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
       lw = lh = 0;                      // and the lattice needs re-sizing
-
-      tex = gl.createTexture();
-      gl.bindTexture(gl.TEXTURE_2D, tex);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE,
-                    new Uint8Array([0, 0, 0, 255]));
-      drawn = null;                     // the TYPE texture went with the context
-      w = h = 0;                        // and so did the viewport
+      w = h = 0;                        // the viewport went with the context too
     }
     /* Every caller reads this as "a field, or null" and branches once. The
        restore path honours that; the FIRST build did not, so a driver that took
@@ -766,31 +671,6 @@
       }
     });
 
-    /* The TYPE texture. Drawn on a 2D canvas rather than shaped in the shader
-       because it has to be Cormorant — the mandated face — and an SDF cannot be
-       a typeface. Redrawn only when the word changes. */
-    const pad = document.createElement('canvas');
-    function setWord(word) {
-      if (word === drawn) return;
-      drawn = word;
-      const W = 2048, H = 1152;
-      pad.width = W; pad.height = H;
-      const c = pad.getContext('2d');
-      c.fillStyle = '#000'; c.fillRect(0, 0, W, H);
-      c.fillStyle = '#fff';
-      c.textAlign = 'center'; c.textBaseline = 'middle';
-      /* Overflow the frame on purpose — the reference letterforms are cropped
-         hard by the edges, which is what gives a thin serif weight at scale. */
-      let size = 520;
-      c.font = `300 ${size}px Cormorant, serif`;
-      const w0 = c.measureText(word).width;
-      if (w0 > 0) size = Math.min(820, size * (W * 1.06 / w0));
-      c.font = `300 ${size}px Cormorant, serif`;
-      c.fillText(word, W / 2, H / 2);
-      gl.bindTexture(gl.TEXTURE_2D, tex);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, pad);
-    }
-
     function size(dpr) {
       const nw = Math.round(canvas.clientWidth * dpr);
       const nh = Math.round(canvas.clientHeight * dpr);
@@ -802,19 +682,14 @@
     /* Both programs read the same picture, so both take the same uniforms —
        each handed its OWN location map, because a location belongs to a program
        and using one against the other silently writes nothing. */
-    function feed(p, uu, t, o, cell, mode) {
+    function feed(p, uu, t, o, cell) {
       gl.useProgram(p);
-      gl.uniform1i(uu.uTex, 0);
-      gl.uniform1i(uu.uLat, 1);
+      gl.uniform1i(uu.uLat, 0);
       gl.uniform2f(uu.uRes, w, h);
-      gl.uniform1f(uu.uT, t);
       gl.uniform1f(uu.uG, o.g != null ? o.g : t);
       gl.uniform1f(uu.uCell, cell);
       gl.uniform1f(uu.uGap, o.gap != null ? o.gap : 0.12);
       gl.uniform1f(uu.uGain, o.gain != null ? o.gain : 1.0);
-      gl.uniform1i(uu.uMode, mode);
-      gl.uniform1i(uu.uSection, o.section || 0);
-      gl.uniform1f(uu.uFov, o.fov != null ? o.fov : 0.70);
       const ink = o.ink || [1, 1, 1], paper = o.paper || [0, 0, 0];
       const ink2 = o.ink2 || ink;
       gl.uniform3f(uu.uInk, ink[0], ink[1], ink[2]);
@@ -843,8 +718,6 @@
       const dpr = Math.min(root.devicePixelRatio || 1, 2);
       const cell = (o.cell != null ? o.cell : 12) * dpr;
       size(dpr);
-      const mode = MODES[o.mode || opt.mode] || 0;
-      if (mode === 2 && o.word) setWord(o.word);
 
       /* One texel per cell, plus the cell of border cellAt() relies on. */
       const nw = Math.ceil(w / cell) + 2, nh = Math.ceil(h / cell) + 2;
@@ -856,27 +729,25 @@
       }
 
       gl.activeTexture(gl.TEXTURE0);
-      gl.bindTexture(gl.TEXTURE_2D, tex);
-      gl.activeTexture(gl.TEXTURE1);
       gl.bindTexture(gl.TEXTURE_2D, latTex);
 
       /* PASS ONE: the picture, once per cell. */
       gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
       gl.viewport(0, 0, lw, lh);
-      feed(latProg, ul, t, o, cell, mode);
+      feed(latProg, ul, t, o, cell);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
 
       /* PASS TWO: the frame, which now only has to read it. */
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
       gl.viewport(0, 0, w, h);
-      feed(prog, u, t, o, cell, mode);
+      feed(prog, u, t, o, cell);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     }
 
     /* isLost is the RECOVERABLE half of isDead: draw() returns immediately for
        both, but the page needs them apart — dead is terminal, lost is where it
        stops asking UNTIL the restore event, its cue to start again. */
-    return { draw, setWord, gl, canvas, isDead: () => dead, isLost: () => lost };
+    return { draw, gl, canvas, isDead: () => dead, isLost: () => lost };
   }
 
   root.PTLField = { mount, CLOSE };

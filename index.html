@@ -159,17 +159,21 @@
      scroll-choreographed containers, which would leave a crawler, a link
      preview and a screen reader with no words at all. The copy lives here
      instead, as ordinary semantic HTML, and the script reads it out of the DOM;
-     the rendered version is aria-hidden so it is not announced twice. */
-      .story {
+     the rendered version is aria-hidden so it is not announced twice.
+
+     One recipe, two users: the copy itself, and the page h1 inside it that
+     stays hidden even when .no-js unhides the rest. */
+      .story,
+      .story .sr {
         position: absolute;
         width: 1px;
         height: 1px;
-        margin: -1px;
-        padding: 0;
-        border: 0;
         overflow: hidden;
         clip-path: inset(50%);
         white-space: nowrap;
+      }
+      .story {
+        margin: -1px;
       }
 
       .stage {
@@ -193,9 +197,6 @@
         inset: 0;
         z-index: 2;
         pointer-events: none;
-      }
-      .type a {
-        pointer-events: auto;
       }
       /* The LAYER is transparent to the pointer; the WORDS are not — otherwise
      the copy cannot be selected or copied. Only the text boxes take the pointer
@@ -315,7 +316,8 @@
       }
       /* On a phone, and on any short viewport, the form reaches the header and
      the bar is set over pure white cells. A scrim of the page's own ground,
-     only there.
+     only there. max-height too: a landscape phone is 844 wide, never matched,
+     and got the desktop bar — 87.7px, 22% of a 390-tall frame.
 
      FULL paper to 72%, not a partial scrim: --dim reads 5.03:1 on black and
      4.17:1 on white, so it survives both extremes and dies only on the
@@ -335,13 +337,8 @@
             transparent 100%
           );
         }
-      }
-      /* max-height too: a landscape phone is 844 wide, never matched, and got
-     the desktop bar — 87.7px, 22% of a 390-tall frame. */
-      @media (max-width: 560px), (max-height: 560px) {
         .chrome {
           padding: 1.5rem 1.2rem;
-          align-items: center;
         }
         .nav .count,
         .nav i {
@@ -802,12 +799,10 @@
         margin-bottom: -0.1015em;
         margin-right: -1.005em;
         background: var(--ink-live, var(--ink));
-        animation: caret 1.06s step-end infinite;
-      }
-      /* Bounded. A 2x22px block toggling forever was 97% of the closing
-     screen's remaining power draw, on the one screen the reader sits on. */
-      .fin-b .cur {
-        animation-iteration-count: 12;
+        /* Bounded, not infinite. A 2x22px block toggling forever was 97% of the
+       closing screen's remaining power draw, on the one screen the reader sits
+       on. */
+        animation: caret 1.06s step-end 12;
       }
       @keyframes caret {
         0% {
@@ -920,14 +915,6 @@
       .no-js .story section + section {
         margin-top: 4rem;
       }
-      .story .sr {
-        position: absolute;
-        width: 1px;
-        height: 1px;
-        overflow: hidden;
-        clip-path: inset(50%);
-        white-space: nowrap;
-      }
       .no-js .story h1,
       .no-js .story h2 {
         font:
@@ -984,7 +971,7 @@
            to tell the claim from the beats supporting it. One page-level h1,
            beats demote to h2; #story is clipped, so nothing visible moves. -->
       <h1 class="sr">Predictive Text Labs — Machines that Decide</h1>
-      <section data-key="DECIDE">
+      <section>
         <h2>
           In twenty years, machines will make most consequential decisions in
           government and business.
@@ -994,13 +981,13 @@
          overriding the defaults for one beat. This one clears early and the
          next arrives quickly: the gap between question and answer read as a
          pause. -->
-      <section data-key="WHEN" data-out="0.64,0.20">
+      <section data-out="0.64,0.20">
         <h2>The question is not whether this future arrives, but when.</h2>
       </section>
-      <section data-key="EARN" data-in="0.00,0.15">
+      <section data-in="0.00,0.15">
         <h2>How can we help machines earn this right to lead?</h2>
       </section>
-      <section data-key="COMMIT">
+      <section>
         <h2>
           A machine earns this right through a track record of committing scarce
           resources into the world.
@@ -1010,7 +997,7 @@
           Tomorrow's AI must know the cost of failure.
         </p>
       </section>
-      <section data-key="PRICE">
+      <section>
         <h2>
           Predictive Text Labs teaches machines to forecast so they can commit
           to decisions that matter.
@@ -1020,7 +1007,7 @@
          registers, two destinations. The name and the verb leave, the claim
          stays. No period — a blinking terminal block stands in for it, a full
          stop still waiting for the next input. -->
-      <section data-key="DECIDE" data-finale>
+      <section data-finale>
         <h2>
           <span class="ln">Predictive Text Labs.</span>
           <span class="ln">Builds</span>

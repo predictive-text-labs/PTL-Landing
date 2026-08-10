@@ -27,7 +27,6 @@
     return {
       head:   sec.querySelector('h1,h2').textContent.trim(),
       body:   p ? p.textContent.trim() : '',
-      key:    sec.dataset.key || '',
       /* Per-beat timing; everything else takes the defaults. */
       win:    { in: pair(sec.dataset.in, [0.02, 0.21]),
                 out: pair(sec.dataset.out, [0.76, 0.22]) },
@@ -632,7 +631,7 @@
      after the body had been stretched to the film's full height — one screen of
      words atop a very long empty page. Nothing is committed until the mount. */
   const field = typeof PTLField !== 'undefined'
-    ? PTLField.mount(document.getElementById('c'), { mode: 'form' })
+    ? PTLField.mount(document.getElementById('c'))
     : null;
   /* A null field is not a failure worth falling back over: WebGL2 is
      unavailable, and the choreographed type carries the whole argument against
@@ -751,7 +750,7 @@
          — only the ambient clock was disabled — and the closing ring's bright
          arc swept up through a lockup reduce pins in place, putting 86% of the
          verb's ink under 4.5:1. */
-      g: reduce ? 1 : p, section: idx, word: S[idx].key,
+      g: reduce ? 1 : p,
       /* The keep-out band is for copy on the floor. On a phone there is none
          until the ending, so it OPENS on the ending's own ramp and the film
          gets the whole frame back for the argument itself.
@@ -770,7 +769,7 @@
         ? [FLOOR[0], -FLOOR[3] + (FLOOR[1] + FLOOR[3]) * end, FLOOR[2], FLOOR[3]]
         : FLOOR,
       lift: lift(),
-      cell: 12, gap: 0.12, gain: 1.0, fov: 0.70,
+      cell: 12, gap: 0.12, gain: 1.0,
       mouse: cur, act, ink: INK, ink2: INK2, paper: PAPER, tint: TINT,
       time: clock, amb: ambient(), resolve: res,
     });
