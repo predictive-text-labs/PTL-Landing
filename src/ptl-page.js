@@ -425,10 +425,29 @@
     /* .copy is inset from the top, and .blk is positioned inside it, so the
        clearing has to come back out of viewport coordinates to be usable. */
     const inset = copy.getBoundingClientRect().top;
-    const from  = 0.5 * H + CLEARING * fieldBase(H) - inset;
-    const to    = copy.clientHeight;
+    /* H, not fieldBase(H). The shader divides back out to the real height —
+       `sy = uv.y * base / uRes.y` — precisely so the band is the same share of
+       what the reader can see on a short viewport. Scaling by base instead
+       agrees only when the frame is 16:9 or taller, and on anything wider put
+       this line below the band it is meant to name. */
+    const from  = H * (0.5 + CLEARING) - inset;
+    /* To the frame's own bottom edge, not to .copy's bottom margin. The shader
+       clears the band all the way down — it cannot clear past the frame — and
+       that margin is a layout inset with no claim on where the picture ends.
+       Measuring to it pulled the centre up by half of it, 0.029H, which is
+       exactly what read as high. */
+    const to    = H - inset;
+    /* The margin is still a floor. On a short window the clearing is shorter
+       than the deepest beat and its centre would push that beat past the
+       bottom of the frame — so the floor is applied ONCE, to the tallest
+       block, and every beat rises with it. Clamping each block on its own
+       would let the short beats keep the low centre while the tall ones stop
+       above it, which is the spread this exists to remove: measured 55px at
+       1600x960 and 65px at 1280x800 before it was hoisted out of the loop. */
+    const tall  = Math.max(...heads.map(b => b.el.offsetHeight));
+    const seat  = Math.min((from + to) / 2, copy.clientHeight - tall / 2);
     for (const b of heads) {
-      b.el.style.top = `${(from + (to - from - b.el.offsetHeight) / 2).toFixed(1)}px`;
+      b.el.style.top = `${(seat - b.el.offsetHeight / 2).toFixed(1)}px`;
       b.el.style.bottom = 'auto';
     }
   };
