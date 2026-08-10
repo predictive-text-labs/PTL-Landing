@@ -640,12 +640,15 @@
      max(…, env()) tracks it because the chrome's own padding is written the
      same way. */
       .copy {
+        /* Named once, because the mobile rule below has to subtract exactly
+       this to get back to viewport coordinates. */
+        --copy-top: calc(max(1.5rem, env(safe-area-inset-top)) + 4.5rem);
         position: absolute;
         left: 50%;
         transform: translateX(-50%);
         width: min(60rem, 86vw);
         text-align: center;
-        top: calc(max(1.5rem, env(safe-area-inset-top)) + 4.5rem);
+        top: var(--copy-top);
         bottom: 4.2rem;
       }
       /* NO overflow-y:auto here, deliberately, and it was tried. The descender
@@ -669,6 +672,51 @@
       }
       .blk.on {
         visibility: visible;
+      }
+      /* ON A PHONE THE COPY SITS IN THE CIRCLE, NOT ON THE FLOOR.
+     Bottom-anchoring is right on a landscape frame: the mark fills the upper
+     half, the copy takes the lower, and the two are in balance. Portrait
+     inverts that. The mark becomes a band across the top with a deep dark
+     disc under it, the copy is pinned 4.2rem off the bottom edge, and the
+     middle of the frame — the part the form is actually drawing — is empty,
+     with the words crowded into the last fifth as if they had fallen there.
+
+     48dvh IS THE CIRCLE'S CENTRE, not an eyeballed nudge. The form is a ring
+     of radius r about (0.5W, 0.5H - cy*base), and cy is
+     track(g, 0.00, 0.30, -0.80, 0.02) — it reaches 0.02 by the end of the
+     first beat and holds there for the rest of the film, so the centre is
+     fixed at 0.5H - 0.02*base. In portrait base is the height (the long side,
+     max(H, W/1.78)), which makes it 0.48H. Checked against the render at
+     three scroll positions: the predicted underside of the crown lands within
+     a few px of the measured one. The circle itself cannot be measured
+     directly here — at 390 wide its inner edge runs off both sides of the
+     frame, which is exactly why this is derived rather than eyeballed.
+
+     dvh, not vh: the shader's base comes from the canvas's own height, which
+     follows the URL bar, and vh does not. (The warning against dvh in
+     ptl-page.js is about the DOCUMENT's height, where a bar that hides
+     mid-scroll would move the film under the reader. This is one offset in a
+     fixed layer that is meant to track the canvas.) --copy-top comes back off
+     because .blk is positioned inside .copy, not against the frame.
+
+     The finale keeps the floor and is untouched: it is .fin-a/b/c in a layer
+     of its own, positioned by finale() in JS, not a .blk. The closing lockup
+     is the one moment that IS bottom-weighted on purpose — the mark has
+     closed above it and the words land beneath.
+
+     Portrait only. A landscape phone is 390 tall with the arch across most of
+     it, and this would lay the copy straight onto the bright of the mark.
+
+     One side effect, stated: .blk h1's 0.32em of ascender padding used to
+     grow the box upward off a fixed bottom edge and move nothing. Off a
+     centre it moves the glyphs down by half of it, about 5px here. Constant
+     across every beat, so it reads as position rather than as drift. */
+      @media (max-width: 560px) {
+        .blk {
+          top: calc(48dvh - var(--copy-top));
+          bottom: auto;
+          transform: translate(-50%, -50%);
+        }
       }
       /* THE BOX MUST CONTAIN THE INK.
      ------------------------------------------------------------------------
