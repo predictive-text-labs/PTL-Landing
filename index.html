@@ -1,445 +1,1422 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <script>
-      // Prevent FOUC: start hidden; we'll reveal after CSS arrives (not fonts)
-      document.documentElement.classList.add("no-fouc");
-    </script>
-    <meta charset="UTF-8" />
+    <meta charset="utf-8" />
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+      content="width=device-width,initial-scale=1,viewport-fit=cover"
     />
-    <title>Predictive Text Labs</title>
+    <title>Predictive Text Labs — Machines that Decide</title>
 
-    <!-- Basic SEO -->
     <meta
       name="description"
-      content="Predictive Text Labs builds AI that predicts the future."
+      content="In twenty years, machines will make most consequential decisions in government and business. Predictive Text Labs teaches machines to forecast so they can commit to decisions that matter."
     />
     <meta name="author" content="Predictive Text Labs" />
     <meta name="application-name" content="Predictive Text Labs" />
     <meta
       name="robots"
-      content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"
+      content="index, follow, max-image-preview:large, max-snippet:-1"
     />
     <link rel="canonical" href="https://ptl.inc/" />
 
-    <!-- Icons & colors -->
-    <link rel="icon" href="/favicon.ico" sizes="any" />
-    <meta name="theme-color" content="#ffffff" />
-    <meta name="color-scheme" content="light" />
+    <meta name="theme-color" content="#000000" />
+    <meta name="color-scheme" content="dark" />
     <meta name="format-detection" content="telephone=no" />
 
-    <!-- Performance hints for external assets -->
+    <!-- The palette switch, resolved in the HEAD so it lands before the first
+     paint. It used to sit with the other scripts at the end of the body, which
+     is after the browser is entitled to have painted the background once
+     already — long enough for ?v=2 to flash black before turning stone. Only
+     the attribute is set here; the stylesheet below reads it. -->
+    <script>
+      {
+        const v = new URLSearchParams(location.search).get("v");
+        if (v === "2" || v === "3" || v === "4")
+          document.documentElement.dataset.v = v;
+      }
+    </script>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon.ico" sizes="any" />
 
-    <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://ptl.inc/" />
     <meta property="og:site_name" content="Predictive Text Labs" />
     <meta property="og:locale" content="en_US" />
     <meta
       property="og:title"
-      content="Predictive Text Labs — Temporal AI for Forecasting"
+      content="Predictive Text Labs — Machines that Decide"
     />
     <meta
       property="og:description"
-      content="Predictive Text Labs builds AI that predicts the future."
+      content="Teaching machines to forecast, so they can commit to decisions that matter."
     />
-    <meta property="og:image" content="https://ptl.inc/favicon.ico" />
-    <meta property="og:image:alt" content="Predictive Text Labs logo" />
-
-    <!-- Twitter -->
+    <meta property="og:image" content="https://ptl.inc/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:url" content="https://ptl.inc/" />
     <meta
       name="twitter:title"
-      content="Predictive Text Labs — Temporal AI for Forecasting"
+      content="Predictive Text Labs — Machines that Decide"
     />
     <meta
       name="twitter:description"
-      content="Predictive Text Labs builds AI that predicts the future."
+      content="Teaching machines to forecast, so they can commit to decisions that matter."
     />
-    <meta name="twitter:image" content="https://ptl.inc/favicon.ico" />
-    <meta name="twitter:image:alt" content="Predictive Text Labs logo" />
-    <meta name="twitter:site" content="@PredictiveTextLabs" />
-    <meta name="twitter:creator" content="@PredictiveTextLabs" />
+    <meta name="twitter:image" content="https://ptl.inc/og.png" />
 
-    <!-- Structured Data -->
+    <!-- Only the two faces on the FIRST FRAME are preloaded — the roman and the
+     mono. font-display:block means an unloaded face renders nothing at all,
+     so anything the opening frame sets has to be here; the comment below is
+     why the other two are deliberately not. Four faces ship, 147KB, all
+     local; these two are 64KB of it. -->
+    <link
+      rel="preload"
+      href="/fonts/Cormorant.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      href="/fonts/GeistMono.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <!-- Cormorant-Italic and Inter are NOT preloaded. They are used only by the
+     closing lockup, eleven viewport-heights down, and at top priority they
+     contended with the roman that gates the LCP: measured on Slow 4G, the
+     roman finished 86ms AFTER an italic nothing could see yet. Dropping the
+     two preloads took LCP from 1640ms to 1260ms — 23% — with FCP unchanged at
+     156ms. The @font-face rules still fetch them, at normal priority, when
+     the finale first needs them. -->
+
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
         "@type": "Organization",
         "name": "Predictive Text Labs",
         "url": "https://ptl.inc/",
-        "logo": "https://ptl.inc/favicon.ico",
-        "description": "Predictive Text Labs builds AI that predicts the future.",
-        "foundingDate": "2024",
-        "sameAs": ["https://twitter.com/PredictiveTextLabs"]
+        "description": "An AI research lab teaching machines to forecast so they can commit to decisions that matter."
       }
     </script>
 
-    <!-- Preload local variable fonts for faster first paint -->
-    <link
-      rel="preload"
-      as="font"
-      href="/fonts/Cormorant Variable Font.woff2"
-      type="font/woff2"
-      crossorigin
-      fetchpriority="high"
-    />
-    <link
-      rel="preload"
-      as="font"
-      href="/fonts/Cormorant Italic Variable Font.woff2"
-      type="font/woff2"
-      crossorigin
-      fetchpriority="high"
-    />
-
-    <!-- Self-hosted Cormorant variable font -->
     <style>
-      /* Keep page hidden only until CSS/Fonts ready */
-      .no-fouc body {
-        visibility: hidden;
-      }
       @font-face {
-        font-family: "Cormorant";
-        src: url("/fonts/Cormorant Variable Font.woff2") format("woff2");
+        font-family: Cormorant;
+        src: url("/fonts/Cormorant.woff2") format("woff2");
         font-weight: 300 700;
-        font-style: normal;
-        font-display: swap;
+        font-display: block;
       }
       @font-face {
-        font-family: "Cormorant";
-        src: url("/fonts/Cormorant Italic Variable Font.woff2") format("woff2");
+        font-family: Cormorant;
+        src: url("/fonts/Cormorant-Italic.woff2") format("woff2");
         font-weight: 300 700;
         font-style: italic;
-        font-display: swap;
+        font-display: block;
       }
-      /* Critical CSS to prevent initial layout shift before Tailwind loads */
+      @font-face {
+        font-family: "Geist Mono";
+        src: url("/fonts/GeistMono.woff2") format("woff2");
+        font-weight: 100 900;
+        font-display: block;
+      }
+      /* The third face, and the only one not in the original kit. The closing claim
+     is a neo-grotesque, which neither Cormorant nor a monospace can stand in
+     for: it is uniform-stroke uppercase, and a mono at display size shows its
+     fixed advances badly (the I in MACHINES sits in a hole). Inter, variable,
+     latin subset, 48KB, local — no third-party request on this page. */
+      @font-face {
+        font-family: Inter;
+        src: url("/fonts/Inter.woff2") format("woff2");
+        font-weight: 100 900;
+        font-display: block;
+      }
+
+      /* THE PALETTE — four colourways, one switch.
+     ------------------------------------------------------------------------
+     Every colour on the page, including the two the shader resolves its 1-bit
+     output to, comes from here. The renderer is handed --field and --paper at
+     draw time, so the film and the type can never disagree about the ground
+     they are on. Variation 1 is the default and has no query at all; 2, 3 and
+     4 are selected with ?v=, and ?v= anything else falls back to 1.
+
+       1  the original: white mark on black
+       2  inverted onto the old site's own paper (Tailwind stone-100), which
+          is warm — pure white would have read as a different brand
+       3  the same paper and the same black type as 2, with the blue confined
+          to the FIELD. That is why --field is a separate token from --ink:
+          the colour is an event in the film, not a change of voice in the
+          writing, and running the copy in it as well made the page read as
+          branded-blue rather than as a black-and-white page with one blue
+          thing moving on it.
+
+     --wash is the defocus dome. It used to be a brightness() term, which only
+     works when the paper is at one end of the range: on a MID-TONE ground,
+     brightening the backdrop pushes the paper itself past white and paints a
+     visible bright dome over the page. So the dome is now a translucent sheet
+     of the paper colour laid over a plain blur — which is what "lower the
+     contrast of whatever is behind the copy" actually means, and it is correct
+     for any ground, dark, light or mid. */
+      /* Variation 1 is a DUOTONE, and the values are measured rather than
+     chosen: sampled off photographs of the page running, the ground is a deep
+     indigo (#111228, consistent across six frames) and the marks are a warm
+     cream (#F5E1BA at the arch's crown, #E4C198 through the mid limb). Cool
+     shadow against warm highlight is what makes it read as a surface catching
+     light from a warm bulb instead of as a diagram.
+
+     --tint is the mark at its DIMMEST. The shader ramps the mark's hue from
+     it up to --field as the form brightens, which is a black-body ramp: a
+     filament is orange when it is cool and goes pale as it heats. That ramp
+     is the "iridescence" — a single flat mark colour cannot produce it.
+
+     The ground is PITCH BLACK. It was a deep indigo for a long time, sampled
+     off photographs of the thing running, and the greys were re-authored on it
+     — each carrying a little of the paper's own hue, because pure neutrals
+     read cold and dirty against blue-violet. With the blue gone they are
+     neutral again, matched to the old ones by LUMINANCE rather than by eye so
+     the type sits exactly where it sat: #8A8398 -> #868686, #9A93A6 -> #969696,
+     #ADA6B8 -> #A9A9A9, rule #33334D -> #353535. Contrast improves slightly on
+     the way, because black is darker than the indigo was — 5.77:1 for the
+     chrome's --dim and 7.10:1 for the body's --mid, both clear AA. */
+      :root {
+        --paper: #000000;
+        --ink: #f4eada;
+        --field: #f8e5b8;
+        --field-end: #ffffff;
+        --dim: #868686;
+        --mid: #969696;
+        --soft: #a9a9a9;
+        --rule: #353535;
+        --wash: rgba(0, 0, 0, 0.62);
+        --deep: rgba(0, 0, 0, 0.33);
+        --tint: #c64a16;
+      }
+      /* stone-300. Warm and heavy enough that the type tones cannot be reused
+     from the dark variant — #6E6E6E is 4.1:1 on black and 2.6:1 here. These
+     are picked against this ground specifically. */
+      /* VARIATION 4 — the film with nothing added to it.
+     ------------------------------------------------------------------------
+     Same black ground and the same six beats, but strictly one bit: no drop
+     shadow, no warm ramp on the mark, no bloom or spill on the ground. Every
+     pixel in the frame is either the ink or the paper, which is what the
+     halftone claims to be and what variation 1 relaxes on purpose.
+
+     It is here to be the control. Variation 1's toning is an argument — that
+     the field reads as an emulsion catching light rather than as a diagram —
+     and an argument of that kind is only worth anything next to the thing it
+     is arguing against. --tint is set to the paper so that even the token is
+     a no-op; the shader is told separately, via tone, not to ramp at all.
+
+     The greys are variation 1's, which are already neutral and already
+     matched to this ground. */
+      :root[data-v="4"] {
+        --paper: #000000;
+        --ink: #ffffff;
+        --field: #ffffff;
+        --field-end: #ffffff;
+        --dim: #7c7c7c;
+        --mid: #8a8a8a;
+        --soft: #9e9e9e;
+        --rule: #333333;
+        --wash: rgba(0, 0, 0, 0.62);
+        --deep: rgba(0, 0, 0, 0.33);
+        --tint: #000000;
+      }
+      :root[data-v="2"] {
+        --paper: #d6d3d1;
+        --ink: #0c0a09;
+        --field: #0c0a09;
+        --field-end: #0c0a09;
+        --dim: #57534e;
+        --mid: #44403c;
+        --soft: #3b3735;
+        --rule: #9c9691;
+        --wash: rgba(214, 211, 209, 0.7);
+        --deep: rgba(214, 211, 209, 0.33);
+        /* The dim end of the mark. On paper the ramp runs the other way — a dark
+       mark on a light ground is DEEPER when it is dim, not warmer-brighter —
+       so this is a warm near-black that lifts to the flat ink as the form
+       brightens. Same mechanism, inverted ground. */
+        --tint: #3e301e;
+      }
+      /* taupe-300 — variation 2's step, in variation 3's colour.
+     ------------------------------------------------------------------------
+     This ground was taupe-400 for a while, a full step heavier, on the
+     argument that the blue takes a deeper paper best: the deeper the ground,
+     the more the halftone reads as a printed screen rather than a glow. The
+     glow was real. What it cost was the picture. A genuinely mid ground caps
+     the page at about 7.8:1 even with near-black ink, and it caps the FILM
+     harder than it caps the type — the blue managed 3.97:1 against that
+     paper and the tint, which owns the whole floor of the frame, only
+     1.40:1. The crown measured 0.845 modulation and the bottom third
+     dissolved into the ground rather than standing in front of it. Here the
+     same two inks measure 6.79:1 and 2.40:1, and the crown 0.912. The lower
+     limbs stay graphic all the way down, which is what the light climbing
+     the frame was for.
+
+     TAUPE, not stone, and the whole block moves together — the temperature
+     is now the only thing separating this ground from variation 2's, so it
+     has to carry the distinction on its own. Taupe sits at hue ~41 against
+     stone's ~56 — redder, and at about one and a half times the chroma — so
+     a taupe ground under stone ink reads as two different warms arguing
+     rather than one. The greys are variation 2's scale held at their own
+     OKLCH lightness and re-authored with taupe's hue and chroma: the tonal
+     structure that was tuned against a 300 ground is preserved exactly and
+     only the temperature moves. Every ratio holds to within 0.04 of a point
+     — ink 13.26 -> 13.27, --mid 6.90 -> 6.90, --dim 5.12 -> 5.16, the blue
+     6.79 -> 6.79.
+
+     The chroma is a judgement and not a lookup. Stone's own chroma nearly
+     vanishes at the 300 step — 0.004, against taupe-400's 0.014 — so taking
+     this paper from the scale ratio alone gives #D8D2D0, which is stone with
+     a rumour of warmth and is not taupe at all. It sits at 0.010 instead,
+     near the midpoint: unmistakably the 400's own colour a step lighter, and
+     short of the blush that holding the full 0.014 turns into this close to
+     white. */
+      :root[data-v="3"] {
+        /* --field-end is where the mark ARRIVES. The blue is the state of the
+       argument at the top of the page, not a brand colour, so it resolves
+       to the same ink the type is set in by the time the film closes.
+       taupe-950 and stone-950 are the same hex, so the ink is unchanged.
+
+       AND THE BLUE IS A PIGMENT, NOT A DARK. It was #0000A0, which is not a
+       saturated blue — it is a dull one, dimmed by taking blue away. On a
+       light ground the useful trick is the opposite: blue carries only 0.0722
+       of the luminance, so it can be run almost to the top of its channel and
+       still land nearly as dark. #0000E0 is two thirds more chromatic than
+       #0000A0 and measures 0.918 modulation at the crown against its 0.961 —
+       four percent of the contrast, for an ink that reads as ink. */
+        --paper: #dad2cf;
+        --ink: #0c0a09;
+        --field: #0000e0;
+        --field-end: #0c0a09;
+        --dim: #5b514e;
+        --mid: #473f3c;
+        --soft: #3d3634;
+        --rule: #a09490;
+        --wash: rgba(218, 210, 207, 0.72);
+        --deep: rgba(218, 210, 207, 0.33);
+        /* NO --tint. The blue is the only variation that runs the film
+       strictly one bit on paper — see TONE — so the ramp, the ground's haze
+       and everything else that reads a tint are all multiplied out. A token
+       that names a colour nothing can use is a lie in the palette, and the
+       renderer falls back to the paper, which makes the term a no-op. */
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      /* --ink-live is --ink travelling to --field-end on the resolve clock, set
+     from JS each frame. The fallback is the whole no-JS story: without script
+     the type is simply --ink and nothing is lost. */
       html,
       body {
-        margin: 0; /* avoid UA 8px body margin CLS */
-        overscroll-behavior: contain !important; /* Contained overscroll */
-        overscroll-behavior-y: contain !important;
-      }
-      /* Reserve scrollbar gutter to prevent width jumps on first layout */
-      html {
-        scrollbar-gutter: stable both-edges;
-        font-size: 85%; /* Scale everything to 80% */
+        background: var(--paper);
+        color: var(--ink-live, var(--ink));
+        -webkit-font-smoothing: antialiased;
       }
       body {
-        overscroll-behavior: contain !important;
-        overscroll-behavior-y: contain !important;
-      }
-      /* Preapply final metrics for the hero <h1> to avoid CLS */
-      h1[data-hero] {
-        font-family: "Cormorant", serif;
-        font-weight: 500; /* font-medium */
-        letter-spacing: 0.05em; /* tracking-wider */
-        margin-bottom: 0.25rem; /* mb-1 */
-        font-size: 3.75rem; /* text-6xl */
-        line-height: 1; /* leading-\[1\] */
-      }
-      @media (min-width: 64rem) {
-        h1[data-hero] {
-          font-size: 6rem; /* lg:text-8xl */
-          margin-bottom: 0.75rem; /* lg:mb-3 */
-        }
-      }
-      /* Radial oval sizing for footer backdrop */
-      :root {
-        --oval-rx: 100vw; /* full viewport width */
-        --oval-ry: 8rem; /* mobile & tablet visible height */
-      }
-      @media (min-width: 1024px) {
-        /* desktop */
-        :root {
-          --oval-rx: 100vw; /* full viewport width */
-          --oval-ry: 12rem; /* desktop visible height */
-        }
+        overflow-x: hidden;
       }
 
-      /* Robust footer glow: render gradient within footer stacking context */
-      footer {
-        isolation: isolate; /* ensure ::before sits behind text only */
-      }
-      footer::before {
-        content: "";
+      /* The argument, in the markup. -----------------------------------------
+     Every visible word on this page is drawn by script into containers that
+     are choreographed against scroll, which would leave a crawler, a link
+     preview and a screen reader with a page containing no words at all. So
+     the copy lives HERE, as ordinary semantic HTML, and the script reads it
+     out of the DOM rather than carrying its own copy of it. One source of
+     truth; the rendered version is marked aria-hidden so it is not announced
+     twice. */
+      .story {
         position: absolute;
+        width: 1px;
+        height: 1px;
+        margin: -1px;
+        padding: 0;
+        border: 0;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+      }
+
+      .stage {
+        position: fixed;
+        inset: 0;
+        overflow: hidden;
+        z-index: 0;
+      }
+      canvas {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+      /* The type is NOT inside .stage. .stage has to clip — it holds the canvas —
+     and with the copy inside it, raising the browser's base font size grew the
+     bottom-anchored block up past the top edge and the overflow rule deleted
+     it. Content that is merely too big must still be readable; content that is
+     clipped away is gone. Same fixed frame, no clip. */
+      .type {
+        position: fixed;
+        inset: 0;
+        z-index: 2;
+        pointer-events: none;
+      }
+      .type a {
+        pointer-events: auto;
+      }
+      /* The LAYER is transparent to the pointer; the WORDS are not. Without this
+     the copy is text you cannot put a cursor in — no I-beam, no selection, no
+     copying a line out of it — because the whole layer above the canvas was
+     waved through. Only the text boxes take the pointer back: the empty frame
+     around them stays transparent, so nothing intercepts a scroll and the
+     mark keeps reading the pointer (which it does from window, so events
+     landing on the copy still reach it by bubbling). The finale's lines are
+     handled in fadeLine, which knows when a line has faded out from under
+     itself and should stop hit-testing an empty band. */
+      .blk h1,
+      .blk p {
+        pointer-events: auto;
+      }
+      /* And selection is drawn, not left to the UA's blue — one more inversion,
+     which is the whole vocabulary of the page. */
+      ::selection {
+        background: var(--ink);
+        color: var(--paper);
+      }
+
+      .chrome {
+        position: fixed;
+        top: 0;
         left: 0;
         right: 0;
-        bottom: -0.25rem; /* nudge so ellipse center aligns at page bottom */
-        height: var(--oval-ry);
+        z-index: 3;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 2.4rem;
+        font:
+          400 0.68rem/1 "Geist Mono",
+          monospace;
+        color: var(--dim);
+      }
+      .chrome .wm {
+        letter-spacing: 0.34em;
+      }
+      .nav {
+        display: flex;
+        align-items: center;
+        gap: 0.9em;
+        letter-spacing: 0.24em;
+      }
+      /* --dim, not --ink. White-on-the-field measured 1.00:1 for 15% of the
+     scroll on a foldable's unfolded panel, where this element is visible;
+     the weight carries the emphasis instead. */
+      .nav b {
+        color: var(--dim);
+        font-weight: 500;
+      }
+      .nav i {
+        width: 2.2em;
+        height: 1px;
+        background: var(--rule);
+        font-style: normal;
+      }
+      /* The only interactive element on the page, so it has to announce itself as
+     one on hover and on keyboard focus alike. The underline is offset clear of
+     the caps rather than crowding them, and the trailing letter-space is pulled
+     back so the rule stops with the last letter instead of running past it. */
+      .nav a {
+        position: relative;
+        color: var(--dim);
+        text-decoration: none;
+        margin-right: -0.24em;
+        transition: color 0.16s ease;
+        -webkit-tap-highlight-color: transparent;
+      }
+      /* The drawn box is 45.7 x 10.9. A pseudo-element rather than padding,
+     because .chrome is an align-items:center flex row and the underline's
+     offset is calibrated — this changes the hit rectangle and moves nothing.
+     ~58 x 44, which is the platform minimum with no layout consequence. */
+      .nav a::after {
+        content: "";
+        position: absolute;
+        left: -6px;
+        right: -6px;
+        top: 50%;
+        height: 44px;
+        transform: translateY(-50%);
+      }
+      /* On a phone there is no hover, so the page's only control was pixel-
+     identical to the inert wordmark beside it — same colour, size, family and
+     weight, no underline. The affordance has to exist without a cursor. */
+      @media (hover: none) {
+        .nav a {
+          color: var(--ink);
+          text-decoration: underline;
+          text-underline-offset: 0.45em;
+          text-decoration-thickness: 1px;
+        }
+      }
+      .nav a:hover,
+      .nav a:focus-visible {
+        color: var(--ink);
+        text-decoration: underline;
+        text-underline-offset: 0.45em;
+        text-decoration-thickness: 1px;
+      }
+      /* A real ring, not a 1px underline sitting on the film: the substituted
+     underline measured 82.8% of its ink below 3:1 at the worst beat. The
+     paper-coloured spread is what makes the ring legible over the halftone
+     rather than over whatever happens to be behind it. */
+      .nav a:focus-visible {
+        outline: 2px solid var(--ink);
+        outline-offset: 0.35em;
+        box-shadow: 0 0 0 0.4em var(--paper);
+        text-decoration: none;
+      }
+
+      /* NARROW SCREENS — the counter goes.
+     ------------------------------------------------------------------------
+     The wordmark needs ~205px at this tracking and the right-hand group ~140px
+     with the counter in it; a 390px phone has 313px after padding, so the bar
+     wrapped and interleaved the company name with the section number. Shrinking
+     the type would have saved all three elements by making all three worse, and
+     the tracking is most of what makes this bar read as a mark rather than a
+     nav. So the counter — the only one of the three that is decoration rather
+     than a job — is dropped instead, along with its rule, and the wordmark and
+     the link keep their size and their letterspacing.
+
+     nowrap on both is the belt: if a future string does overflow, it overflows
+     visibly instead of silently folding in half. */
+      .chrome .wm,
+      .nav {
+        white-space: nowrap;
+      }
+      .wm br {
+        display: none;
+      }
+      /* On a desktop the form never reaches the header. On a phone — and on any
+     short viewport — it does, and the bar ends up set over pure white cells.
+     A scrim of the page's own ground, only there. */
+      /* .82 was the one value that destroyed the thing it was protecting. The
+     chrome's ink is --dim, mid-grey: it reads 5.03:1 on black AND 4.17:1 on
+     white, so it survives both extremes — and dies only on the MID-TONES an
+     82% scrim manufactures. Measured, 96.7% of ABOUT's core pixels fell below
+     3:1 at the worst beat, median 1.41:1; with the scrim removed entirely,
+     6.1%. It was the cause, not the cure, for ~2 viewport-heights of scroll on
+     every phone and every variant.
+
+     Full paper to 72% instead. The type sits 29-60% down an 83px bar, so this
+     covers both wordmark lines and the link and still fades out at the bar's
+     bottom edge. Built from --paper, so it lands on all three variants. */
+      @media (max-width: 560px), (max-height: 560px) {
+        .chrome::before {
+          content: "";
+          position: absolute;
+          inset: 0;
+          z-index: -1;
+          background: linear-gradient(
+            180deg,
+            var(--paper) 0%,
+            var(--paper) 72%,
+            transparent 100%
+          );
+        }
+      }
+      /* max-height too: a landscape phone is 844 wide and never matched, so it
+     got the desktop bar — 87.7px, 22% of a 390-tall frame, and section 03's
+     headline cleared it by 10px. */
+      @media (max-width: 560px), (max-height: 560px) {
+        .chrome {
+          padding: 1.5rem 1.2rem;
+          align-items: center;
+        }
+        .nav .count,
+        .nav i {
+          display: none;
+        }
+        .nav {
+          gap: 0;
+        }
+        /* Stacked, and broken where the name breaks — PREDICTIVE / TEXT LABS,
+       not wherever the measure happened to run out. Leading has to open up
+       too: the bar is set at line-height 1, which is right for one line and
+       far too tight for two. */
+        .wm br {
+          display: inline;
+        }
+        .chrome .wm {
+          line-height: 1.62;
+        }
+      }
+      /* The page declares viewport-fit=cover, so on a notched phone in landscape
+     the bar would otherwise lay itself into the cutout it opted into. */
+      .chrome {
+        padding-left: max(2.4rem, env(safe-area-inset-left));
+        padding-right: max(2.4rem, env(safe-area-inset-right));
+        padding-top: max(2.4rem, env(safe-area-inset-top));
+      }
+      @media (max-width: 560px) {
+        .chrome {
+          padding-left: max(1.2rem, env(safe-area-inset-left));
+          padding-right: max(1.2rem, env(safe-area-inset-right));
+          padding-top: max(1.5rem, env(safe-area-inset-top));
+        }
+      }
+
+      /* DEPTH OF FIELD, DOWNWARD.
+     ------------------------------------------------------------------------
+     The picture is lit from above, and the floor of the frame is that light
+     on water: what separates a reflection from the thing reflected is focus.
+     So the frame holds its edge at the top and loses it toward the bottom,
+     over a ramp that also deepens the ground — blur alone reads as fog, and
+     the darkening is what makes it read as depth.
+
+     A backdrop-filter with a MASK, which is what makes it progressive: the
+     radius is constant and the mask decides how much of the blurred backdrop
+     is allowed through, so the picture crosses from sharp to soft over a
+     distance instead of at an edge. Same mechanism as .veil below, which is
+     why there is no new machinery here. 0 to 28px over the bottom half of the
+     frame, starting at the mark's own centre.
+
+     Not in the shader, though it was built there first — as a depth term
+     inside the mark's own feather. Two reasons it is here instead. That
+     feather is switched off entirely on variation 4, which is one bit by
+     contract, so the control would have been the variant without the effect;
+     and softening the MARK is the trade this page refuses everywhere else,
+     while softening the FRAME leaves every mark the shape it was drawn.
+
+     ON THE FILM'S OWN CLOCK. --resolved is the number the type resolves on,
+     published by ptl-page.js; at the close it is 1 and this is gone. The last
+     frame is sharp to the floor, which is the point of the last frame.
+
+     The ramp is a token, not black paint: on paper the ground deepening is the
+     paper, or the bottom of the frame would go to soot on a light variation. */
+      /* PHONE ONLY. On a wide frame the mark keeps the upper two thirds and the
+     copy has the floor, so there is no depth to describe down there — the
+     bottom of the frame is where the argument is written, and blurring it
+     would be blurring the ground the words stand on. */
+      @media (max-width: 560px) {
+        .deep {
+          position: absolute;
+          inset: 0;
+          z-index: 1;
+          pointer-events: none;
+          opacity: calc(1 - var(--resolved, 0));
+          background: linear-gradient(
+            180deg,
+            transparent 50%,
+            var(--deep) 100%
+          );
+          backdrop-filter: blur(28px);
+          -webkit-backdrop-filter: blur(28px);
+          -webkit-mask-image: linear-gradient(
+            180deg,
+            transparent 50%,
+            #000 100%
+          );
+          mask-image: linear-gradient(180deg, transparent 50%, #000 100%);
+        }
+      }
+
+      /* A dome of defocus rising off the bottom edge.
+     ------------------------------------------------------------------------
+     The ellipse is centred at 50% 100% — the very bottom of the viewport — so
+     only its top half is ever on screen and the rest of the circle is cut off
+     below the fold. That gives a semicircular ground for the copy that has no
+     visible shape of its own: no top edge to read as a card, no left or right
+     edge at all, just density falling away as you move up and out.
+
+     It works WITH the shader's keep-out rather than replacing it, which is why
+     both are here. The keep-out handles the centre column, where the copy
+     actually sits and where a hard mark would be unreadable. This handles
+     everything that merely drifts NEAR the copy — the arch's legs, the outer
+     ring of the lattice — which the keep-out deliberately leaves sharp. */
+      /* saturate(0) so the defocus carries VALUE and not HUE. The wash is already
+     the paper colour, but it is translucent on purpose — a defocus, not an
+     eraser — and the ~28% of the field still showing through arrives with its
+     own colour. On variation 3 that is blue, so the dome behind the copy came
+     out lavender: a third colour, on a page that has two. Desaturating the
+     backdrop first means what bleeds through is only light and dark, and the
+     dome reads as the paper defocused. Measured: haze chroma 17 -> 8, against
+     the paper's own 10. A no-op on the other two variations, whose ink is
+     already neutral, so it does not need scoping to v3. */
+      .veil {
+        position: absolute;
+        inset: 0;
+        z-index: 1;
         pointer-events: none;
-        z-index: -1;
-        background: radial-gradient(
-          ellipse var(--oval-rx) var(--oval-ry) at 50% 100%,
-          rgba(255, 255, 255, 1) 0%,
-          rgba(255, 255, 255, 0.9) 45%,
-          rgba(255, 255, 255, 0.5) 65%,
-          rgba(255, 255, 255, 0.2) 82%,
-          rgba(255, 255, 255, 0) 100%
+        background: var(--wash);
+        backdrop-filter: blur(28px) saturate(0);
+        -webkit-backdrop-filter: blur(28px) saturate(0);
+        -webkit-mask-image: radial-gradient(
+          ellipse 82% 68% at 50% 100%,
+          #000 0%,
+          #000 46%,
+          transparent 100%
+        );
+        mask-image: radial-gradient(
+          ellipse 82% 68% at 50% 100%,
+          #000 0%,
+          #000 46%,
+          transparent 100%
         );
       }
-    </style>
-    <!-- Preload Tailwind to reduce time-to-style and further cut CLS -->
-    <link
-      rel="preload"
-      href="/assets/tailwind.css"
-      as="style"
-      fetchpriority="high"
-    />
-    <!-- Compiled Tailwind CSS (self-hosted) -->
-    <link id="tailwind-css" rel="stylesheet" href="/assets/tailwind.css" />
-    <script>
-      (function () {
-        var root = document.documentElement;
-        var show = function () {
-          root.classList.remove("no-fouc");
-        };
 
-        // Reveal immediately after CSS is ready; don't block on font downloads.
-        var link = document.getElementById("tailwind-css");
-        if (link) {
-          if (link.sheet) {
-            // CSS is already parsed (bfcache/HTTP2 push/preload path)
-            show();
-          } else {
-            link.addEventListener("load", show, { once: true });
-          }
+      /* Short viewports need a far bigger dome — the copy occupies most of a
+     landscape phone, and 68% of 390px puts the mask's opaque core below where
+     the words start. This is a media query and NOT max(68%,26rem) inside the
+     gradient: Chromium does not parse a CSS math function in a gradient size,
+     drops the whole mask-image as invalid, and then backdrop-filter blurs the
+     entire page with nothing masking it. WebKit accepts it, which is exactly
+     how it shipped. */
+      @media (max-height: 620px) {
+        .veil {
+          -webkit-mask-image: radial-gradient(
+            ellipse 92% 135% at 50% 100%,
+            #000 0%,
+            #000 46%,
+            transparent 100%
+          );
+          mask-image: radial-gradient(
+            ellipse 92% 135% at 50% 100%,
+            #000 0%,
+            #000 46%,
+            transparent 100%
+          );
         }
+      }
 
-        // Safety: if the CSS link fails to load for any reason, unhide after a tick
-        setTimeout(show, 900);
-      })();
-    </script>
-    <noscript
-      ><style>
-        .no-fouc body {
-          visibility: visible;
-        }
-      </style></noscript
-    >
-    <!-- Small utility + critical typography shim to reduce CLS on slow CSS -->
-    <style>
-      /* Viewport height stabilization across engines */
-      @supports (min-height: 100svh) {
-        .min-h-\[100svh\] {
-          min-height: 100svh;
+      /* ON A PHONE THE DOME IS ONLY FOR THE ENDING.
+     The defocus exists to give bottom-anchored copy a ground. On a phone the
+     copy is no longer bottom-anchored — it sits in the disc — so through the
+     whole argument the dome has nothing under it to serve, and what it does
+     instead is smother the bottom of the form: the ring's lower arc lands in
+     the middle of the mask's opaque core and comes back as a smudge, which is
+     why the frame read as an arch floating over an empty band rather than as
+     a circle.
+
+     The ending is the exception, and it is the whole reason this fades rather
+     than being deleted. The finale IS on the floor — .fin-a/b/c are positioned
+     by finale() against the bottom of the frame — so it needs exactly the
+     ground the beats do not.
+
+     --ending is published by ptl-page.js as a plain number, 0 through the
+     film and 1 across the finale's entrance. The page states how far into the
+     ending it is; this rule decides what that is worth on a phone. On a wide
+     frame nothing reads the property and the dome is unconditional, as
+     before. */
+      @media (max-width: 560px) {
+        .veil {
+          opacity: var(--ending, 0);
         }
       }
-      @supports ((not (min-height: 100svh)) and (min-height: 100dvh)) {
-        .min-h-\[100dvh\] {
-          min-height: 100dvh;
+
+      /* The top bound is what keeps a grown block off the chrome, and it has to
+     be written against the chrome's RENDERED height — which doubles with the
+     root font too, so a plain rem bound would not clear a two-line wordmark.
+     max(…, env()) tracks it because the chrome's own padding is written the
+     same way. */
+      .copy {
+        /* Named once, because the mobile rule below has to subtract exactly
+       this to get back to viewport coordinates. */
+        --copy-top: calc(max(1.5rem, env(safe-area-inset-top)) + 4.5rem);
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        width: min(60rem, 86vw);
+        text-align: center;
+        top: var(--copy-top);
+        bottom: 4.2rem;
+      }
+      /* NO overflow-y:auto here, deliberately, and it was tried. The descender
+     fix below pads each line by .18em and pulls it back with a negative
+     margin — which nets to zero for LAYOUT but not for scrollHeight, so the
+     block measures 269 against a 266 client height at every size. With
+     `overflow-y:auto` that 3px makes it a live scroll container at DEFAULT
+     text size, and a wheel starting over the copy was swallowed by a
+     container with 3px to give: measured, scrollY 0 -> 0 where it should be
+     0 -> 900. overscroll-behavior:contain made it worse, not better.
+     The reachability of over-large text is carried instead by the viewport
+     cap on the type below and by .copy's top bound above, which together stop
+     the block outgrowing the frame in the first place. */
+      .blk {
+        position: absolute;
+        left: 50%;
+        bottom: 0;
+        transform: translateX(-50%);
+        width: 100%;
+        visibility: hidden;
+      }
+      .blk.on {
+        visibility: visible;
+      }
+      /* WHERE THE COPY IS, AS A NUMBER THE SCRIPT CAN READ.
+     The shader clears a band at the bottom of the frame so the copy has
+     somewhere clean to sit — see uKeep in ptl-field.js. Which band that should
+     be is not the shader's business, it is this rule's: below, the copy stops
+     being on the floor. Rather than have the script carry its own copy of the
+     breakpoint and the two drift, the breakpoint stays here, once, and the
+     script reads the answer off the root. */
+      :root {
+        --phone: 0;
+      }
+      @media (max-width: 560px) {
+        :root {
+          --phone: 1;
         }
       }
-      /* Baseline mobile typography to match utilities before Tailwind parses */
-      html {
-        font-family: "Cormorant", serif;
-      }
-      header > p {
-        font-size: 1.875rem;
-        line-height: 2.25rem;
-        font-weight: 300;
-        font-style: italic;
-      }
-      section p {
-        font-size: 1.25rem;
-        line-height: 1.75rem;
-        margin-bottom: 1rem;
-      }
-      /* Keep base heading styling light so Tailwind utilities win */
-      section h2 {
-        font-weight: 600;
-        /* omit margin-top so utility classes control spacing */
-        margin-bottom: 1rem;
-      }
-      /* Founders section spacing */
-      @media (min-width: 1024px) {
-        .founders-section {
-          margin-top: 9.5rem;
-          transition: opacity 0.2s ease;
+
+      /* ON A PHONE THE COPY SITS IN THE CIRCLE, NOT ON THE FLOOR.
+     Bottom-anchoring is right on a landscape frame: the mark fills the upper
+     half, the copy takes the lower, and the two are in balance. Portrait
+     inverts that. The mark becomes a band across the top with a deep dark
+     disc under it, the copy is pinned 4.2rem off the bottom edge, and the
+     middle of the frame — the part the form is actually drawing — is empty,
+     with the words crowded into the last fifth as if they had fallen there.
+
+     48dvh IS THE CIRCLE'S CENTRE, not an eyeballed nudge. The form is a ring
+     of radius r about (0.5W, 0.5H - cy*base), and cy is
+     track(g, 0.00, 0.30, -0.80, 0.02) — it reaches 0.02 by the end of the
+     first beat and holds there for the rest of the film, so the centre is
+     fixed at 0.5H - 0.02*base. In portrait base is the height (the long side,
+     max(H, W/1.78)), which makes it 0.48H. Checked against the render at
+     three scroll positions: the predicted underside of the crown lands within
+     a few px of the measured one. The circle itself cannot be measured
+     directly here — at 390 wide its inner edge runs off both sides of the
+     frame, which is exactly why this is derived rather than eyeballed.
+
+     dvh, not vh: the shader's base comes from the canvas's own height, which
+     follows the URL bar, and vh does not. (The warning against dvh in
+     ptl-page.js is about the DOCUMENT's height, where a bar that hides
+     mid-scroll would move the film under the reader. This is one offset in a
+     fixed layer that is meant to track the canvas.) --copy-top comes back off
+     because .blk is positioned inside .copy, not against the frame.
+
+     The finale keeps the floor and is untouched: it is .fin-a/b/c in a layer
+     of its own, positioned by finale() in JS, not a .blk. The closing lockup
+     is the one moment that IS bottom-weighted on purpose — the mark has
+     closed above it and the words land beneath.
+
+     Portrait only. A landscape phone is 390 tall with the arch across most of
+     it, and this would lay the copy straight onto the bright of the mark.
+
+     One side effect, stated: .blk h1's 0.32em of ascender padding used to
+     grow the box upward off a fixed bottom edge and move nothing. Off a
+     centre it moves the glyphs down by half of it, about 5px here. Constant
+     across every beat, so it reads as position rather than as drift. */
+      @media (max-width: 560px) {
+        .blk {
+          top: calc(50dvh - var(--copy-top));
+          bottom: auto;
+          transform: translate(-50%, -50%);
         }
-        .mobile-separator {
-          display: none !important;
+      }
+      /* THE BOX MUST CONTAIN THE INK.
+     ------------------------------------------------------------------------
+     A mask clips its element to `mask-clip`, which defaults to the border box,
+     and at this line-height Cormorant's descenders hang below the content box
+     — so the tail of every g and y was being sliced off flat. No mask-repeat
+     value rescues that: the clip happens before the layers are even consulted.
+     `mask-clip:no-clip` is the declaration that means what we want and it
+     parses in all three engines, but only Firefox actually honours it; on
+     Chromium and WebKit the element is still cropped to the border box.
+
+     So the box is grown to hold the overhang instead, and pulled back by the
+     same amount so nothing moves. That works everywhere because it is not a
+     masking feature at all — it is just a bigger box. The margin nets out
+     under collapsing too (a negative and a positive collapse to their sum,
+     and the padding adds it straight back), so the measured gap down to the
+     body is exactly what it was.
+
+     The top needs it too, but only on the headline and only sometimes: at the
+     landscape-phone measure the Cormorant ascenders overflow upward and
+     Chromium was shaving 68 device px off them, where WebKit and Firefox laid
+     them out just inside. It gets padding with no compensating margin, because
+     .blk is anchored to its BOTTOM — the block simply grows upward and not one
+     glyph moves. That does shift the border-box origin the 12px lattice is
+     laid from, which re-phases the halftone by a fraction of a cell; the
+     lattice is a dissolve texture with no registration to anything, so that
+     costs nothing, and a cropped ascender is not nothing. */
+      .blk h1,
+      .blk p {
+        padding-bottom: 0.18em;
+        margin-bottom: -0.18em;
+      }
+      .blk h1 {
+        padding-top: 0.32em;
+      }
+      /* Two things at once.
+     The vw term needed 869px before it engaged, so the headline was a FIXED
+     30.4px at every width from 320 to 430 — at 320 that set as six lines of
+     15-19 characters. 7.1vw engages across the whole phone range: 22.7px at
+     320, 30.5px at 430, so the largest phone keeps today's size and the
+     smallest gets a real reduction.
+     And the min() OUTSIDE the clamp is what stops a raised text size deleting
+     the copy. .blk is bottom-anchored inside a position:fixed layer, so the
+     block grows UPWARD past y=0 where there is no scroll container and no
+     overflow — at 200% text size 76% of one headline was simply gone, with no
+     scroll position that could recover it. min() inside the clamp does not
+     work: the rem floor wins and nothing changes. */
+      /* AND A MEASURE OF ITS OWN, NARROWER THAN THE COLUMN.
+     At .copy's full 60rem the two long beats — COMMIT and PRICE — set as two
+     lines of nearly sixty characters, a paragraph measure on type this size,
+     while the opening beat beside them ran to three. Three lines each is the
+     shape the argument wants: one rhythm from beat to beat, and no line long
+     enough to need a return sweep.
+
+     IN em, AND THAT IS THE WHOLE TRICK. The size above is capped by 5.6vh, so
+     the headline is 51px on a tall screen and 43px on a 768-high laptop — and
+     a measure in rem holds a fixed number of PIXELS while the type shrinks
+     underneath it, which is a different number of characters to the line. Set
+     in px it worked at 900 high and dropped PRICE back to two lines at 768.
+     em resolves against the element's own font-size, so the measure is a
+     character count and the line count stops depending on the window's
+     height. Measured at 900, 982, 1080 and 768 high: the window is 13.5em to
+     18em, the SAME window at every one of them.
+
+     16em, not an edge: below 13.5 the opening beat breaks to four, above 18
+     the two long ones fall back to two, and everything between renders
+     3/2/2/3/3 alike, because text-wrap:balance minimises the longest line
+     once the count is fixed. The middle is where an edit to the copy can move
+     without taking the composition with it.
+
+     It binds only while the column is wider than it — around 930px and up.
+     Below that 86vw is already narrower and the viewport sets the count, as
+     it did before. */
+      .blk h1 {
+        font:
+          300 min(clamp(1.55rem, 7.1vw, 3.2rem), 5.6vh)/1.14 Cormorant,
+          serif;
+        letter-spacing: -0.012em;
+        text-wrap: balance;
+        max-width: 16em;
+        margin-left: auto;
+        margin-right: auto;
+      }
+      /* `balance` sets the paragraph at the narrowest measure that still holds its
+     line count, so a two-line body is two EVEN lines rather than a long one
+     and a stub. max-width is the ceiling it balances within. */
+      .blk p {
+        margin-top: 1.9rem;
+        font:
+          400 min(0.78rem, 2.2vh)/1.9 "Geist Mono",
+          monospace;
+        letter-spacing: 0.04em;
+        color: var(--mid);
+        max-width: 36rem;
+        text-wrap: balance;
+        margin-left: auto;
+        margin-right: auto;
+      }
+      /* And on a phone it sits closer to what it qualifies. 1.9rem is a wide
+     frame's gap, where the block has the whole floor to breathe on; inside a
+     centred block on a phone it reads as a break between two thoughts rather
+     than as one thought and its footnote. Written AFTER the rule it overrides
+     rather than up with the other phone rules: same specificity, so source
+     order is the whole argument. */
+      @media (max-width: 560px) {
+        .blk p {
+          margin-top: 0.95rem;
         }
-        /* Fade main content when hovering over sidebar */
-        .founders-section:hover ~ .main-content .main-content-section,
-        .content-wrapper:has(.founders-section:hover) .main-content-section {
-          opacity: 0.75;
+      }
+
+      /* THE FINALE — one sentence, three registers, two destinations.
+     ------------------------------------------------------------------------
+     Everywhere else a section is a paragraph that resolves and disintegrates
+     in place. The last one is a lockup that MOVES: the name and the verb ride
+     up and out of frame, and the claim rises into a fixed spot beneath the
+     mark and stays there while the mark closes.
+
+     So it is built as two independently-positioned groups, not one block —
+     .fin-a (the name + the verb) and .fin-b (the claim). They travel together
+     while they are one lockup, then .fin-a is handed a second move and leaves.
+     Their spacing while joined is measured from the DOM, so the joined state
+     is exactly what normal flow would have produced. */
+      .finale {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        visibility: hidden;
+      }
+      .finale.on {
+        visibility: visible;
+      }
+      .fin-a,
+      .fin-b,
+      .fin-c {
+        position: absolute;
+        left: 50%;
+        top: 0;
+        width: min(60rem, 86vw);
+        text-align: center;
+        will-change: transform;
+      }
+
+      /* THE ONE THING YOU CAN DO.
+     ------------------------------------------------------------------------
+     The page has no CTA by design — it is an argument, not a funnel — so the
+     single action it offers arrives only after the argument has finished
+     making itself: the mark has closed, the claim has come to rest, and the
+     film is holding still. Then this.
+
+     Set as text, not as a filled block. The block was the loudest object on
+     the page by a distance — the only solid shape in a composition made of
+     marks and thin type — and it read as a product page's button dropped onto
+     the end of an essay. As a rule the same as the chrome's, in the same face
+     and tracking, it is legible as an action without claiming to be the point.
+
+     Set in Cormorant, which is the brand's own face and the one the lockup
+     above opens with — so the last thing on the page is in the same voice as
+     the first, rather than in the chrome's mono, which is the register the
+     page uses for labels and machinery. Sentence case, untracked: a tracked
+     uppercase line here would read as a second headline arguing with the
+     claim two lines above it.
+
+     No rule at rest. It carries none of the mono's letter-spacing now, so
+     text-decoration hugs the glyphs and there is no trailing space to throw
+     the rule off centre — and because text-decoration is not layout, the
+     underline can appear on hover without anything moving. The rule stops at
+     the words: the arrow is an atomic inline, which all three engines skip
+     rather than draw through, so the hairline under the type and the hairline
+     of the arrow never join into one long stroke.
+
+     Deliberately NOT .fade. The lockup's lines arrive through a mask wipe
+     because they are type resolving out of the field; this is not part of the
+     argument, it is what is offered once the argument is over, and a wipe read
+     as one more piece of choreography. It just rises and fades — see
+     floatCta(). */
+      /* opacity:0 because the value is entirely JS-driven — the CSS default of 1
+     made the link flash fully lit the instant the finale mounted. The
+     transition is gone with it: floatCta() rate-limits the arrival itself now,
+     on one clock with the rise, which the transition was tearing apart. */
+      .cta {
+        display: inline-block;
+        padding: 0.55rem 0.3rem;
+        opacity: 0;
+        will-change: opacity, transform;
+        -webkit-tap-highlight-color: transparent;
+        color: var(--ink-live, var(--ink));
+        text-decoration: none;
+        font:
+          300 1.5rem/1.15 Cormorant,
+          serif;
+        letter-spacing: 0.005em;
+        text-underline-offset: 0.19em;
+        text-decoration-thickness: 1px;
+      }
+      .cta:hover,
+      .cta:focus-visible {
+        text-decoration: underline;
+        outline: none;
+      }
+
+      /* The arrow is DRAWN, not typed. None of the four faces this page ships
+     carries U+2192, so a typed arrow would fall out of the stack to whatever
+     the system serves as `serif` — a Times arrow, heavier and stubbier than
+     anything else on the line, next to Cormorant at weight 300. Drawn, it is
+     one hairline: non-scaling-stroke pins it to exactly 1px, the same 1px the
+     hover rule underneath it is drawn at, so the two read as the same
+     instrument. vertical-align:middle is the definition we want here — the
+     box's centre against the baseline plus half the parent's x-height — which
+     puts the shaft through the middle of the lowercase, and keeps the arrow
+     entirely above the baseline so it cannot deepen the line box.
+     pointer-events:none so the anchor, not the path, is what the cursor
+     finds. */
+      .cta .arw {
+        width: 0.95em;
+        height: 0.292em;
+        margin-left: 0.4em;
+        vertical-align: middle;
+        pointer-events: none;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1;
+        vector-effect: non-scaling-stroke;
+        stroke-linejoin: miter;
+      }
+
+      /* 9.8vw so the closing name scales with the headline across the phone
+     range; at 320 it had 0.08px of slack in its box, in an italic whose
+     rasterised advance differs between engines. */
+      .l1 {
+        font:
+          italic 300 clamp(1.95rem, 9.8vw, 4.2rem)/1.16 Cormorant,
+          serif;
+        letter-spacing: -0.008em;
+      }
+      /* The hinge. Small, tracked, grey — the same register as the corner marks,
+     so the verb reads as connective tissue between two statements rather than
+     as a third statement. */
+      .l2 {
+        margin-top: 0.81rem;
+        font:
+          400 0.78rem/1.2 "Geist Mono",
+          monospace;
+        letter-spacing: 0.44em;
+        text-indent: 0.44em;
+        text-transform: uppercase;
+        color: var(--soft);
+      }
+
+      /* The claim. All-caps neo-grotesque, light, widely tracked, closed by a
+     blinking terminal block instead of a period.
+
+     The block must not push the words off centre — the sentence is centred and
+     the cursor hangs off its right, exactly as a caret does at the end of a
+     line you have finished typing. That is what the text-indent buys:
+
+       indent = cursor margin (.26) + cursor width (.60) + the text's own
+                trailing letter-space (.145) = 1.005em
+
+     which is precisely the distance the cursor would otherwise drag the line
+     left, so subtracting it back centres the INK rather than the line box.
+     Tracking lives on the inner span, not here, so the block can never pick up
+     a stray letter-space and break that sum.
+
+     It is a negative margin on the CURSOR and not a text-indent on the block,
+     because text-indent only ever applies to the first line. The moment the
+     claim wrapped — which it does at phone widths — the compensation landed on
+     the line without the cursor on it and the two lines were centred on axes
+     an em apart. The margin travels with the cursor, so it is correct on
+     whichever line the cursor ends up on. */
+      /* padding+margin for the same reason as .blk h1's descender fix above: the
+     caret is pulled OUTSIDE the line box by margin-right:-1.005em, and .fade's
+     mask clips to the border box, so at 320px the entire terminal block was
+     sliced off — 770 device px of ink, the sentence's full stop. The pair nets
+     to zero, so not one glyph moves. */
+      .l3 {
+        font:
+          300 clamp(1.15rem, 2.8vw, 2.5rem)/1.25 Inter,
+          sans-serif;
+        text-transform: uppercase;
+        letter-spacing: 0;
+        padding-right: 1.05em;
+        margin-right: -1.05em;
+      }
+      .l3 .t {
+        letter-spacing: 0.145em;
+      }
+      /* ON A PHONE THE CLAIM IS AS BIG AS ONE LINE ALLOWS.
+     The desktop clamp's floor is 1.15rem, and on a narrow frame that is what
+     binds — the last words of the film set smaller than the sentence above
+     them. The ceiling here is the fit itself: measured, MACHINES THAT DECIDE
+     in Inter 300 with this tracking is 14.94 times the font-size wide, and the
+     lockup is 86vw, so 86 / 14.94 = 5.76vw is exactly the size at which it
+     fills the line — 5.6vw with a hair of slack, because a wrap here costs a
+     line of the film's last frame.
+
+     Set halfway between that ceiling and the 1.15rem floor it used to take,
+     which is where it reads: at the ceiling the claim outweighed the name
+     above it. The mean of the two rules rather than a third number, so it
+     still moves with the frame. 5.6vw stays in the min() as a hard ceiling:
+     below about 300px the rem floor is itself wider than the line, so the mean
+     of the two would wrap where the fit alone would not. The rem cap is only a
+     backstop against a very large root size. */
+      @media (max-width: 560px) {
+        .l3 {
+          font-size: min(2.2rem, 5.6vw, calc((1.15rem + 5.6vw) / 2));
         }
-        .main-content-section {
-          transition: opacity 0.2s ease;
+      }
+      /* An empty inline-block takes its baseline from its bottom margin edge, so
+     `vertical-align:baseline` seats it on the baseline. Taller than the caps
+     (.93 against a .727em cap height) and narrower than square: a terminal
+     cell is a standing rectangle, and a true square read as a dot.
+
+     Being taller than the caps means the baseline is the WRONG datum — sitting
+     on it, the block overhangs the cap line and reads high. The negative bottom
+     margin drops it by (.93 - .727) / 2 so the block's centre and the cap
+     band's centre coincide, which is where the eye actually looks. */
+      .l3 .cur {
+        display: inline-block;
+        vertical-align: baseline;
+        width: 0.6em;
+        height: 0.93em;
+        margin-left: 0.26em;
+        margin-bottom: -0.1015em;
+        margin-right: -1.005em;
+        background: var(--ink-live, var(--ink));
+        animation: caret 1.06s step-end infinite;
+      }
+      /* Bounded. A 2x22px block toggling forever was 97% of the closing screen's
+     remaining power draw, on the one screen the reader is meant to sit on. */
+      .fin-b .cur {
+        animation-iteration-count: 12;
+      }
+      @keyframes caret {
+        0% {
+          opacity: 1;
         }
+        50% {
+          opacity: 0;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .l3 .cur {
+          animation: none;
+        }
+      }
+
+      /* THE FINALE'S TRANSITION — not the halftone resolve.
+     ------------------------------------------------------------------------
+     Every other section condenses its type out of the grid, because that is
+     the argument those sections make: the picture and the words on one
+     lattice. The ending is not an argument, it is a sign-off, and it wants to
+     arrive the way a title card arrives — softly. So the finale opts out.
+
+     Three things move together, in and out:
+       --rv  a mask that wipes up the line, revealing it from the baseline
+       --ex  a second mask, intersected, that erases it the same way
+       opacity, and a small translate, both driven alongside.
+
+     The masks are what keep it from reading as a plain CSS fade: the line
+     resolves and dissolves with a direction, bottom-up, in the same sense the
+     lockup is travelling. */
+      .fade {
+        will-change: opacity, transform;
+        -webkit-mask-image:
+          linear-gradient(
+            to top,
+            #000 calc(var(--rv, 1) * 150% - 50%),
+            transparent calc(var(--rv, 1) * 150%)
+          ),
+          linear-gradient(
+            to top,
+            transparent calc(var(--ex, 0) * 150% - 50%),
+            #000 calc(var(--ex, 0) * 150%)
+          );
+        mask-image:
+          linear-gradient(
+            to top,
+            #000 calc(var(--rv, 1) * 150% - 50%),
+            transparent calc(var(--rv, 1) * 150%)
+          ),
+          linear-gradient(
+            to top,
+            transparent calc(var(--ex, 0) * 150% - 50%),
+            #000 calc(var(--ex, 0) * 150%)
+          );
+        -webkit-mask-composite: source-in;
+        mask-composite: intersect;
+      }
+
+      /* KINETIC TYPE, in this page's own grammar.
+     ------------------------------------------------------------------------
+     The first attempt slid each word up out of a mask. It worked, and it was
+     wrong: sliding is the default move of every motion-design template there
+     is, and nothing else on this page slides. Everything else here is a rigid
+     lattice of squares whose SIZE carries the image — so the type arrives that
+     way too. It is a halftone of itself that resolves.
+
+     Three mask layers, intersected:
+       1. vertical stripes of width --mk on a 12px pitch
+       2. horizontal stripes of width --mk on a 12px pitch
+          (1 n 2 = squares of --mk on the same 12px lattice as the field)
+       3. a soft sweep at --sw giving the reveal a direction
+
+     Growing --mk from 0 to 12px makes the letterforms condense out of the grid
+     and close up solid; shrinking it back disintegrates them into it. The 12px
+     pitch is the field's own cell size, so the type and the picture are
+     literally on the same grid. */
+      .kin {
+        -webkit-mask-image:
+          linear-gradient(90deg, #000 var(--mk), transparent 0),
+          linear-gradient(180deg, #000 var(--mk), transparent 0),
+          linear-gradient(
+            90deg,
+            #000 0 calc(var(--sw) - 16%),
+            transparent calc(var(--sw) + 4%)
+          );
+        mask-image:
+          linear-gradient(90deg, #000 var(--mk), transparent 0),
+          linear-gradient(180deg, #000 var(--mk), transparent 0),
+          linear-gradient(
+            90deg,
+            #000 0 calc(var(--sw) - 16%),
+            transparent calc(var(--sw) + 4%)
+          );
+        -webkit-mask-size:
+          12px 12px,
+          12px 12px,
+          100% 100%;
+        mask-size:
+          12px 12px,
+          12px 12px,
+          100% 100%;
+        -webkit-mask-repeat: repeat, repeat, no-repeat;
+        mask-repeat: repeat, repeat, no-repeat;
+        -webkit-mask-composite: source-in, source-in;
+        mask-composite: intersect, intersect;
+        --mk: 12px;
+        --sw: 200%;
+      }
+
+      /* Without script there is no film and no scroll choreography, so the copy
+     stops hiding and simply sets itself as a document. */
+      .no-js .story {
+        position: static;
+        width: auto;
+        height: auto;
+        margin: 0;
+        overflow: visible;
+        clip-path: none;
+        white-space: normal;
+        max-width: 44rem;
+        padding: 6rem 2.4rem;
+        margin-inline: auto;
+      }
+      .no-js .story section + section {
+        margin-top: 4rem;
+      }
+      .story .sr {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+      }
+      .no-js .story h1,
+      .no-js .story h2 {
+        font:
+          300 clamp(1.6rem, 3vw, 2.4rem)/1.2 Cormorant,
+          serif;
+      }
+      .no-js .story p {
+        margin-top: 1.2rem;
+        font:
+          400 0.8rem/1.9 "Geist Mono",
+          monospace;
+        color: var(--mid);
+      }
+      .no-js .stage {
+        display: none;
       }
     </style>
   </head>
+  <body class="no-js">
+    <header class="chrome">
+      <span class="wm">PREDICTIVE <br />TEXT LABS</span>
+      <nav class="nav">
+        <span class="count"><b id="bn">01</b> / <span id="bt">06</span></span
+        ><i></i><a id="about" href="/about.html">ABOUT</a>
+      </nav>
+    </header>
 
-  <body class="relative overflow-x-hidden bg-stone-100">
-    <!-- Subtle circular gradient background that fades to transparent (paint early) -->
-    <div
-      aria-hidden="true"
-      class="pointer-events-none fixed inset-0 z-0"
-      style="
-        background: radial-gradient(
-          ellipse var(--oval-rx) var(--oval-ry) at 50% 100%,
-          rgba(255, 255, 255, 1) 0%,
-          rgba(255, 255, 255, 0.9) 45%,
-          rgba(255, 255, 255, 0.5) 65%,
-          rgba(255, 255, 255, 0.2) 82%,
-          rgba(255, 255, 255, 0) 100%
-        );
-      "
-    ></div>
-    <!-- Main Content -->
-    <main
-      class="relative z-[1] flex flex-col items-start justify-start gap-8 px-1 pt-16 pb-6 md:px-4 lg:flex-row lg:gap-12 lg:pb-18"
-    >
-      <div
-        class="mx-auto mb-8 w-full max-w-screen-xl px-6 lg:max-w-[66rem] lg:px-0"
-      >
-        <div
-          class="content-wrapper flex w-full flex-col items-start gap-8 text-xl lg:mt-12 lg:grid lg:max-w-none lg:grid-cols-[40rem_20rem] lg:justify-center lg:gap-x-24"
-        >
-          <div class="main-content max-w-[40rem] lg:col-start-1">
-            <header>
-              <h1
-                class="mb-1 text-6xl font-medium tracking-wider text-stone-700 lg:mb-3 lg:text-8xl"
-                data-hero
-              >
-                Predictive
-              </h1>
-              <p
-                class="text-3xl font-light text-stone-600 italic lg:mb-4 lg:text-5xl"
-              >
-                Text Labs.
-              </p>
-            </header>
-            <section
-              class="main-content-section mt-10 flex-1 text-[1.625rem] text-stone-700 transition-opacity duration-200 lg:mt-12 lg:text-[1.625rem]"
-            >
-              <p class="mb-4">
-                The underlying insight driving Predictive Text Labs is that when
-                leaders ask “what should I do?”, they want an actionable answer,
-                not another chart. Anyone who's worked with a CEO knows that
-                actionable answers start with a prediction.
-              </p>
-              <p class="mb-4">
-                LLMs are powerful; trained on billions of articles, books, and
-                websites, they summarize the past brilliantly. But we still
-                don’t trust them to forecast. That's because reasoning to
-                predict events is fundamentally different from predicting the
-                next token. Real forecasting requires seeing how events cascade,
-                why patterns repeat, and which signals matter.
-              </p>
-              <p class="mb-4">
-                We believe temporal reasoning isn’t just another AI capability.
-                It’s the core primitive that turns LLMs from search engines into
-                decision-making partners. Without it, AI can analyze the past
-                but never predict the future.
-              </p>
-              <p class="mb-4">
-                This gap limits every organization trying to leverage AI to
-                drive decisions.
-              </p>
-              <p>Our mission is to close it.</p>
+    <div class="stage" aria-hidden="true">
+      <canvas id="c"></canvas>
+      <div class="deep"></div>
+      <div class="veil"></div>
+    </div>
 
-              <h2 class="mt-12 mb-4 text-3xl font-semibold">Join us</h2>
-              <p class="mb-4">
-                We're the researchers, developers, and builders behind leading
-                ML tools and platforms like DLFinLab and Netlify. The
-                researchers we work with have tens of thousands of citations.
-              </p>
-
-              <p class="mb-4">
-                We build AI models that predict the future. If you're
-                world‑class in research, graphs, time series, ML engineering, or
-                product and want to ship with velocity, we'd love to talk.
-              </p>
-            </section>
-          </div>
-
-          <!-- Mobile separator -->
-          <div class="mobile-separator my-8 w-full text-center text-stone-400">
-            ⁂
-          </div>
-
-          <!-- Our team: text-only list -->
-          <section
-            class="founders-section w-full max-w-[36rem] shrink-0 pb-24 text-stone-700 transition-opacity duration-200 lg:col-start-2 lg:w-[18rem] lg:max-w-none lg:pb-0 lg:opacity-75 lg:hover:opacity-100"
-          >
-            <div class="lg:sticky lg:top-12">
-              <h2 class="mb-4 text-3xl font-semibold lg:text-lg">Founders</h2>
-              <ul class="space-y-4 text-lg lg:text-[0.95rem] lg:leading-[1.4]">
-                <li>
-                  <span class="font-bold">Chris Bach / Co-CEO:</span>
-                  <span class="font-light"
-                    >Serial entrepreneur, co-founder of Netlify, powering 90M+
-                    sites. Pioneered the Jamstack movement and the decoupled
-                    web.</span
-                  >
-                </li>
-                <li>
-                  <span class="font-bold">Alex Pan / Co-CEO:</span>
-                  <span class="font-light"
-                    >MLE and product. Authored the first synthetic benchmark for
-                    verifiable mixed logic reasoning and state management.
-                    Founded Storipress. Forbes 30 Under 30.</span
-                  >
-                </li>
-                <li>
-                  <span class="font-bold">Athon Millane / CTO:</span>
-                  <span class="font-light"
-                    >Data scientist. Built DLFinLab—the deep learning
-                    algotrading system powering today's quant funds. Founding
-                    Team at The Network State.</span
-                  >
-                </li>
-              </ul>
-              <h2 class="mt-12 mb-4 text-3xl font-semibold lg:text-lg">
-                Advisors
-              </h2>
-              <ul class="space-y-4 text-lg lg:text-[0.95rem] lg:leading-[1.4]">
-                <li>
-                  <span class="font-bold">Ming Jin, PhD:</span>
-                  <span class="font-light"
-                    >Time Series Researcher, Griffith University.</span
-                  >
-                </li>
-                <li>
-                  <span class="font-bold">Andy Huang, PhD:</span>
-                  <span class="font-light"
-                    >Graph Researcher, Oxford University.</span
-                  >
-                </li>
-                <li>
-                  <span class="font-bold">Flora Salim, PhD:</span>
-                  <span class="font-light"
-                    >Time Series Researcher, University of New South
-                    Wales.</span
-                  >
-                </li>
-              </ul>
-            </div>
-          </section>
+    <div class="type" aria-hidden="true">
+      <div class="copy" id="copy"></div>
+      <div class="finale" id="finale">
+        <div class="fin-a" id="finA"></div>
+        <div class="fin-b" id="finB"></div>
+        <!-- tabindex="-1" because this whole layer is aria-hidden: it is a
+           rendered duplicate of #story, and a focusable control inside
+           aria-hidden content is a trap — reachable by keyboard, invisible to
+           a screen reader. The chrome's ABOUT link is the same destination and
+           is announced properly, so this one is for the mouse. -->
+        <div class="fin-c" id="finC">
+          <a class="cta" id="cta" href="/about.html" tabindex="-1"
+            >join us<svg class="arw" viewBox="0 0 26 8" aria-hidden="true">
+              <path d="M0 4h24M20.5 1 24 4l-3.5 3" /></svg
+          ></a>
         </div>
       </div>
+    </div>
+
+    <main class="story" id="story">
+      <!-- The six beats were six h1s and nothing else, so heading navigation
+           gave a screen-reader user six equal-rank siblings with no way to
+           tell the claim from the beats supporting it. One page-level h1, and
+           the beats demote to h2. #story is clipped, so nothing visible
+           moves. -->
+      <h1 class="sr">Predictive Text Labs — Machines that Decide</h1>
+      <section data-key="DECIDE">
+        <h2>
+          In twenty years, machines will make most consequential decisions in
+          government and business.
+        </h2>
+      </section>
+      <!-- data-in / data-out are "start,length" in section-local time, and
+         override the defaults for this beat only. This one clears out
+         early and the next arrives quickly, because the gap between the
+         question and the answer was reading as a pause. -->
+      <section data-key="WHEN" data-out="0.64,0.20">
+        <h2>The question is not whether this future arrives, but when.</h2>
+      </section>
+      <section data-key="EARN" data-in="0.00,0.15">
+        <h2>How can we help machines earn this right to lead?</h2>
+      </section>
+      <section data-key="COMMIT">
+        <h2>
+          A machine earns this right through a track record of committing scarce
+          resources into the world.
+        </h2>
+        <p>
+          Today's AI is built to perform low-stakes, reversible decisions.
+          Tomorrow's AI must know the cost of failure.
+        </p>
+      </section>
+      <section data-key="PRICE">
+        <h2>
+          Predictive Text Labs teaches machines to forecast so they can commit
+          to decisions that matter.
+        </h2>
+      </section>
+      <!-- The finale is the one section set as a lockup rather than a sentence:
+         three registers, and two destinations. The name and the verb leave,
+         the claim stays. No period on the last line — a blinking terminal
+         block stands in for it, which is a full stop still waiting for the
+         next input. -->
+      <section data-key="DECIDE" data-finale>
+        <h2>
+          <span class="ln">Predictive Text Labs.</span>
+          <span class="ln">Builds</span>
+          <span class="ln">Machines that Decide</span>
+        </h2>
+      </section>
     </main>
-    <!-- Footer -->
-    <footer
-      class="pointer-events-none fixed inset-x-0 text-center text-stone-500"
-      style="
-        position: fixed;
-        z-index: 9999;
-        isolation: isolate;
-        bottom: 0;
-        padding-bottom: 0.5rem;
-        padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
-      "
-    >
-      <div class="text-[1.125rem]">© 2026 Predictive Text Labs</div>
-    </footer>
+
+    <script>
+      /* The rest of the switch, which needs the stylesheet parsed and the body
+     present. Both the browser chrome and the link out are derived from the
+     resolved palette rather than restated: the hexes live in one place. */
+      {
+        const paper = getComputedStyle(document.documentElement)
+          .getPropertyValue("--paper")
+          .trim();
+        const n = paper.replace("#", "");
+        const [r, g, b] = [0, 2, 4].map(
+          (i) => parseInt(n.slice(i, i + 2), 16) / 255,
+        );
+        document.querySelector("meta[name=theme-color]").content = paper;
+        /* Which end of the range the paper sits at is what `color-scheme` is for —
+       it is what the scrollbar and any UA widget are drawn against. Variations
+       2 and 3 are light grounds; announcing them as dark drew a dark scrollbar
+       down the side of a stone page. */
+        document.querySelector("meta[name=color-scheme]").content =
+          0.2126 * r + 0.7152 * g + 0.0722 * b > 0.5 ? "light" : "dark";
+
+        /* Carry the variation across to the about page, so following the link does
+       not silently drop you back into variation 1. */
+        const v = document.documentElement.dataset.v;
+        if (v)
+          for (const id of ["about", "cta"]) {
+            document.getElementById(id).href = "/about.html?v=" + v;
+          }
+      }
+    </script>
+    <script src="/src/ptl-field.js"></script>
+    <script src="/src/ptl-page.js"></script>
   </body>
 </html>

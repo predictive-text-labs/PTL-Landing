@@ -1,0 +1,6 @@
+{
+  "$schema": "./node_modules/knip/schema.json",
+  "entry": ["src/ptl-page.js", "src/ptl-field.js"],
+  "project": ["src/**/*.js"],
+  "ignoreBinaries": ["python3"]
+}
