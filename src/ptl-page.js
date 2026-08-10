@@ -409,7 +409,7 @@
      middle. Every wide viewport gets it for the whole film, and it draws what
      the three constants in the shader used to draw, to the pixel.
 
-     A phone gets NONE instead — nothing cleared at all. The copy there is not
+     A phone gets a band of negative height instead — nothing cleared at all. The copy there is not
      under the mark, it is inside it, sitting in the ring's own void; clearing
      a band as well took out the lower arc and the lattice beneath it and left
      the film 190px short of the bottom edge. Parting the form around the words
@@ -418,11 +418,10 @@
      read as an egg. The words simply sit on the picture, where the picture is
      already black.
 
-     The ending is the exception at both sizes, and it travels: the lockup IS
-     on the floor, so as it arrives the phone's box crosses from NONE to FLOOR
-     on the same ramp that brings the dome up. */
+     The ending is the exception at both sizes: the lockup IS on the floor, so
+     as it arrives the phone's band grows out of the bottom edge to FLOOR's, on
+     the same ramp that brings the dome up. */
   const FLOOR = [-0.40, 0.10, 0.40, 0.21];
-  const NONE  = [-9, 0.01, 0.01, 0.02];   // a band nine frames below: clears nothing
 
   /* The mark's lower edge in screen px — the same arithmetic as form()'s
      radius track, restricted to the last section, where every track but the
@@ -779,6 +778,7 @@
   document.body.style.height = ((S.length * PER + TAIL) * 100) + 'vh';
   let raf = 0, shown = -1, remeasure = false, lastW = innerWidth;
   let endU = -1;                          // last published --ending
+  let resU = '';                          // last published --resolved
   /* True once the film has finished closing. Past PTLField.CLOSE.TO the
      fragment program is a pure function of constants — the ambient term is
      multiplied by (1 - smoothstep(0.86, 0.965, g)), exactly zero there, and
@@ -849,8 +849,15 @@
     document.documentElement.style.setProperty('--ink-live', mixHex(TYPE_A, TYPE_B, res));
     /* The same number, unmixed, for the rules that need the CURVE rather than
        a colour off it — .deep, whose blur is part of the film and has to leave
-       on the film's clock rather than a second one of its own. */
-    document.documentElement.style.setProperty('--resolved', res.toFixed(3));
+       on the film's clock rather than a second one of its own. Written only
+       when it changes, like --ending below: it is pinned at 0 for the first
+       three beats and at 1 for the last two, and every write invalidates
+       style for a rule that blurs the whole frame. */
+    const resS = res.toFixed(3);
+    if (resS !== resU) {
+      resU = resS;
+      document.documentElement.style.setProperty('--resolved', resS);
+    }
 
     /* How far into the ending we are, published rather than applied: the
        stylesheet decides who wants it. On a phone the defocus dome is only for
@@ -875,12 +882,25 @@
          put 86% of the verb's ink under 4.5:1. */
       g: reduce ? 1 : p, section: idx, word: S[idx].key,
       /* The keep-out band is for copy on the floor. On a phone there is none
-         until the ending, so it rides the ending's own ramp and the film gets
-         the whole frame back for the argument itself. */
-      /* The parting travels from the middle to the floor as the ending
-         arrives, because that is where the copy goes: the finale's lockup is
-         the one phone frame whose words are under the mark rather than in it. */
-      copy: phone ? NONE.map((v, i) => v + (FLOOR[i] - v) * end) : FLOOR,
+         until the ending, so it OPENS on the ending's own ramp and the film
+         gets the whole frame back for the argument itself.
+
+         Only the half-height moves. Lerping the whole box from somewhere
+         off-frame was tried and it does not travel at all: the band is a
+         hundredth of a frame tall against a centre nine frames down, so it
+         stays outside the picture until the centre has almost arrived and
+         then snaps in over the last 4.5% of the ramp. Measured — nothing is
+         cleared until end = 0.955. Fixing the centre where it belongs and
+         growing the band out of the bottom edge is the same end state and an
+         actual opening.
+
+         It starts at MINUS the falloff so that at end 0 the taper cannot
+         reach the frame either: smoothstep(-w, 0, |x|) is 1 for every |x|, so
+         the band is exactly zero. Starting at 0 instead would leave 64% of it
+         standing at the frame's floor before the ending had begun. */
+      copy: phone
+        ? [FLOOR[0], -FLOOR[3] + (FLOOR[1] + FLOOR[3]) * end, FLOOR[2], FLOOR[3]]
+        : FLOOR,
       lift: lift(),
       cell: 12, gap: 0.12, gain: 1.0, fov: 0.70, shadow: SHADOW, tone: TONE,
       print: PRINT,
