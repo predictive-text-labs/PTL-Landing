@@ -161,6 +161,28 @@
         color: var(--ink-live, var(--ink));
         -webkit-font-smoothing: antialiased;
       }
+      /* THE CARRIED FILM MUST NOT LENGTHEN THE PAGE.
+     Once the film is unfixed it is moved by a transform, and a transform
+     counts towards scrollable overflow. The layer is one viewport plus a bleed
+     tall, so translated to the end of the document it hangs that bleed past
+     the bottom and the page grows. The page then has a NEW end, --film-travel
+     is republished against it, and the layer reaches further still. Measured
+     on iOS 26.5 with the film fixed the document is 4287 and never moves; with
+     it unfixed and nothing here, 4615 — and --film-travel ended up 184px stale,
+     which is the film sitting that far off its own frame at the bottom.
+
+     `clip` and not `hidden`: hidden makes body a scroll container, which is
+     what the front page happens to have, and it did NOT contain this — that
+     page is quiet for a different reason, its body height is set outright in
+     vh. clip creates no scroll container and contributes no scrollable
+     overflow at all, and the clip margin is what still lets the bleed paint
+     past the padding box, which is the entire point of having one. Measured
+     with this line: 4287 and GREW 0, travel exactly the page's own length, and
+     the film still reaching the bottom of the screen. */
+      body {
+        overflow: clip;
+        overflow-clip-margin: 300px;
+      }
       ::selection {
         background: var(--ink);
         color: var(--paper);
