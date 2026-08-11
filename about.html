@@ -233,7 +233,24 @@
         inset: 0;
         z-index: 1;
         pointer-events: none;
-        background: var(--wash);
+        background-color: var(--wash);
+        /* AND ONE MORE SHEET OF IT WHILE THE TABLE IS IN FRAME. The wash is a
+     fixed .62 chosen for a page that is mostly film; over the twelve, where
+     the film is a ground rather than the subject, the section wants to sit
+     deeper than the rest of the page does. --veil-d is that second sheet,
+     driven by the same scroll window as the reach above, and it is the
+     PAPER rather than black on purpose: --wash is already --paper at an
+     alpha in every variation, so another sheet of it deepens each palette
+     in its own direction instead of dragging a light one toward black.
+     At 0 the mix is fully transparent and this layer is not there. */
+        background-image: linear-gradient(
+          color-mix(
+              in srgb,
+              var(--paper) calc(var(--veil-d, 0) * 100%),
+              transparent
+            )
+            0 0
+        );
         backdrop-filter: blur(30px) saturate(0);
         -webkit-backdrop-filter: blur(30px) saturate(0);
         -webkit-mask-image: linear-gradient(
@@ -255,6 +272,12 @@
         .veil {
           -webkit-mask-image: none;
           mask-image: none;
+          /* And no second sheet either. The mask going away covers --veil-r,
+       which only exists inside it, but --veil-d is on the background and
+       would otherwise deepen a phone that was never in this change. Held
+       here rather than in the script so the breakpoint stays written down
+       once. */
+          background-image: none;
         }
       }
       .page {
@@ -1119,14 +1142,14 @@
      wash does not calm the halftone, it erases it, and what is left is a
      grey cloud where the map was. The last seventh is the whole difference.
      Held at 0.86 the marks come back as a ghost — the grid still reads, the
-     orange still reads — and the numbers land on parity, which is the target
-     here rather than a ratio out of a spec. `03` and `09`, the two worst
-     cells on the page, measure 2.90:1 and spend 3.7% and 3.2% of their area
-     under 3:1. `04` in the first column measures 2.98:1 and 3.5%, and that
-     column has been sitting in the calm zone since the veil was written. The
-     table should read as one table rather than as three columns on three
-     different grounds; it now does, and the third column is no longer the
-     one you skip.
+     orange still reads. The target was parity rather than a ratio out of a
+     spec: `04` in the first column has been reading on the calm ground since
+     the veil was written, and whatever it measures is what the other two
+     columns should measure. With the second sheet below under it, `03` and
+     `09` come in at 3.47:1 against that column's 3.89, and nothing in the
+     table falls under 3:1 anywhere. The reach alone had them at 2.90 against
+     2.98 — parity, but parity a little under the line; the depth carried all
+     three over it. One table, not three columns on three grounds.
 
      The rect is read every frame rather than cached because render() already
      reads scrollHeight, which forces the same layout flush — a second read
@@ -1135,16 +1158,45 @@
         const prin = document.querySelector(".prin");
         const VEIL_IN = 0.5,
           VEIL_OUT = 0.2,
-          VEIL_MAX = 0.86;
+          VEIL_MAX = 0.86,
+          VEIL_DEEP = 0.3;
+        /* The window itself, 0 to 1. Two things read it: how far right the
+     veil reaches, and how deep it sits. One shape, so they cannot drift
+     apart and leave the section arriving in two stages. */
+        /* AND NONE OF IT BELOW THE VEIL'S OWN BREAKPOINT, where there is no
+     mask to modulate and the rule above has taken the second sheet away
+     too. Measured at 390x844: the rect read and the two writes cost 203us
+     a frame to reach nothing.
+
+     Asked of the CSS rather than restated as a number here. A second copy
+     of 760px in the script is a thing that drifts out of step with the rule
+     it shadows, and the failure would be silent — the veil frozen at a
+     width where the mask still exists, which is the contrast bug returning
+     with nothing to show for it. This asks the one question that actually
+     matters, once at setup and again on resize, never per frame. */
+        const veilEl = document.querySelector(".veil");
+        let veilOn = true;
+        const readVeilOn = () => {
+          const cs = veilEl && getComputedStyle(veilEl);
+          const m = cs && (cs.maskImage || cs.webkitMaskImage);
+          veilOn = !!m && m !== "none";
+          /* Once, on the way out. render() stops writing these when the gate
+       closes, which would otherwise leave whatever the last desktop frame
+       set standing on the root — read by nothing, since the rule above
+       takes both the mask and the sheet away, but it would say the veil is
+       open on a phone and that is not a thing to leave lying around. */
+          if (!veilOn) {
+            root.style.setProperty("--veil-r", "0");
+            root.style.setProperty("--veil-d", "0");
+          }
+        };
+        readVeilOn();
         const veilAt = () => {
           if (!prin) return 0;
           const h = Math.max(innerHeight, 1),
             r = prin.getBoundingClientRect();
-          return (
-            VEIL_MAX *
-            smooth(
-              Math.min((h - r.top) / (h * VEIL_IN), r.bottom / (h * VEIL_OUT)),
-            )
+          return smooth(
+            Math.min((h - r.top) / (h * VEIL_IN), r.bottom / (h * VEIL_OUT)),
           );
         };
 
@@ -1162,12 +1214,22 @@
 
         function render() {
           if (!field || field.isDead()) return;
+          /* EVERY READ BEFORE EVERY WRITE. --ink-live is a custom property on
+     the root, so writing it invalidates style for the whole document, and
+     a getBoundingClientRect() after that has to recalculate before it can
+     answer. Interleaved, the rect cost 285us a frame at 1920x1200; moved
+     above the write it costs 77us, and the ordering is worth more than the
+     read itself is. */
           const max = root.scrollHeight - innerHeight;
+          const veil = veilOn ? veilAt() : 0;
           const p = max > 0 ? clamp(window.scrollY / max) : 0;
           const gNow = gAt(p);
           const res = resolveAt(gNow);
           root.style.setProperty("--ink-live", mixHex(TYPE_A, TYPE_B, res));
-          root.style.setProperty("--veil-r", veilAt().toFixed(3));
+          if (veilOn) {
+            root.style.setProperty("--veil-r", (veil * VEIL_MAX).toFixed(3));
+            root.style.setProperty("--veil-d", (veil * VEIL_DEEP).toFixed(3));
+          }
           field.draw(p, {
             g: gNow,
             section: 0,
@@ -1236,6 +1298,10 @@
         let rz = 0;
         addEventListener("resize", () => {
           clearTimeout(rz);
+          /* Not debounced with the render below it: a scroll landing inside
+       those 120ms calls render() directly, and it has to know which side
+       of the breakpoint it is on. */
+          readVeilOn();
           rz = setTimeout(render, 120);
         });
         document.addEventListener("visibilitychange", () => {
