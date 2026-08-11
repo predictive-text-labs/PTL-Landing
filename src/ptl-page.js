@@ -939,12 +939,16 @@
      frame's power draw, provably wasted. Keyed to the shader's own constant
      so the two cannot drift. */
   let still = false;
-  /* The geometry the last frame was actually drawn against. A resize arrives
-     with the layout already changed under it, so nothing measurable at that
-     moment describes where the reader was — but scrollY is still the pixel
-     the last frame used, and these are the two numbers that frame divided it
-     by. Kept so the resize handler has an honest denominator. */
-  let lastMax = 0, lastFilm = 1;
+  /* WHERE THE LAST FRAME WAS, in the film's own terms rather than in pixels.
+     Taken in render() because that is the only place scrollY and the film it
+     is divided by are known to agree. By the time a resize is heard they do
+     not: the browser clamps scrollY to the new document BEFORE dispatching,
+     so any change that shortens the page — a rotation, a window dragged
+     shorter — hands the handler a pixel the reader was never at. Measured at
+     1280x800 rotating to 390x664: the end of the finale, y = 8785, arrives as
+     7775, and so does every other position in the last 1600px of the page.
+     Re-deriving the beat from that is re-deriving it from the clamp. */
+  let lastBeat = [0, 0], lastTail = 0;
 
   function render() {
     const max  = document.documentElement.scrollHeight - innerHeight;
@@ -970,6 +974,8 @@
        moving. */
     const tailU = clamp((window.scrollY - film) / Math.max(max - film, 1));
     const ct    = t + tailU * TAIL_T;
+    lastBeat = [idx, t];
+    lastTail = tailU;
 
     if (idx !== shown) {
       blocks.forEach((b, i) => b.el.classList.toggle('on', i === idx));
@@ -1065,7 +1071,6 @@
       mouse: cur, act, ink: INK, ink2: INK2, paper: PAPER, tint: TINT,
       time: clock, amb: ambient(), resolve: res,
     });
-    lastMax = max; lastFilm = film;
   }
 
   function frame() {
@@ -1112,20 +1117,19 @@
      is a different moment in the argument — two thirds of a beat out, at the
      weights index.html asks for.
 
-     AND MEASURED AGAINST THE FRAME STILL ON THE SCREEN. This block ran the
-     other way round for a long time and was therefore dead: latchLVH() was
-     the first thing in it, so filmLen() below already answered for the
-     viewport being arrived at, the position came out as the position, and the
-     restore was the identity — in every case, since a width that does not
-     change does not change the film either. Nothing looked wrong, because
-     putting the reader back where they already were is exactly what doing
-     nothing looks like. By the time this runs the layout has already moved,
-     so the only honest denominators are the ones the last frame used. */
+     AND NOT MEASURED HERE AT ALL. This block used to work it out from
+     scrollY, which is wrong twice over: latchLVH() was the first thing in it,
+     so filmLen() below already answered for the viewport being arrived at and
+     the restore came out as the identity — in every case, since a width that
+     does not change does not change the film either. Nothing looked wrong,
+     because putting the reader back where they already were is exactly what
+     doing nothing looks like. And by the time this runs scrollY has been
+     clamped to a document that has already changed size. So the position is
+     simply the one the last frame drew; see lastBeat above. */
   let keepP = null, keepTail = 0;
   addEventListener('resize', () => {
-    keepP = beat(clamp(window.scrollY / lastFilm));
-    keepTail = clamp(Math.max(0, window.scrollY - lastFilm)
-                   / Math.max(lastMax - lastFilm, 1));
+    keepP = lastBeat;
+    keepTail = lastTail;
     if (innerWidth !== lastW) { lastW = innerWidth; latchLVH(); }
     remeasure = true;
     if (!raf) raf = requestAnimationFrame(frame);
