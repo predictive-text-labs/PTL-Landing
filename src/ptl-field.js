@@ -1193,17 +1193,24 @@
          gl_FragCoord, which counts from the BUFFER's bottom, so a bleed that is
          not a whole multiple of the cell shifts every mark in the frame by the
          remainder and the picture no longer lands where it was tuned. */
-      if (nw === w && nh === h) return;
-      w = canvas.width = nw; h = canvas.height = nh;
-      /* Read here and nowhere else: getComputedStyle flushes style, and size()
-         runs every frame. The bleed can only change by changing the canvas's
-         own height, so a size that did not move cannot have a bleed that did. */
+      /* Off the root as a plain attribute rather than as the custom property
+         that carries the same number to CSS. This runs every frame, and
+         getComputedStyle would flush style each time; pin() writes both.
+         Checked independently of the buffer's size because the two can change
+         and cancel — turn the phone and lvh grows by what the chrome gives
+         back — leaving a canvas the same height with a different frame in it. */
       const cellPx = 12 * dpr;
-      const want = Math.max(0, parseFloat(
-        getComputedStyle(canvas).getPropertyValue('--film-bleed')) || 0) * dpr;
-      bleed = Math.min(h - 1, Math.round(want / cellPx) * cellPx);
-      frameH = h - bleed;
-      gl.viewport(0, 0, w, h);
+      const want = Math.max(0,
+        +document.documentElement.dataset.filmBleed || 0) * dpr;
+      const nb = Math.min(nh - 1, Math.round(want / cellPx) * cellPx);
+      if (nw === w && nh === h && nb === bleed) return;
+      if (nw !== w || nh !== h) {
+        /* Assigning width/height clears the drawing buffer, so only when it
+           actually moved — a bleed that changed alone must not cost a frame. */
+        w = canvas.width = nw; h = canvas.height = nh;
+        gl.viewport(0, 0, w, h);
+      }
+      bleed = nb; frameH = h - nb;
     }
 
     /* Both programs read the same picture, so both take the same uniforms.
@@ -1330,29 +1337,19 @@
     if (root.matchMedia &&
         !root.matchMedia('(hover: none) and (pointer: coarse)').matches) return false;
 
-    /* WHAT IS BEING COVERED. Not a safe-area inset: env(safe-area-inset-bottom)
+    /* BOTH NUMBERS, TOGETHER, EVERY TIME. They move for the same reasons: turn
+       the phone and lvh is a different length AND the chrome it leaves room for
+       is a different size. Republishing the travel alone — which is what the
+       first cut of this did — leaves the film cut to a portrait pocket in
+       landscape until the page is reloaded.
+
+       WHAT IS BEING COVERED. Not a safe-area inset: env(safe-area-inset-bottom)
        is 0 here, because the toolbar's pocket is chrome and not a notch. It is
        the difference between the LARGEST the layout viewport ever gets and the
        screen. Zero or less on anything that does not overlay its chrome — which
-       makes this its own feature gate, and a truer one than sniffing an engine. */
-    const lvh = resolve('100lvh');
-    const gap = (root.screen ? root.screen.height : 0) - lvh;
-    if (!lvh || !(gap > 0)) return false;
+       makes this its own feature gate, and a truer one than sniffing an engine.
 
-    /* Snapped UP to a whole cell. The lattice counts from the buffer's bottom,
-       so a bleed that is a fraction of a cell shifts every mark in the frame. */
-    el.style.setProperty('--film-bleed', Math.ceil(gap / CELL) * CELL + 'px');
-
-    doc.dataset.filmPinned = '';
-    if (getComputedStyle(el).position !== 'absolute') {
-      /* The page did not take it — an engine without the @supports, or markup
-         older than this script. Leave nothing behind either way. */
-      delete doc.dataset.filmPinned;
-      el.style.removeProperty('--film-bleed');
-      return false;
-    }
-
-    /* HOW FAR THE FILM TRAVELS, measured off something it cannot move.
+       HOW FAR THE FILM TRAVELS, measured off something it cannot move.
        Read from documentElement.scrollHeight this feeds back on itself: the
        film is a viewport plus a bleed tall, so parked at the end it hangs that
        bleed past the document, the document grows, the distance is republished
@@ -1370,18 +1367,52 @@
        film for the last ~120px of scroll and nothing else. Painting there would
        need a layer that is neither in the document nor clipped to the layout
        viewport, and on this engine there isn't one. */
-    let last = '';
-    const travel = () => {
-      const v = Math.max(0, Math.round(
-        document.body.getBoundingClientRect().height - resolve('100lvh'))) + 'px';
-      if (v === last) return;
-      last = v;
-      el.style.setProperty('--film-travel', v);
+    let lastBleed = '', lastTravel = '';
+    const measure = () => {
+      const lvh = resolve('100lvh');
+      const gap = (root.screen ? root.screen.height : 0) - lvh;
+      /* Snapped UP to a whole cell. The lattice counts from the BUFFER's
+         bottom, so a bleed that is a fraction of a cell shifts every mark in
+         the frame off the composition it was tuned against. */
+      const bleed = lvh > 0 && gap > 0 ? Math.ceil(gap / CELL) * CELL : 0;
+      if (bleed + 'px' !== lastBleed) {
+        lastBleed = bleed + 'px';
+        /* Published twice, on the root, for two readers that cannot share one
+           form. CSS needs a length to put in a calc; the renderer needs a
+           number it can read on every frame, and reading a custom property
+           means getComputedStyle, which flushes style. An attribute is a plain
+           property access. Written here and nowhere else, so they cannot drift. */
+        doc.style.setProperty('--film-bleed', lastBleed);
+        doc.dataset.filmBleed = bleed;
+      }
+      const t = Math.max(0, Math.round(
+        document.body.getBoundingClientRect().height - lvh)) + 'px';
+      if (t !== lastTravel) {
+        lastTravel = t;
+        doc.style.setProperty('--film-travel', t);
+      }
+      return bleed;
     };
-    travel();
-    root.addEventListener('resize', travel);
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(travel);
-    if (root.ResizeObserver) new ResizeObserver(travel).observe(document.body);
+
+    const strip = () => {
+      delete doc.dataset.filmPinned;
+      delete doc.dataset.filmBleed;
+      doc.style.removeProperty('--film-bleed');
+      doc.style.removeProperty('--film-travel');
+    };
+
+    if (!measure()) { strip(); return false; }
+    doc.dataset.filmPinned = '';
+    if (getComputedStyle(el).position !== 'absolute') {
+      /* The page did not take it — an engine without the @supports, or markup
+         older than this script. Leave nothing behind either way. */
+      strip();
+      return false;
+    }
+
+    root.addEventListener('resize', measure);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(measure);
+    if (root.ResizeObserver) new ResizeObserver(measure).observe(document.body);
     return true;
   }
 
