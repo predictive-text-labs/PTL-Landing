@@ -429,14 +429,26 @@
        units as t the tail runs to 1.387, so the button is fully in at 1.354
        with about 55px of scroll to spare underneath it. */
     CTA: [1.259, 0.095],
-    /* A QUARTER LESS OF THAT WAIT ON A PHONE. What is scaled is the wait, not
-       the position: 1.259 is 0.473 of a section after the claim goes still at
-       0.786, and three quarters of that is 0.355, which puts the button at
-       1.141. The pause is still a pause — it is most of a frame of scroll in
-       which nothing whatsoever happens — but a small frame holding one still
-       picture runs out of things to say sooner than a large one does.
-       Fully in at 1.236, with 0.151 of tail under it rather than 0.033. */
-    CTA_MOB: [1.141, 0.095],
+    /* AND A QUARTER LESS SCROLL BEFORE IT, ON A PHONE — in pixels, which is
+       the only unit the thumb has. This is subtler than scaling the number,
+       and scaling the number is what was tried first: `ct` runs at two
+       different rates. Inside the ending one unit of it is that beat's whole
+       length, which the phone weights at 1.875 shares; across the tail one
+       unit is a nominal beat, 40% less. So 1.259 -> 1.141 looked like a
+       quarter off the wait and was 18% off the distance.
+
+       Measured at 390x664: the claim goes still at t = 0.786, which leaves
+       0.214 of the ending — 489px — before the film's scroll is even
+       exhausted, and that alone is three quarters of the old 660px wait. A
+       quarter off is 495px, so the button now opens 0.006 into the tail: the
+       pause is the ending's own still stretch, and the tail carries the
+       arrival rather than the wait.
+
+       The cost is at the bottom. Fully in at 1.101 leaves 349px of scroll
+       under a button that has finished arriving, against 40px on a wide
+       frame. TAIL is one length for every device and this does not change it;
+       shortening the pause was the ask. */
+    CTA_MOB: [1.006, 0.095],
     CTA_RISE: 0.042,      // how far it floats up, as a fraction of the frame
     CTA_GAP: 1.4,         // below the claim, in rem, capped against short frames
     /* How long the defocus dome takes to arrive under the lockup, in the same
