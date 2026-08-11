@@ -395,6 +395,19 @@
     /* in / out windows per line: [start, length]. The claim never leaves. */
     IN:  [[0.00, 0.17], [0.045, 0.17], [0.095, 0.19]],
     OUT: [[0.28, 0.12], [0.30, 0.12]],
+    /* AND THEY ARRIVE FURTHER APART ON A PHONE. 0.045 of a beat between the
+       registers is a stagger on a desk and a simultaneity in the hand: the
+       name, the verb and the claim land close enough together to read as one
+       lockup switching on rather than as three things being said. This is the
+       extra delay per register, so the nth line is n of these late, and it
+       doubles the gaps to 0.095 and 0.10 — a third of a frame of scroll
+       between them at the weight the ending now carries.
+
+       Everything that waits for the claim to LAND waits the same two: the
+       pair's exit and its lift. The claim is fully in at 0.385 against the
+       first departure at 0.38, which is the relation the wide frame has at
+       0.285 and 0.28, kept rather than re-eyeballed. */
+    LAG: 0.05,
     /* The button waits for the film to be over. The mark stops closing at
        g = 0.965, which is t = 0.79 of this section, and the claim stops being
        pushed at the same instant — so that is the first moment there is a
@@ -416,6 +429,14 @@
        units as t the tail runs to 1.387, so the button is fully in at 1.354
        with about 55px of scroll to spare underneath it. */
     CTA: [1.259, 0.095],
+    /* A QUARTER LESS OF THAT WAIT ON A PHONE. What is scaled is the wait, not
+       the position: 1.259 is 0.473 of a section after the claim goes still at
+       0.786, and three quarters of that is 0.355, which puts the button at
+       1.141. The pause is still a pause — it is most of a frame of scroll in
+       which nothing whatsoever happens — but a small frame holding one still
+       picture runs out of things to say sooner than a large one does.
+       Fully in at 1.236, with 0.151 of tail under it rather than 0.033. */
+    CTA_MOB: [1.141, 0.095],
     CTA_RISE: 0.042,      // how far it floats up, as a fraction of the frame
     CTA_GAP: 1.4,         // below the claim, in rem, capped against short frames
     /* How long the defocus dome takes to arrive under the lockup, in the same
@@ -425,6 +446,11 @@
     DOME: 0.14,
   };
   const easeIn = u => u * u;             // accelerates out of frame
+  /* The lockup's phone-only delay, as the two numbers everything reads: one
+     lag for the second register, two for the third and for everything that
+     waits on the claim. Zero everywhere else, so the wide frame is arithmetic
+     with nothing in it. */
+  const lagged = () => (phone ? [FIN.LAG, FIN.LAG * 2] : [0, 0]);
 
   let ha = 0, gap = 0, ctaGap = 0;
   /* Whether the copy is inside the mark or under it. The page does not own the
@@ -603,7 +629,7 @@
       Math.max(rise, H * FIN.PIN, markBottom(g, H) + H * FIN.CLEAR),
       H - finB.offsetHeight - tail - H * 0.045
     );
-    const go   = easeIn(clamp((t - FIN.GO) / FIN.GO_LEN)) * H * FIN.LIFT;
+    const go   = easeIn(clamp((t - FIN.GO - lagged()[1]) / FIN.GO_LEN)) * H * FIN.LIFT;
     finB.style.transform = `translate(-50%,${bY.toFixed(1)}px)`;
     finA.style.transform = `translate(-50%,${(bY - gap - ha - go).toFixed(1)}px)`;
     finC.style.transform =
@@ -647,11 +673,12 @@
       return;
     }
     const ins = FIN.IN, out = FIN.OUT;
+    const [lag, late] = lagged();
     fadeLine(b.l1, outCubic(clamp((t - ins[0][0]) / ins[0][1])),
-                   inQuad  (clamp((t - out[0][0]) / out[0][1])), H);
-    fadeLine(b.l2, outCubic(clamp((t - ins[1][0]) / ins[1][1])),
-                   inQuad  (clamp((t - out[1][0]) / out[1][1])), H);
-    fadeLine(b.l3, outCubic(clamp((t - ins[2][0]) / ins[2][1])), 0, H);
+                   inQuad  (clamp((t - out[0][0] - late) / out[0][1])), H);
+    fadeLine(b.l2, outCubic(clamp((t - ins[1][0] - lag) / ins[1][1])),
+                   inQuad  (clamp((t - out[1][0] - late) / out[1][1])), H);
+    fadeLine(b.l3, outCubic(clamp((t - ins[2][0] - late) / ins[2][1])), 0, H);
     floatCta(ct, H);
   }
 
@@ -664,7 +691,8 @@
   let ctaU = 0, ctaSettling = false, ctaTs = 0;
   function floatCta(t, H) {
     if (!cta) return;
-    const target = smooth(FIN.CTA[0], FIN.CTA[0] + FIN.CTA[1], t);
+    const win = phone ? FIN.CTA_MOB : FIN.CTA;
+    const target = smooth(win[0], win[0] + win[1], t);
     /* Rate-limited HERE rather than by a CSS transition. This function drives
        the opacity and the rise from one number, but only opacity was
        transitioned — so under a fling the transform snapped to its final value
