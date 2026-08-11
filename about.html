@@ -880,16 +880,10 @@
         const gainAt = (p) =>
           lerp(1.0, 0.1, Math.pow(clamp((p - 0.18) / 0.82), 0.55));
 
-        /* The ambient clock, as on the film: real time, sped up by scroll speed,
-     reaching ONLY the size of the halftone marks. It cannot move the
-     composition, because nothing positional reads it. */
-        const AMB_IDLE = 1.0,
-          AMB_GAIN = 5.5,
-          AMB_DECAY = 0.86;
-        let clock = 0,
-          lastTs = 0,
-          vel = 0,
-          lastY = window.scrollY;
+        /* The ambient clock — real time, sped up by scroll speed, reaching ONLY
+     the size of the halftone marks — is the FIELD's, and it keeps it. This page
+     had a second copy of the arithmetic, identical to ptl-page.js's down to the
+     constants and the two bug fixes in it. What is left here is the pump. */
         let ticking = 0;
 
         function render() {
@@ -911,7 +905,6 @@
             ink2: INK2,
             paper: PAPER,
             tint: TINT,
-            time: clock,
             amb: reduce ? 0 : 1,
           });
         }
@@ -920,17 +913,7 @@
           if (ticking) return;
           ticking = requestAnimationFrame(function step(ts) {
             ticking = 0;
-            /* A gap past 0.5s is a returning tab; anything else is a slow frame
-     and counts for what it was. Same clamp as ptl-page.js. */
-            const raw = lastTs ? (ts - lastTs) / 1000 : 0.016;
-            const dt = raw > 0.5 ? 0.016 : Math.min(raw, 0.25);
-            lastTs = ts;
-            if (!reduce) {
-              /* Per second, not per frame: AMB_DECAY is tuned at 60Hz, so per
-     frame the boost bled off twice as fast at 120Hz. */
-              vel *= Math.pow(AMB_DECAY, dt * 60);
-              clock += dt * (AMB_IDLE + AMB_GAIN * Math.min(vel, 1.4));
-            }
+            if (field) field.frame(ts, !reduce);
             render();
             /* Only while there is something to draw on: with no renderer, or one
      that died with its context, this held the compositor open at 60fps to
@@ -943,8 +926,7 @@
         addEventListener(
           "scroll",
           () => {
-            vel += Math.abs(window.scrollY - lastY) / Math.max(innerHeight, 1);
-            lastY = window.scrollY;
+            if (field) field.scrolled();
             if (reduce) render();
             else tick();
           },
@@ -958,7 +940,7 @@
         });
         document.addEventListener("visibilitychange", () => {
           if (document.hidden) return;
-          lastTs = 0;
+          if (field) field.idle();
           tick();
         });
 

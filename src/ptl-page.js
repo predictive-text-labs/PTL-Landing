@@ -372,7 +372,10 @@
      The ending is the exception at both sizes: the lockup IS on the floor, so
      the phone's band grows out of the bottom edge to FLOOR's, on the same ramp
      that brings the dome up. */
-  const FLOOR = [-0.40, 0.10, 0.40, 0.21];
+  /* The field's, the same four numbers it defaults uCopy to. Fallback for the
+     same reason C has one: this file still seats the copy with no renderer. */
+  const FLOOR = (typeof PTLField !== 'undefined' && PTLField.FLOOR) ||
+                [-0.40, 0.10, 0.40, 0.21];
   /* Where the band's taper is half applied: the line, in the shader's own
      units, at which the picture gives way to the copy's ground. */
   const CLEARING = -(FLOOR[0] + FLOOR[1] + FLOOR[3] / 2);
@@ -569,13 +572,10 @@
      nothing else — and is monotonic. Nothing that decides where a word sits
      reads it, so at worst the halftone is a few frames further through a sine.
 
-     Scrolling makes it run faster: `vel` is scroll distance in viewport-heights
-     accumulated and decayed continuously, so the rate answers to how hard you
-     are moving rather than to whether an event fired. */
-  const AMB_IDLE = 1.0;    // clock seconds per real second, untouched
-  const AMB_GAIN = 5.5;    // extra, at full scroll speed
-  const AMB_DECAY = 0.86;  // how fast the boost bleeds off, per 60th of a second
-  let clock = 0, lastTs = 0, vel = 0, lastY = 0;
+     The clock ITSELF is the field's — it reaches uTime and nothing else, so it
+     lives with the thing it reaches, and about.html no longer keeps a second
+     copy of the arithmetic. What stays here is the pump: when to ask for a
+     frame, and when to stop. That is genuinely this page's business. */
   /* Ambient motion is motion, so reduced motion turns it off outright — and so
      does having nothing to move. The breathe reaches exactly one thing, mark
      size, so with no renderer mounted the loop held the compositor open at
@@ -598,16 +598,7 @@
     if (ticking) return;
     ticking = requestAnimationFrame(function step(ts) {
       ticking = 0;
-      /* Clamped for the one enormous delta a backgrounded tab hands back, and
-         ONLY that: past 0.5s is a returning tab, everything else is a slow
-         frame. Applied to every frame it ran the clock at 0.72 s/s at 15fps. */
-      const raw = lastTs ? (ts - lastTs) / 1000 : 0.016;
-      const dt  = raw > 0.5 ? 0.016 : Math.min(raw, 0.25);
-      lastTs = ts;
-      if (ambient()) {
-        vel *= Math.pow(AMB_DECAY, dt * 60);   // per second, not per frame
-        clock += dt * (AMB_IDLE + AMB_GAIN * Math.min(vel, 1.4));
-      }
+      if (field) field.frame(ts, ambient() === 1);
       const dx = tgt[0] - cur[0], dy = tgt[1] - cur[1];
       /* The chase rate eases on distance too: near the mark the light is
          attentive, far from it lazy — the shader's amplitude falloff on the
@@ -630,7 +621,7 @@
      first frame after does not carry the whole absence as one delta. */
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) return;
-    lastTs = 0;
+    if (field) field.idle();
     tick();
   });
 
@@ -780,7 +771,7 @@
       lift: lift(),
       cell: 12, gap: 0.12, gain: 1.0,
       mouse: cur, act, ink: INK, ink2: INK2, paper: PAPER, tint: TINT,
-      time: clock, amb: ambient(), resolve: res,
+      amb: ambient(), resolve: res,
     });
   }
 
@@ -801,11 +792,7 @@
   }
 
   addEventListener('scroll', () => {
-    /* Distance, not events: a trackpad fires far more scroll events per pixel
-       than a wheel, so rating the boost by event count would make one gesture
-       mean different things on different hardware. */
-    vel += Math.abs(window.scrollY - lastY) / Math.max(innerHeight, 1);
-    lastY = window.scrollY;
+    if (field) field.scrolled();
     wakeCaret();
     /* When the ambient loop is running it already draws every frame, so
        scheduling the scroll slot too would render the same frame twice. */
@@ -853,7 +840,6 @@
      would give it, which is only knowable once Cormorant has loaded. */
   document.fonts.ready.then(() => { measure(); frame(); });
   measure();
-  lastY = window.scrollY;
   frame();
   tick();          // and the field starts breathing, with nobody having done anything
 

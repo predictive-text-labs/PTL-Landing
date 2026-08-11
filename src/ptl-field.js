@@ -38,6 +38,14 @@
     ASPECT: 1.78,            // the long-side normalisation, uRes.x / 1.78
   };
 
+  /* THE KEEP-OUT BAND for copy on the floor of a landscape frame: (centre,
+     half-height, half-width, falloff). Published because it is two things at
+     once — the value ptl-page.js seats the copy against, which had its own copy
+     of these four numbers, and feed()'s default for uCopy. A caller that says
+     nothing about copy gets a landscape floor cleared, which is a real decision
+     and one about.html has been inheriting without ever asking for it. */
+  const FLOOR = [-0.40, 0.10, 0.40, 0.21];
+
   /* ---- THE FIELD'S VOCABULARY ----------------------------------------------
      draw() takes colours as normalised triples and is driven by curves the page
      computes, so turning a stylesheet token into something it accepts is part of
@@ -64,6 +72,19 @@
     const c = i => Math.round((A[i] + (B[i] - A[i]) * t) * 255);
     return 'rgb(' + c(0) + ',' + c(1) + ',' + c(2) + ')';
   };
+
+  /* ---- THE AMBIENT CLOCK ---------------------------------------------------
+     It reaches exactly one thing — uTime, and through it the size of the
+     halftone marks — so it is the FIELD's clock, not either page's, and it lives
+     here. Both pages had their own copy of the arithmetic below, identical down
+     to the constants, and both had separately discovered the same two bugs: the
+     returning-tab delta, and that a decay tuned at 60Hz bleeds off twice as fast
+     at 120Hz unless it is raised per SECOND. One copy, so there is one place to
+     find them. The rAF pump stays with each page: they stop for genuinely
+     different reasons, and that is not shared logic. */
+  const AMB_IDLE = 1.0;    // clock seconds per real second, untouched
+  const AMB_GAIN = 5.5;    // extra, at full scroll speed
+  const AMB_DECAY = 0.86;  // how fast the boost bleeds off, per 60th of a second
 
   const VERT = `#version 300 es
   void main(){
@@ -577,6 +598,34 @@
     fragColor = vec4(encLum(formAt(id)), encBrt(breatheAt(id)), 1.0);
   }`;
 
+  /* ---- THE DRAW OPTIONS, AND EVERY DEFAULT IN ONE PLACE --------------------
+     This was two dozen lines of `o.x != null ? o.x : …`, each default buried at
+     its own call site. The second column IS the contract, and it is worth being
+     able to read down it: uCopy's default is how about.html came to have a
+     landscape keep-out band cut out of its field without anything in that file
+     saying so.
+
+     [uniform, option key, default, setter]. A null scalar default means "the t
+     draw() was called with". A string vector default names an earlier row to
+     fall back to, so ink2 follows ink and tint follows paper — order matters. */
+  const SCALARS = [
+    ['uG',       'g',       null, ],
+    ['uGap',     'gap',     0.12, ],
+    ['uGain',    'gain',    1.0,  ],
+    ['uAct',     'act',     0,    ],
+    ['uAmb',     'amb',     0,    ],
+    ['uResolve', 'resolve', 0,    ],
+    ['uLift',    'lift',    1,    ],
+  ];
+  const VECTORS = [
+    ['uMouse', 'mouse', [0, 0],    'uniform2fv'],
+    ['uInk',   'ink',   [1, 1, 1], 'uniform3fv'],
+    ['uInk2',  'ink2',  'ink',     'uniform3fv'],
+    ['uPaper', 'paper', [0, 0, 0], 'uniform3fv'],
+    ['uTint',  'tint',  'paper',   'uniform3fv'],
+    ['uCopy',  'copy',  FLOOR,     'uniform4fv'],
+  ];
+
   function compile(gl, type, src) {
     const s = gl.createShader(type);
     gl.shaderSource(s, src); gl.compileShader(s);
@@ -609,6 +658,9 @@
        the program. Nothing can be drawn after that, so the page stops asking
        rather than calling draw() on every scroll frame forever. */
     let dead = false;
+    /* The ambient clock's whole state — see AMB_* above. lastY starts where the
+       reader already is, so a deep link does not count the scroll it did not do. */
+    let clock = 0, vel = 0, lastTs = 0, lastY = root.scrollY || 0;
 
     function link(frag) {
       const vs = compile(gl, gl.VERTEX_SHADER, VERT);
@@ -713,27 +765,43 @@
       gl.useProgram(p);
       gl.uniform1i(uu.uLat, 0);
       gl.uniform2f(uu.uRes, w, h);
-      gl.uniform1f(uu.uG, o.g != null ? o.g : t);
       gl.uniform1f(uu.uCell, cell);
-      gl.uniform1f(uu.uGap, o.gap != null ? o.gap : 0.12);
-      gl.uniform1f(uu.uGain, o.gain != null ? o.gain : 1.0);
-      const ink = o.ink || [1, 1, 1], paper = o.paper || [0, 0, 0];
-      const ink2 = o.ink2 || ink;
-      gl.uniform3f(uu.uInk, ink[0], ink[1], ink[2]);
-      gl.uniform3f(uu.uInk2, ink2[0], ink2[1], ink2[2]);
-      gl.uniform3f(uu.uPaper, paper[0], paper[1], paper[2]);
-      const tint = o.tint || paper;
-      gl.uniform3f(uu.uTint, tint[0], tint[1], tint[2]);
-      const m = o.mouse || [0, 0];
-      gl.uniform2f(uu.uMouse, m[0], m[1]);
-      gl.uniform1f(uu.uAct, o.act != null ? o.act : 0);
-      gl.uniform1f(uu.uTime, o.time != null ? o.time : 0);
-      gl.uniform1f(uu.uAmb, o.amb != null ? o.amb : 0);
-      gl.uniform1f(uu.uResolve, o.resolve != null ? o.resolve : 0);
-      const box = o.copy || [-0.40, 0.10, 0.40, 0.21];   // the floor, the default
-      gl.uniform4f(uu.uCopy, box[0], box[1], box[2], box[3]);
-      gl.uniform1f(uu.uLift, o.lift != null ? o.lift : 1);
+      /* uTime is not a draw option: the clock below is the field's own. */
+      gl.uniform1f(uu.uTime, clock);
+      for (const [n, k, dflt] of SCALARS)
+        gl.uniform1f(uu[n], o[k] != null ? o[k] : (dflt == null ? t : dflt));
+      const V = {};
+      for (const [n, k, dflt, set] of VECTORS)
+        gl[set](uu[n], V[k] = o[k] || (typeof dflt === 'string' ? V[dflt] : dflt));
     }
+
+    /* ONE FRAME OF THE AMBIENT CLOCK. The page owns the rAF pump — the two stop
+       for genuinely different reasons — and calls this once per frame with the
+       timestamp and whether ambient motion is allowed. Returns dt in seconds.
+
+       lastTs is always updated, even when the clock is held: the gap while it
+       was off is not a frame's worth of time and must not be spent as one. */
+    function frame(ts, live) {
+      const raw = lastTs ? (ts - lastTs) / 1000 : 0.016;
+      /* Past 0.5s is a returning tab, not a slow frame. Applied to every frame
+         instead, the clock ran at 0.72 s/s at 15fps. */
+      const dt = raw > 0.5 ? 0.016 : Math.min(raw, 0.25);
+      lastTs = ts;
+      if (live) {
+        vel *= Math.pow(AMB_DECAY, dt * 60);   // per second, not per frame
+        clock += dt * (AMB_IDLE + AMB_GAIN * Math.min(vel, 1.4));
+      }
+      return dt;
+    }
+    /* Scroll makes the clock run faster. DISTANCE, not events: a trackpad fires
+       far more scroll events per pixel than a wheel, so counting events would
+       make one gesture mean different things on different hardware. */
+    function scrolled() {
+      vel += Math.abs(root.scrollY - lastY) / Math.max(root.innerHeight, 1);
+      lastY = root.scrollY;
+    }
+    /* A returning tab: forget the timestamp so the absence is not one delta. */
+    function idle() { lastTs = 0; }
 
     function draw(t, o) {
       if (lost || dead) return;
@@ -774,8 +842,9 @@
     /* isLost is the RECOVERABLE half of isDead: draw() returns immediately for
        both, but the page needs them apart — dead is terminal, lost is where it
        stops asking UNTIL the restore event, its cue to start again. */
-    return { draw, gl, canvas, isDead: () => dead, isLost: () => lost };
+    return { draw, gl, canvas, frame, scrolled, idle,
+             isDead: () => dead, isLost: () => lost };
   }
 
-  root.PTLField = { mount, CLOSE, clamp, lerp, smooth, hex3, mixHex };
+  root.PTLField = { mount, CLOSE, FLOOR, clamp, lerp, smooth, hex3, mixHex };
 })(window);
