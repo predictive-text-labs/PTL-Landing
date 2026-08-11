@@ -39,12 +39,20 @@
          defaults below. */
       win:    { in: pair(sec.dataset.in, [0.02, 0.21]),
                 out: pair(sec.dataset.out, [0.76, 0.22]) },
+      /* WHAT THIS BEAT COSTS THE THUMB, on a phone, as a multiple of an
+         even share. Wide frames are flat and always have been: six beats,
+         six equal stretches of scroll. A phone is a different instrument —
+         a swipe is most of a frame, so a beat that reads as one gesture on a
+         desk reads as three flicks in the hand, and the beats that carry the
+         most do not want the same share as the ones that carry a line. This
+         changes only how far the reader travels; see COST below. */
+      cost:   Number(sec.dataset.phoneScroll) || 1,
       finale: sec.hasAttribute('data-finale'),
       lines:  [...sec.querySelectorAll('.ln')].map(e => e.textContent.trim()),
     };
   });
 
-  const PER = 2.0;                       // viewport-heights of scroll per section
+  const PER = 2.0;                       // viewport-heights of scroll per share
   /* Scroll the FILM does not use, appended after it. The last thing the page
      does is hold a still frame while the one action it offers surfaces, and
      that beat is made of scroll — there is no other clock the reader controls.
@@ -54,9 +62,9 @@
      arrival, and a little air after it.
 
      Note that this does not slow the film down. `film` below is the document
-     height MINUS this tail, so every section still gets exactly PER
-     viewport-heights and every cue lands where it always did; the tail is
-     purely extra distance at the bottom, where nothing is moving anyway. */
+     height MINUS this tail, so every section still gets its whole share and
+     every cue lands where it always did; the tail is purely extra distance at
+     the bottom, where nothing is moving anyway. */
   const TAIL = 0.71;                     // viewport-heights, after the film ends
 
   /* THE FILM'S LENGTH IS NOT A FUNCTION OF THE LIVE VIEWPORT.
@@ -92,7 +100,59 @@
     p.remove();
   }
   latchLVH();
-  const filmLen = () => Math.max((S.length * PER - 1) * LVH, 1);
+  /* HOW MUCH SCROLL EACH BEAT COSTS, and the two directions between that and
+     the film's own clock.
+     ------------------------------------------------------------------------
+     There are now two clocks made of scroll, not one, and keeping them apart
+     is the whole of this. `p` is the reader's position in the DOCUMENT. `q` is
+     the film's position in the ARGUMENT — beats, evenly spaced, exactly what
+     `p` used to be. Everything the film draws is a function of q: the mark's
+     tracks, the colour drain, the pointer's licence, the still frame. Nothing
+     reads p except the two lines that turn it into a beat.
+
+     So a beat's weight buys the reader more thumb per beat and changes not one
+     frame of the film. Every cue still lands at the same beat, in the same
+     order, in the same relation to every other cue; only the distance between
+     them moves. That is what makes this safe to tune by eye — and it is
+     checkable: with flat weights q is p to the bit, so a wide frame is
+     provably the film it was.
+
+     Flat is still the default and the wide frame never leaves it. */
+  let COST = S.map(() => 1), SUM = S.length, UPTO = S.map((_, i) => i);
+  function weigh() {
+    COST = S.map(s => (phone ? s.cost : 1));
+    SUM  = COST.reduce((a, b) => a + b, 0);
+    let c = 0;
+    UPTO = COST.map(w => { const at = c; c += w; return at; });
+  }
+  /* Which beat a document position falls in, and how far through it. */
+  function beat(p) {
+    const x = p * SUM;
+    let i = S.length - 1;
+    while (i > 0 && x < UPTO[i]) i--;
+    return [i, (x - UPTO[i]) / COST[i]];
+  }
+  /* And back — the only way anything outside render() names a position. */
+  const pOf = (i, t) => (UPTO[i] + t * COST[i]) / SUM;
+  /* ONE SHARE'S WORTH OF SCROLL, and it is a constant.
+     The document carries PER viewport-heights per share, but the last viewport
+     is on the screen rather than under the thumb, so the film's scroll is one
+     viewport shorter than the document it lives in. That one viewport belongs
+     to the FILM, not to a share. Taking it off the total — rather than letting
+     it dilute across however many shares there happen to be — is what makes a
+     share the same distance whatever the beats around it weigh, so a beat
+     asked for at three shares is three times the distance and not 3.09. */
+  const SPAN = (S.length * PER - 1) / S.length;
+  const filmLen = () => Math.max(SUM * SPAN * LVH, 1);
+  /* The tail's length in the button's clock, which is deliberately NOT a
+     function of the last beat's weight. The tail is a fixed stretch of scroll
+     — TAIL viewport-heights, whatever the film in front of it costs — so
+     measuring it in nominal beats keeps the button arriving after the same
+     distance on every device. Measuring it in the LAST beat's own units
+     instead put the arrival at 1.19 on a phone that weights the ending, with
+     the button's window opening at 1.259: the page's only action, permanently
+     out of reach, because a beat above it got longer. */
+  const TAIL_T = TAIL / SPAN;
 
   const clamp    = v => (v < 0 ? 0 : v > 1 ? 1 : v);
   const outCubic = v => 1 - Math.pow(1 - v, 3);
@@ -375,6 +435,12 @@
     palette();
     phone = getComputedStyle(document.documentElement)
               .getPropertyValue('--phone').trim() === '1';
+    /* The weights are the phone's, so the document's own height is too — it
+       is set here rather than once at load because crossing the breakpoint
+       changes what the film costs. Still `vh`, still the large viewport,
+       still not a function of the live one: see the note above filmLen. */
+    weigh();
+    document.body.style.height = ((SUM * SPAN + 1 + TAIL) * 100) + 'vh';
     /* The CSS default is 1 and .cta carries a transition, so on first entering
        the finale the link rendered at FULL opacity and faded back out over
        ~120ms — giving away, 2.15 viewport-heights early, the exact thing TAIL
@@ -860,7 +926,6 @@
      decision now sits in the head of index.html and this line is gone with it.
      What is still owed from this file is the report that it finished, at the
      very bottom. */
-  document.body.style.height = ((S.length * PER + TAIL) * 100) + 'vh';
   let raf = 0, shown = -1, remeasure = false, lastW = innerWidth;
   let endU = -1;                          // last published --ending
   let resU = '';                          // last published --resolved
@@ -874,6 +939,12 @@
      frame's power draw, provably wasted. Keyed to the shader's own constant
      so the two cannot drift. */
   let still = false;
+  /* The geometry the last frame was actually drawn against. A resize arrives
+     with the layout already changed under it, so nothing measurable at that
+     moment describes where the reader was — but scrollY is still the pixel
+     the last frame used, and these are the two numbers that frame divided it
+     by. Kept so the resize handler has an honest denominator. */
+  let lastMax = 0, lastFilm = 1;
 
   function render() {
     const max  = document.documentElement.scrollHeight - innerHeight;
@@ -886,17 +957,19 @@
        overscroll reports negative at the top and past `max` at the bottom, and
        an unclamped p drove the section index to -1, where blocks[-1] is
        undefined and this function threw on every frame of the bounce. */
-    const p    = clamp(window.scrollY / film);
-    const span = 1 / S.length;
-    still = p >= C.TO;
-    const idx  = Math.min(S.length - 1, Math.floor(p / span));
-    const t    = (p - idx * span) / span;
+    const p        = clamp(window.scrollY / film);
+    const [idx, t] = beat(p);
+    /* The film's clock. Beats are evenly spaced here however unevenly they
+       are spaced under the thumb, so every track, window and threshold in
+       this file and in the shader stays written where it was. */
+    const q = (idx + t) / S.length;
+    still = q >= C.TO;
     /* The button's clock: t while the film is running, and then t past 1,
        measured in the same units, through the tail. Nothing else reads it — the
        whole point is that the frame is held while this one number keeps
        moving. */
     const tailU = clamp((window.scrollY - film) / Math.max(max - film, 1));
-    const ct    = t + tailU * (TAIL * S.length / (S.length * PER - 1));
+    const ct    = t + tailU * TAIL_T;
 
     if (idx !== shown) {
       blocks.forEach((b, i) => b.el.classList.toggle('on', i === idx));
@@ -923,14 +996,14 @@
     /* The mark only answers the pointer once it has actually closed — before
        that it is still a ring with a lattice around it, and lighting that
        would be lighting a diagram. */
-    act = POINTER ? smooth(0.88, 0.955, p) : 0;
+    act = POINTER ? smooth(0.88, 0.955, q) : 0;
 
     /* The writing resolves with the picture. Set on the root so every rule
        that reads --ink-live moves at once — the claim, the lockup, the caret
        and the CTA — rather than each being animated on its own timetable and
        drifting apart. Under reduce the film is held at its end, so the type is
        held at its end too. */
-    const res = resolveAt(reduce ? 1 : p);
+    const res = resolveAt(reduce ? 1 : q);
     document.documentElement.style.setProperty('--ink-live', mixHex(TYPE_A, TYPE_B, res));
     /* The same number, unmixed, for the rules that need the CURVE rather than
        a colour off it — .deep, whose blur is part of the film and has to leave
@@ -965,7 +1038,7 @@
          scroll — only the ambient clock was disabled — and the closing ring's
          bright arc swept up through a lockup that reduce pins in place, which
          put 86% of the verb's ink under 4.5:1. */
-      g: reduce ? 1 : p, section: idx, word: S[idx].key,
+      g: reduce ? 1 : q, section: idx, word: S[idx].key,
       /* The keep-out band is for copy on the floor. On a phone there is none
          until the ending, so it OPENS on the ending's own ramp and the film
          gets the whole frame back for the argument itself.
@@ -992,6 +1065,7 @@
       mouse: cur, act, ink: INK, ink2: INK2, paper: PAPER, tint: TINT,
       time: clock, amb: ambient(), resolve: res,
     });
+    lastMax = max; lastFilm = film;
   }
 
   function frame() {
@@ -1002,7 +1076,8 @@
       if (keepP != null) {
         const max1 = document.documentElement.scrollHeight - innerHeight;
         const f1 = filmLen();
-        window.scrollTo(0, Math.min(max1, f1 * keepP + keepTail * Math.max(max1 - f1, 0)));
+        window.scrollTo(0, Math.min(max1,
+          f1 * pOf(keepP[0], keepP[1]) + keepTail * Math.max(max1 - f1, 0)));
         keepP = null;
       }
     }
@@ -1030,16 +1105,28 @@
   /* A resize preserves scrollY in both engines, so the reader's PIXEL
      survived a rotation and their place in the argument did not — up to 3.2
      sections in one gesture, and a fold-and-unfold destroyed the closing link
-     outright. Capture the dimensionless position before the layout changes
-     and restore it after; every layer that paints is position:fixed, so
-     re-anchoring the scroll is visually invisible. */
+     outright. So the position is captured as a BEAT and restored as one;
+     every layer that paints is position:fixed, so re-anchoring the scroll is
+     visually invisible. A beat rather than a fraction because a rotation can
+     cross the phone breakpoint, and on the other side of it the same fraction
+     is a different moment in the argument — two thirds of a beat out, at the
+     weights index.html asks for.
+
+     AND MEASURED AGAINST THE FRAME STILL ON THE SCREEN. This block ran the
+     other way round for a long time and was therefore dead: latchLVH() was
+     the first thing in it, so filmLen() below already answered for the
+     viewport being arrived at, the position came out as the position, and the
+     restore was the identity — in every case, since a width that does not
+     change does not change the film either. Nothing looked wrong, because
+     putting the reader back where they already were is exactly what doing
+     nothing looks like. By the time this runs the layout has already moved,
+     so the only honest denominators are the ones the last frame used. */
   let keepP = null, keepTail = 0;
   addEventListener('resize', () => {
+    keepP = beat(clamp(window.scrollY / lastFilm));
+    keepTail = clamp(Math.max(0, window.scrollY - lastFilm)
+                   / Math.max(lastMax - lastFilm, 1));
     if (innerWidth !== lastW) { lastW = innerWidth; latchLVH(); }
-    const max0 = document.documentElement.scrollHeight - innerHeight;
-    const f0 = filmLen();
-    keepP = clamp(window.scrollY / f0);
-    keepTail = Math.max(0, window.scrollY - f0) / Math.max(max0 - f0, 1);
     remeasure = true;
     if (!raf) raf = requestAnimationFrame(frame);
   });
@@ -1071,12 +1158,19 @@
 
   /* Deterministic seeking, for tests and for screenshots. `t` is the film's,
      so AT(i, 1) is the last frame of section i however much dead scroll the
-     page carries after it; on the last section t may run past 1, into the
-     tail, up to 1 + TAIL * S.length * H / film. */
+     page carries after it — and however much scroll that beat costs, which is
+     what makes this the right grid to compare two builds on. On the last
+     section t may run past 1, into the tail, up to 1 + TAIL_T. */
   window.AT = (i, t) => {
     const max  = document.documentElement.scrollHeight - innerHeight;
     const film = filmLen();
-    window.scrollTo(0, Math.min(max, film * ((i + t) / S.length)));
+    /* Past the film there are no beats left to be in, only the tail, so t
+       continues in the units ct is measured in — which is the only clock
+       anything down there reads. */
+    const y = t > 1 && i === S.length - 1
+      ? film + Math.min((t - 1) / TAIL_T, 1) * Math.max(max - film, 0)
+      : film * pOf(i, t);
+    window.scrollTo(0, Math.min(max, y));
     render();
   };
 

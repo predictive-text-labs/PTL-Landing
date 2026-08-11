@@ -1359,7 +1359,19 @@
            the beats demote to h2. #story is clipped, so nothing visible
            moves. -->
       <h1 class="sr">Predictive Text Labs — Machines that Decide</h1>
-      <section data-key="DECIDE">
+      <!-- data-phone-scroll is what this beat costs the thumb on a phone, as a
+         multiple of an even share. It moves nothing in the film — see COST in
+         ptl-page.js — only how far the reader travels to get through it.
+
+         The opening is 0.75 because it was the beat people gave up on. Nothing
+         it draws answers a small swipe: the mark's opening tracks are
+         smoothstepped out of zero, so the first 166px of a 390x664 frame moves
+         the picture by 0.15% of a frame's luminance, against 6-10% for the
+         same distance mid-film. A quarter off does not make the first inch
+         move — that is the shape of the track, not the length of the beat —
+         but it stops the reader paying two and a half frames of scroll for
+         the part with the least in it. -->
+      <section data-key="DECIDE" data-phone-scroll="0.75">
         <h2>
           In twenty years, machines will make most consequential decisions in
           government and business.
@@ -1375,7 +1387,9 @@
       <section data-key="EARN" data-in="0.00,0.15">
         <h2>How can we help machines earn this right to lead?</h2>
       </section>
-      <section data-key="COMMIT">
+      <!-- The beat with the most in it: the only one carrying a sub-line, and
+         the one the argument turns on. Three shares. -->
+      <section data-key="COMMIT" data-phone-scroll="3">
         <h2>
           A machine earns this right through a track record of committing scarce
           resources into the world.
@@ -1396,7 +1410,7 @@
          the claim stays. No period on the last line — a blinking terminal
          block stands in for it, which is a full stop still waiting for the
          next input. -->
-      <section data-key="DECIDE" data-finale>
+      <section data-key="DECIDE" data-finale data-phone-scroll="2">
         <h2>
           <span class="ln">Predictive Text Labs.</span>
           <span class="ln">Builds</span>
