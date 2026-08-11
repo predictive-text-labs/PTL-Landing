@@ -1329,11 +1329,23 @@
     const doc = document.documentElement;
     const CELL = 12;               // CSS px — the cell both pages draw with
 
-    /* A TOUCH DEVICE FIRST, before the gap below is allowed to mean anything.
-       On a desktop `screen.height` is the MONITOR and the viewport is a window
-       inside it, so the gap is large, arbitrary, and changes when the window is
-       dragged — it would read every desktop as chrome to paint under. Only
-       where the browser fills the screen does the difference mean what it says. */
+    /* THE ENGINE, THEN THE DEVICE, BEFORE THE GAP IS ALLOWED TO MEAN ANYTHING.
+
+       WebKit, because this is a WebKit bug: nothing else clips a fixed layer to
+       the layout viewport, and unfixing the film anywhere else buys a scroll
+       animation and a taller buffer to fix nothing. `-webkit-touch-callout` is
+       the sentinel — measured, not assumed: false in Blink (Chrome 148) and
+       true on iOS 26.5. iOS Chrome and Firefox are WebKit too and have the same
+       bar, so they are meant to be in.
+
+       Then a touch device, because on a desktop `screen.height` is the MONITOR
+       and the viewport is a window inside it: the gap would be large, arbitrary
+       and would change when the window was dragged. Android needs the engine
+       check for the same reason in miniature — screen.height there takes in the
+       system status and navigation bars, which 100lvh never covers, so the gap
+       is positive on a browser that has no overlay toolbar to paint under. */
+    if (typeof CSS === 'undefined' || !CSS.supports ||
+        !CSS.supports('-webkit-touch-callout: none')) return false;
     if (root.matchMedia &&
         !root.matchMedia('(hover: none) and (pointer: coarse)').matches) return false;
 
@@ -1367,14 +1379,33 @@
        film for the last ~120px of scroll and nothing else. Painting there would
        need a layer that is neither in the document nor clipped to the layout
        viewport, and on this engine there isn't one. */
-    let lastBleed = '', lastTravel = '';
+    let lastBleed = '', lastTravel = '', taken = false, refused = false;
+
+    const strip = () => {
+      delete doc.dataset.filmPinned;
+      delete doc.dataset.filmBleed;
+      doc.style.removeProperty('--film-bleed');
+      doc.style.removeProperty('--film-travel');
+      lastBleed = lastTravel = '';
+      taken = false;
+    };
+
     const measure = () => {
+      if (refused) return false;
       const lvh = resolve('100lvh');
       const gap = (root.screen ? root.screen.height : 0) - lvh;
       /* Snapped UP to a whole cell. The lattice counts from the BUFFER's
          bottom, so a bleed that is a fraction of a cell shifts every mark in
          the frame off the composition it was tuned against. */
       const bleed = lvh > 0 && gap > 0 ? Math.ceil(gap / CELL) * CELL : 0;
+      /* Nothing overlaying the page in THIS orientation. Put the film back and
+         say so — but keep listening, because a phone that is in landscape now
+         can be in portrait in a second, and bailing out of pin() entirely here
+         is what would leave it fixed for the rest of the session. */
+      if (!bleed) {
+        if (taken) strip();
+        return false;
+      }
       if (bleed + 'px' !== lastBleed) {
         lastBleed = bleed + 'px';
         /* Published twice, on the root, for two readers that cannot share one
@@ -1391,29 +1422,31 @@
         lastTravel = t;
         doc.style.setProperty('--film-travel', t);
       }
-      return bleed;
+      if (!taken) {
+        doc.dataset.filmPinned = '';
+        if (getComputedStyle(el).position !== 'absolute') {
+          /* The page did not take it — an engine without the @supports, or
+             markup older than this script. That is a fact about the stylesheet
+             and turning the phone will not change it, so stop asking; the
+             geometry case above is the one worth retrying. */
+          refused = true;
+          strip();
+          return false;
+        }
+        taken = true;
+      }
+      return true;
     };
 
-    const strip = () => {
-      delete doc.dataset.filmPinned;
-      delete doc.dataset.filmBleed;
-      doc.style.removeProperty('--film-bleed');
-      doc.style.removeProperty('--film-travel');
-    };
-
-    if (!measure()) { strip(); return false; }
-    doc.dataset.filmPinned = '';
-    if (getComputedStyle(el).position !== 'absolute') {
-      /* The page did not take it — an engine without the @supports, or markup
-         older than this script. Leave nothing behind either way. */
-      strip();
-      return false;
-    }
+    /* Installed whatever the first measurement said. The gap is a property of
+       the orientation, not of the device, so a page that opens in landscape
+       with nothing to paint under must still be listening when it is turned. */
+    const pinned = measure();
 
     root.addEventListener('resize', measure);
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(measure);
     if (root.ResizeObserver) new ResizeObserver(measure).observe(document.body);
-    return true;
+    return pinned;
   }
 
   root.PTLField = { mount, pin, CLOSE };

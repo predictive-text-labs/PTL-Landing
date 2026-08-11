@@ -1059,6 +1059,19 @@
           PTLField.pin(document.getElementById("c"));
         }
 
+        /* THE PAGE'S OWN LENGTH, which stops being the DOCUMENT'S the moment the
+     film is unfixed above. The film is then a viewport plus a bleed tall, so
+     parked at the end of its travel it hangs that bleed past the copy and
+     scrollHeight takes it on — measured, 104px here. Left reading scrollHeight,
+     the arch would want that much more scrolling before p reached 1 and the
+     footer would only reveal past the same artificial tail.
+
+     body's BORDER BOX does not move: an absolutely positioned child overflows it
+     without changing it, and the two are identical wherever the film is still
+     fixed. Measured with it fixed: 4287 and 4287. */
+        const pageLen = () =>
+          Math.round(document.body.getBoundingClientRect().height);
+
         /* OPEN is where the mark sits when the reader lands: exactly where the
      front page left it, closed. Scrolling opens it back out to WIDE and it
      STAYS there.
@@ -1191,9 +1204,10 @@
      three over it. One table, not three columns on three grounds.
 
      The rect is read every frame rather than cached because render() already
-     reads scrollHeight, which forces the same layout flush — a second read
-     inside it is free, and nothing here has to be re-measured on resize, on
-     a font swap, or when a cell rewraps. */
+     takes a layout read of its own — pageLen(), which is body's border box;
+     it used to be scrollHeight and the flush is the same either way — so a
+     second read inside that flush is free, and nothing here has to be
+     re-measured on resize, on a font swap, or when a cell rewraps. */
         const prin = document.querySelector(".prin");
         const VEIL_IN = 0.5,
           VEIL_OUT = 0.2,
@@ -1258,8 +1272,9 @@
      a getBoundingClientRect() after that has to recalculate before it can
      answer. Interleaved, the rect cost 285us a frame at 1920x1200; moved
      above the write it costs 77us, and the ordering is worth more than the
-     read itself is. */
-          const max = root.scrollHeight - innerHeight;
+     read itself is. pageLen() is one of those rects, and is here for the
+     same reason. */
+          const max = pageLen() - innerHeight;
           const veil = veilOn ? veilAt() : 0;
           const p = max > 0 ? clamp(window.scrollY / max) : 0;
           const gNow = gAt(p);
@@ -1380,11 +1395,7 @@
           addEventListener(
             "scroll",
             () => {
-              if (
-                innerHeight + Math.ceil(scrollY) <
-                document.documentElement.scrollHeight - 2
-              )
-                return;
+              if (innerHeight + Math.ceil(scrollY) < pageLen() - 2) return;
               for (const el of document.querySelectorAll(".up:not(.in)")) {
                 el.classList.add("in");
                 io.unobserve(el);
