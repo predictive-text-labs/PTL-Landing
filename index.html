@@ -1363,15 +1363,16 @@
          multiple of an even share. It moves nothing in the film — see COST in
          ptl-page.js — only how far the reader travels to get through it.
 
-         The opening is 0.75 because it was the beat people gave up on. Nothing
-         it draws answers a small swipe: the mark's opening tracks are
-         smoothstepped out of zero, so the first 166px of a 390x664 frame moves
-         the picture by 0.15% of a frame's luminance, against 6-10% for the
-         same distance mid-film. A quarter off does not make the first inch
-         move — that is the shape of the track, not the length of the beat —
-         but it stops the reader paying two and a half frames of scroll for
-         the part with the least in it. -->
-      <section data-key="DECIDE" data-phone-scroll="0.75">
+         The opening is the beat people gave up on, and it is down to a bit
+         over half a share — barely one frame of scroll. Nothing it draws
+         answers a small swipe: the mark's opening tracks are smoothstepped
+         out of zero, so the first 166px of a 390x664 frame moves the picture
+         by 0.15% of a frame's luminance, against 6-10% for the same distance
+         mid-film. Shortening it does not make the first inch move — that is
+         the shape of the track, not the length of the beat — but it stops the
+         reader paying two and a half frames of scroll for the part with the
+         least in it. -->
+      <section data-key="DECIDE" data-phone-scroll="0.5625">
         <h2>
           In twenty years, machines will make most consequential decisions in
           government and business.
@@ -1384,7 +1385,9 @@
       <section data-key="WHEN" data-out="0.64,0.20">
         <h2>The question is not whether this future arrives, but when.</h2>
       </section>
-      <section data-key="EARN" data-in="0.00,0.15">
+      <!-- The turn: the question the rest of the page answers. It was going
+         past at the same rate as the line before it. -->
+      <section data-key="EARN" data-in="0.00,0.15" data-phone-scroll="1.25">
         <h2>How can we help machines earn this right to lead?</h2>
       </section>
       <!-- The beat with the most in it: the only one carrying a sub-line, and
