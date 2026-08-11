@@ -1125,12 +1125,28 @@
      because putting the reader back where they already were is exactly what
      doing nothing looks like. And by the time this runs scrollY has been
      clamped to a document that has already changed size. So the position is
-     simply the one the last frame drew; see lastBeat above. */
+     simply the one the last frame drew; see lastBeat above.
+
+     ONLY WHEN THE WIDTH MOVES, THOUGH, and that is not a tidiness clause.
+     The film's length is a function of the latched large-viewport height and
+     of the weights, and neither can move without the width moving — the
+     weights come off a max-width query. So a height-only resize has nothing
+     to re-anchor. It also has the reader's thumb on the glass: browser chrome
+     retracting IS a resize, it arrives mid-gesture, and scroll and resize are
+     both dispatched before the frame's rAF callbacks run. In that gap scrollY
+     already holds the new position while the last rendered frame still
+     describes the old one, so re-anchoring to it throws the gesture away.
+     Measured, before this guard: the whole of it, 600px of 600px, on every
+     beat, and worse where nothing is redrawing between frames — reduced
+     motion, or no WebGL to breathe. */
   let keepP = null, keepTail = 0;
   addEventListener('resize', () => {
-    keepP = lastBeat;
-    keepTail = lastTail;
-    if (innerWidth !== lastW) { lastW = innerWidth; latchLVH(); }
+    if (innerWidth !== lastW) {
+      lastW = innerWidth;
+      keepP = lastBeat;
+      keepTail = lastTail;
+      latchLVH();
+    }
     remeasure = true;
     if (!raf) raf = requestAnimationFrame(frame);
   });
