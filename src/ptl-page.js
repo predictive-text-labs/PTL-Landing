@@ -856,18 +856,6 @@
   }
   document.body.classList.remove('no-js');
   document.body.style.height = ((S.length * PER + TAIL) * 100) + 'vh';
-  /* After the height, never before: pin measures the document's scrollable
-     distance, and until that line runs there isn't one. A no-op on every engine
-     that still has the film fixed — see --film-bleed in the page.
-
-     Keyed to the FIELD rather than the namespace, which also settles the
-     undeclared-name problem for free: a truthy field means the script is
-     there. mount() returns null when there is no WebGL2 or the program will
-     not build, and unfixing the stage then buys a composited layer, a scroll
-     animation and a taller buffer to carry nothing at all. */
-  if (field) {
-    PTLField.pin(document.querySelector('.stage'));
-  }
   let raf = 0, shown = -1, remeasure = false, lastW = innerWidth;
   let endU = -1;                          // last published --ending
   let resU = '';                          // last published --resolved

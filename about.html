@@ -161,28 +161,6 @@
         color: var(--ink-live, var(--ink));
         -webkit-font-smoothing: antialiased;
       }
-      /* THE CARRIED FILM MUST NOT LENGTHEN THE PAGE.
-     Once the film is unfixed it is moved by a transform, and a transform
-     counts towards scrollable overflow. The layer is one viewport plus a bleed
-     tall, so translated to the end of the document it hangs that bleed past
-     the bottom and the page grows. The page then has a NEW end, --film-travel
-     is republished against it, and the layer reaches further still. Measured
-     on iOS 26.5 with the film fixed the document is 4287 and never moves; with
-     it unfixed and nothing here, 4615 — and --film-travel ended up 184px stale,
-     which is the film sitting that far off its own frame at the bottom.
-
-     `clip` and not `hidden`: hidden makes body a scroll container, which is
-     what the front page happens to have, and it did NOT contain this — that
-     page is quiet for a different reason, its body height is set outright in
-     vh. clip creates no scroll container and contributes no scrollable
-     overflow at all, and the clip margin is what still lets the bleed paint
-     past the padding box, which is the entire point of having one. Measured
-     with this line: 4287 and GREW 0, travel exactly the page's own length, and
-     the film still reaching the bottom of the screen. */
-      body {
-        overflow: clip;
-        overflow-clip-margin: 300px;
-      }
       ::selection {
         background: var(--ink);
         color: var(--paper);
@@ -246,53 +224,6 @@
           mask-image: none;
         }
       }
-      /* THE FILM REACHES THE BOTTOM OF THE SCREEN. The front page carries the
-     long version of this; the short one is that iOS 26 lays a translucent bar
-     over the last ~60pt of the screen, and a `position: fixed` layer is sized
-     to the layout viewport and clipped there, so the film stopped short and
-     the glass showed the page's own ground instead. No viewport unit reaches
-     the rest — 100lvh measures 754 on an 874pt screen, because the pocket the
-     bar sits in never retracts.
-
-     The scrolling layer is not clipped, so the film is unfixed and carried
-     down the document (PTLField.pin) with --film-bleed of extra picture below
-     the frame. ptl-field.js composes against the frame, not the buffer, so
-     nothing above the bar moves.
-
-     The veil stays fixed: it is the defocus sheet the copy is read on, its
-     mask is written against the frame, and it has no business under the bar.
-
-     The guard is three conditions for the reasons the front page gives at
-     length: iOS only, 100lvh because before 15.4 the height would be dropped
-     and this rule has already taken bottom:0 away, and a scroll timeline
-     because carrying the layer from script would re-extend the document on
-     every frame and the page would never end. */
-      @supports (-webkit-touch-callout: none) and (height: 100lvh) and
-        (animation-timeline: scroll()) {
-        :root[data-film-pinned] #c {
-          /* Twelve halftone cells, not a round number — see index.html: the
-             lattice counts cells up from the buffer, so a bleed that is not a
-             whole number of them moves every mark in the frame. And gated on
-             the attribute PTLField.pin sets, so the film is never unfixed
-             unless something is there to carry it. */
-          --film-bleed: 144px;
-          position: absolute;
-          top: 0;
-          bottom: auto;
-          height: calc(100lvh + var(--film-bleed));
-          will-change: transform;
-        }
-        :root[data-film-pinned] #c {
-          animation: film-follow linear both;
-          animation-timeline: scroll(root block);
-        }
-      }
-      @keyframes film-follow {
-        to {
-          transform: translateY(var(--film-travel, 0px));
-        }
-      }
-
       .page {
         position: relative;
         z-index: 2;
@@ -1031,18 +962,6 @@
           typeof PTLField !== "undefined"
             ? PTLField.mount(document.getElementById("c"), { mode: "form" })
             : null;
-        /* A no-op on every engine that still has the film fixed; on iOS it is
-           what carries the unfixed film down the document.
-
-           Keyed to the FIELD, not to the namespace. mount() returns null when
-           there is no WebGL2 or the program will not build, and an unfixed
-           canvas with no renderer in it is all cost and no picture — a
-           composited layer, a scroll animation and a taller buffer, carrying
-           nothing. The page is a complete document without the film; it should
-           be the plain one it always was. */
-        if (field) {
-          PTLField.pin(document.getElementById("c"));
-        }
 
         /* OPEN is where the mark sits when the reader lands: exactly where the
      front page left it, closed. Scrolling opens it back out to WIDE and it
