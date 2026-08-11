@@ -69,7 +69,14 @@
   precision highp float;
   out vec4 fragColor;
 
+  /* uRes is THE FRAME — what the reader is composed against — and not
+     necessarily the whole buffer. On iOS the buffer is given extra rows below
+     the frame so the film can paint into the strip the toolbar sits over (see
+     --film-bleed in the page). uOrigin is where the frame's bottom-left sits
+     inside that buffer, so every measurement below still means what it says:
+     a share of the frame, unmoved by how much bleed is hung underneath it. */
   uniform vec2      uRes;
+  uniform vec2      uOrigin;    // frame's bottom-left within the buffer, device px
   uniform float     uT;         // 0..1 progress through this section
   uniform float     uCell;      // grid cell size in device px
   uniform float     uGap;       // black gutter between cells
@@ -463,7 +470,7 @@
      positional — so one id in, one size out, and a fragment can ask about its
      neighbours on the same terms it asks about itself. */
   vec2 cellUv(vec2 id){
-    return ((id + 0.5) * uCell - 0.5 * uRes) / baseOf();
+    return ((id + 0.5) * uCell - uOrigin - 0.5 * uRes) / baseOf();
   }
 
   /* THE PICTURE, SAMPLED AT ONE CELL. This is the only place the form is ever
@@ -525,7 +532,7 @@
        field on a letterboxed canvas instead of cropping it, which shrank the
        subject to a stamp in the middle of a very wide empty frame. */
     float base = baseOf();
-    vec2 uv = (centre - 0.5 * uRes) / base;
+    vec2 uv = (centre - uOrigin - 0.5 * uRes) / base;
     float halfH = 0.5 * uRes.y / base;
 
     /* THE GROUND IS THE SAME PICTURE THE MARKS ARE, AT THE SAME RESOLUTION.
@@ -1036,6 +1043,9 @@
        defaults, and leaving the cache populated would let size() decide there
        was nothing to re-apply. */
     let w = 0, h = 0;
+    /* The frame is the part of the buffer the reader sees. `bleed` is the rows
+       hung below it, which exist only to be painted over by browser chrome. */
+    let bleed = 0, frameH = 0;
     /* Set only if a REBUILD fails — the context came back and would not take
        the program. Nothing can be drawn again after that, so the page stops
        asking rather than calling draw() on every scroll frame forever. */
@@ -1067,7 +1077,7 @@
       return p;
     }
 
-    const UNIFORMS = ['uRes', 'uT', 'uG', 'uCell', 'uGap', 'uGain', 'uMode',
+    const UNIFORMS = ['uRes', 'uOrigin', 'uT', 'uG', 'uCell', 'uGap', 'uGain', 'uMode',
                       'uSection', 'uTex', 'uLat', 'uFov', 'uMouse', 'uAct',
                       'uTime', 'uAmb', 'uInk', 'uInk2', 'uPaper', 'uTint',
                       'uShadow', 'uTone', 'uResolve', 'uPrint', 'uCopy', 'uLift'];
@@ -1183,6 +1193,25 @@
       const nh = Math.round(canvas.clientHeight * dpr);
       if (nw === w && nh === h) return;
       w = canvas.width = nw; h = canvas.height = nh;
+      /* Read only when the size actually changed — getComputedStyle every
+         frame would cost a style resolve per draw for a number that moves
+         about once a session. */
+      const css = parseFloat(
+        getComputedStyle(canvas).getPropertyValue('--film-bleed'),
+      );
+      /* SNAPPED TO WHOLE HALFTONE CELLS. uOrigin restores the frame's
+         composition, but it cannot restore the LATTICE: main() takes its cell
+         id from gl_FragCoord, which counts up from the bottom of the buffer,
+         so rows hung underneath the frame move the grid's phase against the
+         picture. A bleed of a whole number of cells shifts the cell index by
+         an integer and changes nothing else — the centres land where they
+         landed and every fract() is untouched. The page is written to be a
+         whole number already; this is here so that editing that number by eye
+         cannot quietly move every mark in the frame. */
+      const cellPx = 12 * dpr;             // the cell both pages draw with
+      const want   = Math.max(0, (css || 0) * dpr);
+      bleed  = Math.min(h - 1, Math.round(want / cellPx) * cellPx);
+      frameH = h - bleed;
       gl.viewport(0, 0, w, h);
     }
 
@@ -1193,7 +1222,8 @@
       gl.useProgram(p);
       gl.uniform1i(uu.uTex, 0);
       gl.uniform1i(uu.uLat, 1);
-      gl.uniform2f(uu.uRes, w, h);
+      gl.uniform2f(uu.uRes, w, frameH);
+      gl.uniform2f(uu.uOrigin, 0, bleed);
       gl.uniform1f(uu.uT, t);
       gl.uniform1f(uu.uG, o.g != null ? o.g : t);
       gl.uniform1f(uu.uCell, (o.cell != null ? o.cell : 12) * dpr);
@@ -1269,5 +1299,54 @@
     return { draw, setWord, gl, canvas, isDead: () => dead, isLost: () => lost };
   }
 
-  root.PTLField = { mount, CLOSE };
+  /* CARRYING AN UNFIXED FILM DOWN THE DOCUMENT.
+     --------------------------------------------------------------------------
+     The film cannot be position:fixed on iOS 26 — see --film-bleed in the page
+     for why — so where the page has unfixed it, something has to carry it. The
+     page does that with a scroll timeline; all this publishes is the distance,
+     which is the document's own scrollable length.
+
+     THERE IS DELIBERATELY NO SCRIPT FALLBACK. Writing the transform by hand is
+     not a lesser version of the timeline, it is a broken one: a transform
+     contributes to scrollable overflow, so translating a layer taller than the
+     viewport by scrollY puts its bottom permanently past the document's, which
+     extends scrollHeight, which moves the end further away — every frame, for
+     as long as the reader keeps going. The page would have no bottom. The
+     page's own @supports requires a scroll timeline for exactly this reason, so
+     an engine that cannot run one never unfixes the layer and never gets here.
+
+     No-op unless the page actually unfixed the layer, so every other engine
+     keeps the fixed layer it has no reason to give up. */
+  function pin(el) {
+    if (!el) return;
+    /* The attribute goes on FIRST and comes off again if it did not take. The
+       page gates the whole treatment on it, so the layer cannot be unfixed by
+       a stylesheet that arrived without the script to carry it — and that
+       gating is also why position has to be read after setting it, not
+       before: before, it is still fixed by definition. */
+    const doc = document.documentElement;
+    doc.dataset.filmPinned = '';
+    if (getComputedStyle(el).position !== 'absolute') {
+      delete doc.dataset.filmPinned;
+      return;
+    }
+    let last = '';
+    const travel = () => {
+      const v = Math.max(0, doc.scrollHeight - root.innerHeight) + 'px';
+      if (v === last) return;              // no write, so no observer feedback
+      last = v;
+      el.style.setProperty('--film-travel', v);
+    };
+    travel();
+    root.addEventListener('resize', travel);
+    /* The front page sets its own height in vh and is final at once. The about
+       page is ordinary content, and its faces are font-display:block: when
+       they land, lines re-wrap and the document changes height under a number
+       we have already published. Measured once, the film would end up short or
+       long by that difference at the bottom of the page. */
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(travel);
+    if (root.ResizeObserver) new ResizeObserver(travel).observe(document.body);
+  }
+
+  root.PTLField = { mount, pin, CLOSE };
 })(window);
