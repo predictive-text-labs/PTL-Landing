@@ -70,8 +70,9 @@
       }
       /* .backers asks for Inter; without this its row of small caps fell out of
      the stack to system-ui, the only non-local face on the page. Not
-     preloaded — the reader arrives off `join us`, which is set in Inter and
-     already cached. */
+     preloaded — the reader arrives off the film's closing lockup, whose claim
+     line (.l3) is set in Inter, so the face is already cached. NOT off `join
+     us`: that is .cta, which index.html sets in Cormorant. */
       @font-face {
         font-family: Inter;
         src: url("/fonts/Inter.woff2") format("woff2");
@@ -810,10 +811,18 @@
           TYPE_B = "#ffffff";
         if (PF) {
           const cs = getComputedStyle(root);
-          INK = hex3(cs.getPropertyValue("--field"));
-          INK2 = hex3(cs.getPropertyValue("--field-end"));
-          TINT = hex3(cs.getPropertyValue("--tint"));
-          PAPER = hex3(cs.getPropertyValue("--paper"));
+          /* Fallbacks, and the same ones ptl-page.js uses: hex3 of an empty
+       string is [NaN, NaN, NaN], and NaN reaches gl.uniform3f without
+       complaint. Sharing the parser is only half of agreeing with the
+       other page — the defaults have to match too. */
+          INK = hex3(cs.getPropertyValue("--field") || "#ffffff");
+          INK2 = hex3(
+            cs.getPropertyValue("--field-end") ||
+              cs.getPropertyValue("--field") ||
+              "#ffffff",
+          );
+          TINT = hex3(cs.getPropertyValue("--tint") || "#000000");
+          PAPER = hex3(cs.getPropertyValue("--paper") || "#000000");
           /* From the ROOT rule, never the element we write --ink-live onto:
        reading our own output back would ratchet the type toward its target a
        frame at a time and never return. */
@@ -919,7 +928,14 @@
      that died with its context, this held the compositor open at 60fps to
      advance a number nobody reads. render() already returns immediately in
      both cases; this is the loop agreeing. */
-            if (field && !field.isDead() && !reduce && !document.hidden) tick();
+            if (
+              field &&
+              !field.isDead() &&
+              !field.isLost() &&
+              !reduce &&
+              !document.hidden
+            )
+              tick();
           });
         }
 
@@ -943,6 +959,21 @@
           if (field) field.idle();
           tick();
         });
+
+        /* A LOST CONTEXT STOPS THE LOOP, SO A RESTORED ONE HAS TO START IT.
+     The re-arm above now excludes isLost(), which is what keeps a loss from
+     re-arming at 60fps to draw nothing — but it also means nothing is asking
+     for frames once the context comes back. The field rebuilds itself on this
+     event; this is the page agreeing to start looking again. */
+        {
+          const cv = document.getElementById("c");
+          if (field && cv)
+            cv.addEventListener("webglcontextrestored", () => {
+              if (field.idle) field.idle();
+              render();
+              tick();
+            });
+        }
 
         /* ARRIVAL. Added by script only, so a reader with JS off gets the whole
      page at full opacity rather than an empty one. IntersectionObserver

@@ -429,20 +429,24 @@
       finC.style.transform =
         `translate(-50%,${(rY + finB.offsetHeight + ctaGap).toFixed(1)}px)`;
       for (const el of [b.l1, b.l2, b.l3]) fadeLine(el, 1, 0, H);
-      /* The button is simply present: its arrival IS the motion. */
-      cta.style.opacity = '1';
-      cta.style.transform = 'none';
-      cta.style.pointerEvents = 'auto';
-      /* AND IT HAS TO BE LIVE. inert is set only in floatCta, which this branch
-         returns before reaching — so a reader who scrolled into the finale with
-         motion on and THEN turned reduce on was handed a full-opacity button,
-         pointer-events auto, that could not be clicked, tapped or focused.
-
-         ctaU and ctaSettling go with it: leaving ctaSettling true strands
-         tick()'s `arriving` re-arm permanently high — an unbounded rAF running
-         two fullscreen GL passes a frame, under the exact preference the still
-         frame exists to honour. */
-      cta.inert = false;
+      /* The button is simply present: its arrival IS the motion. Guarded like
+         measure() and floatCta() guard it — this branch was the one place in
+         the file that assumed the element exists. */
+      if (cta) {
+        cta.style.opacity = '1';
+        cta.style.transform = 'none';
+        cta.style.pointerEvents = 'auto';
+        /* AND IT HAS TO BE LIVE. inert is set only in floatCta, which this
+           branch returns before reaching — so a reader who scrolled into the
+           finale with motion on and THEN turned reduce on was handed a
+           full-opacity button, pointer-events auto, that could not be clicked,
+           tapped or focused. */
+        cta.inert = false;
+      }
+      /* ctaU and ctaSettling go with it, element or not: leaving ctaSettling
+         true strands tick()'s `arriving` re-arm permanently high — an unbounded
+         rAF running two fullscreen GL passes a frame, under the exact
+         preference the still frame exists to honour. */
       ctaU = 1;
       ctaSettling = false;
       return;
@@ -547,12 +551,13 @@
      stylesheet removes the animation, so there is nothing to wake. */
   function wakeCaret() {
     if (reduce) return;
-    const cur = blocks[blocks.length - 1] && blocks[blocks.length - 1].cur;
-    if (!cur || !cur.isConnected) return;
-    if (cur.getAnimations().length) return;      // still blinking; leave it be
-    cur.style.animation = 'none';
-    void cur.offsetWidth;                        // reflow, or the restart is a no-op
-    cur.style.animation = '';
+    /* Not `cur`: that is the pointer's eased position, module-level. */
+    const caret = blocks[blocks.length - 1] && blocks[blocks.length - 1].cur;
+    if (!caret || !caret.isConnected) return;
+    if (caret.getAnimations().length) return;    // still blinking; leave it be
+    caret.style.animation = 'none';
+    void caret.offsetWidth;                      // reflow, or the restart is a no-op
+    caret.style.animation = '';
   }
 
   addEventListener('pointermove', e => {
