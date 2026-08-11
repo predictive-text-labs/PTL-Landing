@@ -188,6 +188,35 @@
         display: block;
         pointer-events: none;
       }
+      /* THE FILM, UNFIXED, SO IT REACHES THE EDGES. The front page carries the
+     same block and the reasoning is written out there: iOS 26 clips a
+     full-screen fixed layer to the band above its floating toolbar, and of the
+     four layouts measured against that line only an absolutely positioned one
+     in the scrolling content paints through.
+
+     `bottom: auto` is load-bearing and easy to lose: #c above sets `inset: 0`,
+     so without it the box is told BOTH edges and the height is ignored.
+
+     The veil above stays fixed. It is a wash over the film, and it not
+     reaching into the toolbar's pocket is what the reader already sees today —
+     whereas unfixing it would need its own travel and its own mask arithmetic
+     for a strip 120pt tall behind glass. */
+      @supports (height: 100lvh) and (animation-timeline: scroll()) {
+        :root[data-film-pinned] #c {
+          position: absolute;
+          top: 0;
+          bottom: auto;
+          height: calc(100lvh + var(--film-bleed, 0px));
+          animation: film-follow linear both;
+          animation-timeline: scroll(root block);
+          will-change: transform;
+        }
+      }
+      @keyframes film-follow {
+        to {
+          transform: translateY(var(--film-travel, 0px));
+        }
+      }
       /* The defocus veil: a translucent sheet of the page's own ground over a
      plain blur, saturate(0) so the blurred field cannot tint the paper.
 
@@ -1019,6 +1048,16 @@
           typeof PTLField !== "undefined"
             ? PTLField.mount(document.getElementById("c"), { mode: "form" })
             : null;
+
+        /* Unfix the film so it reaches under the toolbar — see --film-bleed in
+     the head. Keyed to the field, because there is nothing to carry without
+     one, and to the function, because these files share no version with each
+     other: a `pin` that is merely absent has to leave the film alone rather
+     than throw. This page's height is its copy, so pin measures it as it
+     stands and republishes when the fonts land. */
+        if (field && typeof PTLField.pin === "function") {
+          PTLField.pin(document.getElementById("c"));
+        }
 
         /* OPEN is where the mark sits when the reader lands: exactly where the
      front page left it, closed. Scrolling opens it back out to WIDE and it

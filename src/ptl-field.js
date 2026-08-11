@@ -69,7 +69,8 @@
   precision highp float;
   out vec4 fragColor;
 
-  uniform vec2      uRes;
+  uniform vec2      uRes;       // the FRAME — what the reader is meant to see
+  uniform vec2      uOrigin;    // where the frame's bottom-left sits in the buffer
   uniform float     uT;         // 0..1 progress through this section
   uniform float     uCell;      // grid cell size in device px
   uniform float     uGap;       // black gutter between cells
@@ -463,7 +464,7 @@
      positional — so one id in, one size out, and a fragment can ask about its
      neighbours on the same terms it asks about itself. */
   vec2 cellUv(vec2 id){
-    return ((id + 0.5) * uCell - 0.5 * uRes) / baseOf();
+    return ((id + 0.5) * uCell - uOrigin - 0.5 * uRes) / baseOf();
   }
 
   /* THE PICTURE, SAMPLED AT ONE CELL. This is the only place the form is ever
@@ -525,7 +526,7 @@
        field on a letterboxed canvas instead of cropping it, which shrank the
        subject to a stamp in the middle of a very wide empty frame. */
     float base = baseOf();
-    vec2 uv = (centre - 0.5 * uRes) / base;
+    vec2 uv = (centre - uOrigin - 0.5 * uRes) / base;
     float halfH = 0.5 * uRes.y / base;
 
     /* THE GROUND IS THE SAME PICTURE THE MARKS ARE, AT THE SAME RESOLUTION.
@@ -1036,6 +1037,13 @@
        defaults, and leaving the cache populated would let size() decide there
        was nothing to re-apply. */
     let w = 0, h = 0;
+    /* THE BUFFER IS NOT THE FRAME. On iOS the canvas is drawn taller than the
+       picture so that the extra runs under Safari's floating toolbar — see
+       --film-bleed in the page. `h` stays the buffer; `frameH` is what the
+       reader is meant to see, and `bleed` is how far the buffer's bottom sits
+       below the frame's. Everywhere else in this file uRes means the frame, so
+       every calibration comment above still reads true. */
+    let bleed = 0, frameH = 0;
     /* Set only if a REBUILD fails — the context came back and would not take
        the program. Nothing can be drawn again after that, so the page stops
        asking rather than calling draw() on every scroll frame forever. */
@@ -1067,7 +1075,7 @@
       return p;
     }
 
-    const UNIFORMS = ['uRes', 'uT', 'uG', 'uCell', 'uGap', 'uGain', 'uMode',
+    const UNIFORMS = ['uRes', 'uOrigin', 'uT', 'uG', 'uCell', 'uGap', 'uGain', 'uMode',
                       'uSection', 'uTex', 'uLat', 'uFov', 'uMouse', 'uAct',
                       'uTime', 'uAmb', 'uInk', 'uInk2', 'uPaper', 'uTint',
                       'uShadow', 'uTone', 'uResolve', 'uPrint', 'uCopy', 'uLift'];
@@ -1181,8 +1189,20 @@
       const dpr = Math.min(root.devicePixelRatio || 1, 2);
       const nw = Math.round(canvas.clientWidth * dpr);
       const nh = Math.round(canvas.clientHeight * dpr);
+      /* Snapped to a whole number of cells. The lattice is anchored to
+         gl_FragCoord, which counts from the BUFFER's bottom, so a bleed that is
+         not a whole multiple of the cell shifts every mark in the frame by the
+         remainder and the picture no longer lands where it was tuned. */
       if (nw === w && nh === h) return;
       w = canvas.width = nw; h = canvas.height = nh;
+      /* Read here and nowhere else: getComputedStyle flushes style, and size()
+         runs every frame. The bleed can only change by changing the canvas's
+         own height, so a size that did not move cannot have a bleed that did. */
+      const cellPx = 12 * dpr;
+      const want = Math.max(0, parseFloat(
+        getComputedStyle(canvas).getPropertyValue('--film-bleed')) || 0) * dpr;
+      bleed = Math.min(h - 1, Math.round(want / cellPx) * cellPx);
+      frameH = h - bleed;
       gl.viewport(0, 0, w, h);
     }
 
@@ -1193,7 +1213,8 @@
       gl.useProgram(p);
       gl.uniform1i(uu.uTex, 0);
       gl.uniform1i(uu.uLat, 1);
-      gl.uniform2f(uu.uRes, w, h);
+      gl.uniform2f(uu.uRes, w, frameH);
+      gl.uniform2f(uu.uOrigin, 0, bleed);
       gl.uniform1f(uu.uT, t);
       gl.uniform1f(uu.uG, o.g != null ? o.g : t);
       gl.uniform1f(uu.uCell, (o.cell != null ? o.cell : 12) * dpr);
@@ -1269,5 +1290,100 @@
     return { draw, setWord, gl, canvas, isDead: () => dead, isLost: () => lost };
   }
 
-  root.PTLField = { mount, CLOSE };
+  /* Resolve a CSS length the only way that cannot be wrong about it: lay one
+     out and measure it. lvh in particular is not derivable from anything on
+     window — on iOS 26 innerHeight is 714 with the toolbar out and 754 with it
+     collapsed, and 754 is the number that matters. */
+  function resolve(css) {
+    const p = document.createElement('div');
+    p.style.cssText = 'position:absolute;top:-9999px;left:0;width:1px;height:' + css;
+    document.body.appendChild(p);
+    const h = p.getBoundingClientRect().height;
+    p.remove();
+    return h;
+  }
+
+  /* PIN — hand the film to the page's own scrolling so it can reach the edges.
+     ---------------------------------------------------------------------------
+     A full-screen `position: fixed` layer is clipped to the layout viewport on
+     iOS 26, which is why the film stops short of the bottom of the screen and
+     the page's own black shows under Safari's floating toolbar. Measured every
+     way that seemed likely — fixed with both edges, fixed with an explicit
+     height past lvh, an absolutely positioned child hanging out of a fixed
+     parent — and all three are cut at the same line. Only an absolutely
+     positioned layer in the scrolling content paints through, so the film is
+     unfixed and carried back to the viewport by a scroll-driven animation.
+
+     Everything here is measured rather than assumed: the page cannot know how
+     tall the chrome is and neither can a constant. Returns whether the offer
+     was taken, so the caller can tell. */
+  function pin(el) {
+    if (!el) return false;
+    const doc = document.documentElement;
+    const CELL = 12;               // CSS px — the cell both pages draw with
+
+    /* A TOUCH DEVICE FIRST, before the gap below is allowed to mean anything.
+       On a desktop `screen.height` is the MONITOR and the viewport is a window
+       inside it, so the gap is large, arbitrary, and changes when the window is
+       dragged — it would read every desktop as chrome to paint under. Only
+       where the browser fills the screen does the difference mean what it says. */
+    if (root.matchMedia &&
+        !root.matchMedia('(hover: none) and (pointer: coarse)').matches) return false;
+
+    /* WHAT IS BEING COVERED. Not a safe-area inset: env(safe-area-inset-bottom)
+       is 0 here, because the toolbar's pocket is chrome and not a notch. It is
+       the difference between the LARGEST the layout viewport ever gets and the
+       screen. Zero or less on anything that does not overlay its chrome — which
+       makes this its own feature gate, and a truer one than sniffing an engine. */
+    const lvh = resolve('100lvh');
+    const gap = (root.screen ? root.screen.height : 0) - lvh;
+    if (!lvh || !(gap > 0)) return false;
+
+    /* Snapped UP to a whole cell. The lattice counts from the buffer's bottom,
+       so a bleed that is a fraction of a cell shifts every mark in the frame. */
+    el.style.setProperty('--film-bleed', Math.ceil(gap / CELL) * CELL + 'px');
+
+    doc.dataset.filmPinned = '';
+    if (getComputedStyle(el).position !== 'absolute') {
+      /* The page did not take it — an engine without the @supports, or markup
+         older than this script. Leave nothing behind either way. */
+      delete doc.dataset.filmPinned;
+      el.style.removeProperty('--film-bleed');
+      return false;
+    }
+
+    /* HOW FAR THE FILM TRAVELS, measured off something it cannot move.
+       Read from documentElement.scrollHeight this feeds back on itself: the
+       film is a viewport plus a bleed tall, so parked at the end it hangs that
+       bleed past the document, the document grows, the distance is republished
+       longer, and the film reaches further still. Solving for a fixed point
+       diverges — there isn't one — and the shipped version drifted 184px.
+       body's BORDER BOX is immune: an absolutely positioned child overflows it
+       without changing it. Measured on both pages, front and back: grew 0 the
+       whole way down, and travel steady at the value it was first given.
+
+       WHAT THIS DOES NOT FIX, and nothing can: at the very END of the document
+       the toolbar's pocket is below the last pixel there is. The film parked at
+       full travel reaches a bleed past the copy, the document takes that on
+       (measured: about grew 104 there, once, without feeding back), and the
+       pocket moves down with it and stays out of reach. So the bar loses the
+       film for the last ~120px of scroll and nothing else. Painting there would
+       need a layer that is neither in the document nor clipped to the layout
+       viewport, and on this engine there isn't one. */
+    let last = '';
+    const travel = () => {
+      const v = Math.max(0, Math.round(
+        document.body.getBoundingClientRect().height - resolve('100lvh'))) + 'px';
+      if (v === last) return;
+      last = v;
+      el.style.setProperty('--film-travel', v);
+    };
+    travel();
+    root.addEventListener('resize', travel);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(travel);
+    if (root.ResizeObserver) new ResizeObserver(travel).observe(document.body);
+    return true;
+  }
+
+  root.PTLField = { mount, pin, CLOSE };
 })(window);

@@ -1313,6 +1313,21 @@
      would have given it, which is only knowable once Cormorant has loaded. */
   document.fonts.ready.then(() => { measure(); frame(); });
   measure();
+  /* AFTER the first measure() and never before: that is where the document's
+     height is set now, and pin measures the document. It re-reads on its own
+     after this — resize, fonts, and a ResizeObserver on body — which is what
+     covers measure() running again and giving the page a different height when
+     the phone breakpoint is crossed.
+
+     Keyed to the FIELD, because unfixing the stage buys a composited layer, a
+     scroll animation and a taller buffer, all to carry nothing if mount()
+     returned null for want of WebGL2. Keyed to the FUNCTION as well, because
+     these two files share no version with each other or with the markup that
+     loads them: a `pin` that is merely absent has to leave the film where it
+     was rather than throw halfway through setup. */
+  if (field && typeof PTLField.pin === 'function') {
+    PTLField.pin(document.querySelector('.stage'));
+  }
   lastY = window.scrollY;
   frame();
   tick();          // and the field starts breathing, with nobody having done anything
