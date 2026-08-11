@@ -1,0 +1,1 @@
+in the ptl-backtesting repo, you shoudl especially look at the trade health with the map of all the prediction links page
