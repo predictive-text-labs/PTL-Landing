@@ -1,0 +1,5 @@
+<task-notification>
+<task-id>w12ybzqxp</task-id>
+<status>failed</status>
+<summary>Background workflow "Phase 2+3: synthesise the PTL design language, generate one-pager directions, judge them adversarially, pick a winner" was checkpointed for the background fork but could not be resumed (script content changed since it was approved; resume via the Workflow tool to re-approve). To resume manually: Workflow({scriptPath: '/Users/janewang/.claude/projects/-Users-janewang-Documents-GitHub-PTL-Landing/81f94152-0bf9-4cd6-a643-f5d5317526ce/workflows/scripts/ptl-landing-design-wf_04333344-8fc.js', resumeFromRunId: 'wf_04333344-8fc'}).</summary>
+</task-notification>
