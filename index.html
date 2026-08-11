@@ -31,6 +31,18 @@
      the attribute is set here; the stylesheet below reads it. -->
     <script>
       {
+        /* Scripting is live — declared HERE, and for exactly the reason the
+       palette is. The fallback document at the end of the stylesheet below is
+       keyed on the ABSENCE of this flag, and the browser may paint as soon
+       as the body is parsed, which is one round trip before the two scripts at
+       the end of it can run. Set here, the fallback never applies to a scripted
+       page at all. Set from those scripts — which is where it used to be, as
+       `body.no-js` removed in ptl-page.js — it applied for as long as they took
+       to arrive: measured in Chrome, first contentful paint was the fallback
+       document at 192ms with a 500ms script fetch, and the flash lasted about
+       as long as the fetch. Nothing on localhost, which is why it only ever
+       showed on a cold first load. */
+        document.documentElement.dataset.js = "1";
         const v = new URLSearchParams(location.search).get("v");
         if (v === "2" || v === "3" || v === "4")
           document.documentElement.dataset.v = v;
@@ -1258,8 +1270,14 @@
       }
 
       /* Without script there is no film and no scroll choreography, so the copy
-     stops hiding and simply sets itself as a document. */
-      .no-js .story {
+     stops hiding and simply sets itself as a document.
+
+     Keyed on the absence of the head's flag rather than on a class the scripts
+     remove, so that the scripted page never wears these rules for even one
+     frame. The flag can also be taken back off at the end of the body — see the
+     guard after the two script tags — which is what covers a script that was
+     requested and never arrived. */
+      :root:not([data-js]) .story {
         position: static;
         width: auto;
         height: auto;
@@ -1271,7 +1289,7 @@
         padding: 6rem 2.4rem;
         margin-inline: auto;
       }
-      .no-js .story section + section {
+      :root:not([data-js]) .story section + section {
         margin-top: 4rem;
       }
       .story .sr {
@@ -1282,25 +1300,25 @@
         clip-path: inset(50%);
         white-space: nowrap;
       }
-      .no-js .story h1,
-      .no-js .story h2 {
+      :root:not([data-js]) .story h1,
+      :root:not([data-js]) .story h2 {
         font:
           300 clamp(1.6rem, 3vw, 2.4rem)/1.2 Cormorant,
           serif;
       }
-      .no-js .story p {
+      :root:not([data-js]) .story p {
         margin-top: 1.2rem;
         font:
           400 0.8rem/1.9 "Geist Mono",
           monospace;
         color: var(--mid);
       }
-      .no-js .stage {
+      :root:not([data-js]) .stage {
         display: none;
       }
     </style>
   </head>
-  <body class="no-js">
+  <body>
     <header class="chrome">
       <span class="wm">PREDICTIVE <br />TEXT LABS</span>
       <nav class="nav">
@@ -1418,5 +1436,27 @@
     </script>
     <script src="/src/ptl-field.js"></script>
     <script src="/src/ptl-page.js"></script>
+    <script>
+      /* The other half of the switch in the head. If ptl-page.js never arrived,
+     or threw on its way down, the film is not running and the argument is not
+     on the screen — so take the flag back off and let the fallback document
+     apply after all. This runs in the same parse as the two scripts above, so
+     the reader is never shown the empty state.
+
+     It waits on the flag ptl-page.js sets as its LAST statement, not on
+     evidence part-way through. #copy is filled early, a third of the way into
+     that file, and testing for it would call a boot that died after the copy
+     was built a success and hand the reader a blank page — which is the one
+     outcome the fallback exists to prevent.
+
+     The height goes back with it. A throw after the body has been stretched to
+     the film's full height leaves the fallback as one screen of words at the
+     top of eleven empty ones; the comment above the mount in ptl-page.js is
+     about that same failure. */
+      if (document.documentElement.dataset.ptl !== "live") {
+        delete document.documentElement.dataset.js;
+        document.body.style.height = "";
+      }
+    </script>
   </body>
 </html>

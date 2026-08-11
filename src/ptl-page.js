@@ -854,7 +854,12 @@
       });
     }
   }
-  document.body.classList.remove('no-js');
+  /* The fallback document used to be dismissed here, by removing body.no-js.
+     That is one round trip too late to be invisible — the browser has been
+     entitled to paint the thing since the body finished parsing — so the
+     decision now sits in the head of index.html and this line is gone with it.
+     What is still owed from this file is the report that it finished, at the
+     very bottom. */
   document.body.style.height = ((S.length * PER + TAIL) * 100) + 'vh';
   let raf = 0, shown = -1, remeasure = false, lastW = innerWidth;
   let endU = -1;                          // last published --ending
@@ -1074,4 +1079,11 @@
     window.scrollTo(0, Math.min(max, film * ((i + t) / S.length)));
     render();
   };
+
+  /* Everything above ran. The guard at the end of index.html reads this and
+     leaves the scripted page alone; without it, it puts the fallback document
+     back. LAST STATEMENT ON PURPOSE — the whole value of the flag is that it
+     cannot be set by a file that stopped early, so nothing may be added below
+     it. */
+  document.documentElement.dataset.ptl = 'live';
 })();
