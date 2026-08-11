@@ -200,21 +200,71 @@
      of the screen so there is no visible edge. The solid part has to clear
      the intro's measure, which now runs to the middle of the frame. Masking the layer takes the
      backdrop-filter with it, which a gradient background alone cannot do. */
+      /* AND IT LETS GO OF THE RIGHT WHILE THE TABLE IS IN FRAME.
+     ------------------------------------------------------------------------
+     Everything above is written for a flush-left measure, and the twelve
+     principles are the one thing on the page that is not one. At 1920 the
+     third column occupies 1182px to 1594px — 62% to 83% of the frame — and
+     the mask is already down to 0.57 where that column starts and gone
+     entirely before it ends. It is reading on the part of the frame this
+     gradient deliberately gives away to the film.
+
+     The numbers are not close. `09`, `03` and `12` bottom out at 1.00:1
+     against the halftone behind them and spend 67%, 58% and 41% of their own
+     area under 3:1. A ratio of 1.00 is the mark and the glyph at the same
+     brightness, which is to say the digit is not there at all.
+
+     Gain was the first answer and it is still doing its share — gainAt() takes
+     the field to 0.42 by the time the table arrives — but gain is a global
+     control and the reason this fails is local: one section, one side of the
+     frame. So the mask's far stop stops being transparent and becomes a
+     variable, and render() opens it while the table is on screen and closes
+     it again as the last row leaves. At --veil-r: 0 the stop is transparent
+     black, which is what `transparent` already meant, so every frame outside
+     that window — the whole film above, the closing line and the names below
+     — composites exactly as it did before.
+
+     Only where there is a mask to modulate, which is above 760px. At 760 and
+     below the rule underneath already sets mask-image: none for the same
+     reason in reverse — the text runs full width, so the veil does too — and
+     a phone is therefore untouched by all of this, byte for byte. */
       .veil {
         position: fixed;
         inset: 0;
         z-index: 1;
         pointer-events: none;
-        background: var(--wash);
+        background-color: var(--wash);
+        /* AND ONE MORE SHEET OF IT WHILE THE TABLE IS IN FRAME. The wash is a
+     fixed .62 chosen for a page that is mostly film; over the twelve, where
+     the film is a ground rather than the subject, the section wants to sit
+     deeper than the rest of the page does. --veil-d is that second sheet,
+     driven by the same scroll window as the reach above, and it is the
+     PAPER rather than black on purpose: --wash is already --paper at an
+     alpha in every variation, so another sheet of it deepens each palette
+     in its own direction instead of dragging a light one toward black.
+     At 0 the mix is fully transparent and this layer is not there. */
+        background-image: linear-gradient(
+          color-mix(
+              in srgb,
+              var(--paper) calc(var(--veil-d, 0) * 100%),
+              transparent
+            )
+            0 0
+        );
         backdrop-filter: blur(30px) saturate(0);
         -webkit-backdrop-filter: blur(30px) saturate(0);
         -webkit-mask-image: linear-gradient(
           95deg,
           #000 0%,
           #000 46%,
-          transparent 82%
+          rgba(0, 0, 0, var(--veil-r, 0)) 82%
         );
-        mask-image: linear-gradient(95deg, #000 0%, #000 46%, transparent 82%);
+        mask-image: linear-gradient(
+          95deg,
+          #000 0%,
+          #000 46%,
+          rgba(0, 0, 0, var(--veil-r, 0)) 82%
+        );
       }
       /* On a phone the text runs the full width, so there is no right half to
      give away and the veil covers everything. */
@@ -222,6 +272,12 @@
         .veil {
           -webkit-mask-image: none;
           mask-image: none;
+          /* And no second sheet either. The mask going away covers --veil-r,
+       which only exists inside it, but --veil-d is on the background and
+       would otherwise deepen a phone that was never in this change. Held
+       here rather than in the script so the breakpoint stays written down
+       once. */
+          background-image: none;
         }
       }
       .page {
@@ -1056,6 +1112,94 @@
         const gainAt = (p) =>
           lerp(1.0, 0.1, Math.pow(clamp((p - 0.18) / 0.82), 0.55));
 
+        /* THE VEIL'S REACH — see .veil. Zero everywhere except across the
+     principles, where the table is full width and the mask is not.
+
+     Anchored to the OL and not to the section, because the section carries
+     5rem of padding under the last row and the veil has to be gone before
+     the closing line settles, not merely before the section ends. Measured
+     at 1920x1200: the last cell's type clears the top of the screen at
+     y=2071, the ask's line reaches its sticky position at y=2211, and this
+     reaches zero at y=2107 — between the two, with 104px to spare. Every
+     frame of the ending composites unchanged.
+
+     THE TWO ENDS ARE NOT THE SAME LENGTH, and symmetry was the first thing
+     that had to go. Opening, the ground should arrive UNDER the first row —
+     half a viewport of travel, so it is already there when the type is, and
+     nothing appears to switch on. Closing, the requirement is the opposite:
+     hold until the type has gone. At half a viewport it was down to 0.62
+     with row four still mid-screen and `12` measured 2.09:1 over the orange
+     — the fix undone exactly where the field is brightest. A fifth of a
+     viewport is one row of the table, so the ground now follows the last
+     cell off the top of the frame instead of leaving ahead of it.
+
+     Smoothstep over both: linear, the onset was a visible edge sweeping up
+     the frame.
+
+     AND IT STOPS SHORT OF 1. At the full sheet the mask is uniform, the
+     crossfade is gone and the frame is the phone's — which is legible, and
+     is also the thing the note above this one refuses: blur(30) over a .72
+     wash does not calm the halftone, it erases it, and what is left is a
+     grey cloud where the map was. The last seventh is the whole difference.
+     Held at 0.86 the marks come back as a ghost — the grid still reads, the
+     orange still reads. The target was parity rather than a ratio out of a
+     spec: `04` in the first column has been reading on the calm ground since
+     the veil was written, and whatever it measures is what the other two
+     columns should measure. With the second sheet below under it, `03` and
+     `09` come in at 3.47:1 against that column's 3.89, and nothing in the
+     table falls under 3:1 anywhere. The reach alone had them at 2.90 against
+     2.98 — parity, but parity a little under the line; the depth carried all
+     three over it. One table, not three columns on three grounds.
+
+     The rect is read every frame rather than cached because render() already
+     reads scrollHeight, which forces the same layout flush — a second read
+     inside it is free, and nothing here has to be re-measured on resize, on
+     a font swap, or when a cell rewraps. */
+        const prin = document.querySelector(".prin");
+        const VEIL_IN = 0.5,
+          VEIL_OUT = 0.2,
+          VEIL_MAX = 0.86,
+          VEIL_DEEP = 0.3;
+        /* The window itself, 0 to 1. Two things read it: how far right the
+     veil reaches, and how deep it sits. One shape, so they cannot drift
+     apart and leave the section arriving in two stages. */
+        /* AND NONE OF IT BELOW THE VEIL'S OWN BREAKPOINT, where there is no
+     mask to modulate and the rule above has taken the second sheet away
+     too. Measured at 390x844: the rect read and the two writes cost 203us
+     a frame to reach nothing.
+
+     Asked of the CSS rather than restated as a number here. A second copy
+     of 760px in the script is a thing that drifts out of step with the rule
+     it shadows, and the failure would be silent — the veil frozen at a
+     width where the mask still exists, which is the contrast bug returning
+     with nothing to show for it. This asks the one question that actually
+     matters, once at setup and again on resize, never per frame. */
+        const veilEl = document.querySelector(".veil");
+        let veilOn = true;
+        const readVeilOn = () => {
+          const cs = veilEl && getComputedStyle(veilEl);
+          const m = cs && (cs.maskImage || cs.webkitMaskImage);
+          veilOn = !!m && m !== "none";
+          /* Once, on the way out. render() stops writing these when the gate
+       closes, which would otherwise leave whatever the last desktop frame
+       set standing on the root — read by nothing, since the rule above
+       takes both the mask and the sheet away, but it would say the veil is
+       open on a phone and that is not a thing to leave lying around. */
+          if (!veilOn) {
+            root.style.setProperty("--veil-r", "0");
+            root.style.setProperty("--veil-d", "0");
+          }
+        };
+        readVeilOn();
+        const veilAt = () => {
+          if (!prin) return 0;
+          const h = Math.max(innerHeight, 1),
+            r = prin.getBoundingClientRect();
+          return smooth(
+            Math.min((h - r.top) / (h * VEIL_IN), r.bottom / (h * VEIL_OUT)),
+          );
+        };
+
         /* The ambient clock, as on the film: a real-time clock that reaches ONLY
      the size of the halftone marks, sped up by how fast the reader scrolls.
      It cannot move the composition, because nothing positional reads it. */
@@ -1070,11 +1214,22 @@
 
         function render() {
           if (!field || field.isDead()) return;
+          /* EVERY READ BEFORE EVERY WRITE. --ink-live is a custom property on
+     the root, so writing it invalidates style for the whole document, and
+     a getBoundingClientRect() after that has to recalculate before it can
+     answer. Interleaved, the rect cost 285us a frame at 1920x1200; moved
+     above the write it costs 77us, and the ordering is worth more than the
+     read itself is. */
           const max = root.scrollHeight - innerHeight;
+          const veil = veilOn ? veilAt() : 0;
           const p = max > 0 ? clamp(window.scrollY / max) : 0;
           const gNow = gAt(p);
           const res = resolveAt(gNow);
           root.style.setProperty("--ink-live", mixHex(TYPE_A, TYPE_B, res));
+          if (veilOn) {
+            root.style.setProperty("--veil-r", (veil * VEIL_MAX).toFixed(3));
+            root.style.setProperty("--veil-d", (veil * VEIL_DEEP).toFixed(3));
+          }
           field.draw(p, {
             g: gNow,
             section: 0,
@@ -1143,6 +1298,10 @@
         let rz = 0;
         addEventListener("resize", () => {
           clearTimeout(rz);
+          /* Not debounced with the render below it: a scroll landing inside
+       those 120ms calls render() directly, and it has to know which side
+       of the breakpoint it is on. */
+          readVeilOn();
           rz = setTimeout(render, 120);
         });
         document.addEventListener("visibilitychange", () => {
