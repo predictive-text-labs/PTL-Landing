@@ -188,6 +188,35 @@
         display: block;
         pointer-events: none;
       }
+      /* THE FILM, UNFIXED, SO IT REACHES THE EDGES. The front page carries the
+     same block and the reasoning is written out there: iOS 26 clips a
+     full-screen fixed layer to the band above its floating toolbar, and of the
+     four layouts measured against that line only an absolutely positioned one
+     in the scrolling content paints through.
+
+     `bottom: auto` is load-bearing and easy to lose: #c above sets `inset: 0`,
+     so without it the box is told BOTH edges and the height is ignored.
+
+     The veil above stays fixed. It is a wash over the film, and it not
+     reaching into the toolbar's pocket is what the reader already sees today —
+     whereas unfixing it would need its own travel and its own mask arithmetic
+     for a strip 120pt tall behind glass. */
+      @supports (height: 100lvh) and (animation-timeline: scroll()) {
+        :root[data-film-pinned] #c {
+          position: absolute;
+          top: 0;
+          bottom: auto;
+          height: calc(100lvh + var(--film-bleed, 0px));
+          animation: film-follow linear both;
+          animation-timeline: scroll(root block);
+          will-change: transform;
+        }
+      }
+      @keyframes film-follow {
+        to {
+          transform: translateY(var(--film-travel, 0px));
+        }
+      }
       /* The defocus veil: a translucent sheet of the page's own ground over a
      plain blur, saturate(0) so the blurred field cannot tint the paper.
 
@@ -1020,6 +1049,29 @@
             ? PTLField.mount(document.getElementById("c"), { mode: "form" })
             : null;
 
+        /* Unfix the film so it reaches under the toolbar — see --film-bleed in
+     the head. Keyed to the field, because there is nothing to carry without
+     one, and to the function, because these files share no version with each
+     other: a `pin` that is merely absent has to leave the film alone rather
+     than throw. This page's height is its copy, so pin measures it as it
+     stands and republishes when the fonts land. */
+        if (field && typeof PTLField.pin === "function") {
+          PTLField.pin(document.getElementById("c"));
+        }
+
+        /* THE PAGE'S OWN LENGTH, which stops being the DOCUMENT'S the moment the
+     film is unfixed above. The film is then a viewport plus a bleed tall, so
+     parked at the end of its travel it hangs that bleed past the copy and
+     scrollHeight takes it on — measured, 104px here. Left reading scrollHeight,
+     the arch would want that much more scrolling before p reached 1 and the
+     footer would only reveal past the same artificial tail.
+
+     body's BORDER BOX does not move: an absolutely positioned child overflows it
+     without changing it, and the two are identical wherever the film is still
+     fixed. Measured with it fixed: 4287 and 4287. */
+        const pageLen = () =>
+          Math.round(document.body.getBoundingClientRect().height);
+
         /* OPEN is where the mark sits when the reader lands: exactly where the
      front page left it, closed. Scrolling opens it back out to WIDE and it
      STAYS there.
@@ -1152,9 +1204,10 @@
      three over it. One table, not three columns on three grounds.
 
      The rect is read every frame rather than cached because render() already
-     reads scrollHeight, which forces the same layout flush — a second read
-     inside it is free, and nothing here has to be re-measured on resize, on
-     a font swap, or when a cell rewraps. */
+     takes a layout read of its own — pageLen(), which is body's border box;
+     it used to be scrollHeight and the flush is the same either way — so a
+     second read inside that flush is free, and nothing here has to be
+     re-measured on resize, on a font swap, or when a cell rewraps. */
         const prin = document.querySelector(".prin");
         const VEIL_IN = 0.5,
           VEIL_OUT = 0.2,
@@ -1219,8 +1272,9 @@
      a getBoundingClientRect() after that has to recalculate before it can
      answer. Interleaved, the rect cost 285us a frame at 1920x1200; moved
      above the write it costs 77us, and the ordering is worth more than the
-     read itself is. */
-          const max = root.scrollHeight - innerHeight;
+     read itself is. pageLen() is one of those rects, and is here for the
+     same reason. */
+          const max = pageLen() - innerHeight;
           const veil = veilOn ? veilAt() : 0;
           const p = max > 0 ? clamp(window.scrollY / max) : 0;
           const gNow = gAt(p);
@@ -1341,11 +1395,7 @@
           addEventListener(
             "scroll",
             () => {
-              if (
-                innerHeight + Math.ceil(scrollY) <
-                document.documentElement.scrollHeight - 2
-              )
-                return;
+              if (innerHeight + Math.ceil(scrollY) < pageLen() - 2) return;
               for (const el of document.querySelectorAll(".up:not(.in)")) {
                 el.classList.add("in");
                 io.unobserve(el);

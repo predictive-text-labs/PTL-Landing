@@ -69,7 +69,8 @@
   precision highp float;
   out vec4 fragColor;
 
-  uniform vec2      uRes;
+  uniform vec2      uRes;       // the FRAME — what the reader is meant to see
+  uniform vec2      uOrigin;    // where the frame's bottom-left sits in the buffer
   uniform float     uT;         // 0..1 progress through this section
   uniform float     uCell;      // grid cell size in device px
   uniform float     uGap;       // black gutter between cells
@@ -463,7 +464,7 @@
      positional — so one id in, one size out, and a fragment can ask about its
      neighbours on the same terms it asks about itself. */
   vec2 cellUv(vec2 id){
-    return ((id + 0.5) * uCell - 0.5 * uRes) / baseOf();
+    return ((id + 0.5) * uCell - uOrigin - 0.5 * uRes) / baseOf();
   }
 
   /* THE PICTURE, SAMPLED AT ONE CELL. This is the only place the form is ever
@@ -525,7 +526,7 @@
        field on a letterboxed canvas instead of cropping it, which shrank the
        subject to a stamp in the middle of a very wide empty frame. */
     float base = baseOf();
-    vec2 uv = (centre - 0.5 * uRes) / base;
+    vec2 uv = (centre - uOrigin - 0.5 * uRes) / base;
     float halfH = 0.5 * uRes.y / base;
 
     /* THE GROUND IS THE SAME PICTURE THE MARKS ARE, AT THE SAME RESOLUTION.
@@ -1036,6 +1037,13 @@
        defaults, and leaving the cache populated would let size() decide there
        was nothing to re-apply. */
     let w = 0, h = 0;
+    /* THE BUFFER IS NOT THE FRAME. On iOS the canvas is drawn taller than the
+       picture so that the extra runs under Safari's floating toolbar — see
+       --film-bleed in the page. `h` stays the buffer; `frameH` is what the
+       reader is meant to see, and `bleed` is how far the buffer's bottom sits
+       below the frame's. Everywhere else in this file uRes means the frame, so
+       every calibration comment above still reads true. */
+    let bleed = 0, frameH = 0;
     /* Set only if a REBUILD fails — the context came back and would not take
        the program. Nothing can be drawn again after that, so the page stops
        asking rather than calling draw() on every scroll frame forever. */
@@ -1067,7 +1075,7 @@
       return p;
     }
 
-    const UNIFORMS = ['uRes', 'uT', 'uG', 'uCell', 'uGap', 'uGain', 'uMode',
+    const UNIFORMS = ['uRes', 'uOrigin', 'uT', 'uG', 'uCell', 'uGap', 'uGain', 'uMode',
                       'uSection', 'uTex', 'uLat', 'uFov', 'uMouse', 'uAct',
                       'uTime', 'uAmb', 'uInk', 'uInk2', 'uPaper', 'uTint',
                       'uShadow', 'uTone', 'uResolve', 'uPrint', 'uCopy', 'uLift'];
@@ -1181,9 +1189,28 @@
       const dpr = Math.min(root.devicePixelRatio || 1, 2);
       const nw = Math.round(canvas.clientWidth * dpr);
       const nh = Math.round(canvas.clientHeight * dpr);
-      if (nw === w && nh === h) return;
-      w = canvas.width = nw; h = canvas.height = nh;
-      gl.viewport(0, 0, w, h);
+      /* Snapped to a whole number of cells. The lattice is anchored to
+         gl_FragCoord, which counts from the BUFFER's bottom, so a bleed that is
+         not a whole multiple of the cell shifts every mark in the frame by the
+         remainder and the picture no longer lands where it was tuned. */
+      /* Off the root as a plain attribute rather than as the custom property
+         that carries the same number to CSS. This runs every frame, and
+         getComputedStyle would flush style each time; pin() writes both.
+         Checked independently of the buffer's size because the two can change
+         and cancel — turn the phone and lvh grows by what the chrome gives
+         back — leaving a canvas the same height with a different frame in it. */
+      const cellPx = 12 * dpr;
+      const want = Math.max(0,
+        +document.documentElement.dataset.filmBleed || 0) * dpr;
+      const nb = Math.min(nh - 1, Math.round(want / cellPx) * cellPx);
+      if (nw === w && nh === h && nb === bleed) return;
+      if (nw !== w || nh !== h) {
+        /* Assigning width/height clears the drawing buffer, so only when it
+           actually moved — a bleed that changed alone must not cost a frame. */
+        w = canvas.width = nw; h = canvas.height = nh;
+        gl.viewport(0, 0, w, h);
+      }
+      bleed = nb; frameH = h - nb;
     }
 
     /* Both programs read the same picture, so both take the same uniforms.
@@ -1193,7 +1220,8 @@
       gl.useProgram(p);
       gl.uniform1i(uu.uTex, 0);
       gl.uniform1i(uu.uLat, 1);
-      gl.uniform2f(uu.uRes, w, h);
+      gl.uniform2f(uu.uRes, w, frameH);
+      gl.uniform2f(uu.uOrigin, 0, bleed);
       gl.uniform1f(uu.uT, t);
       gl.uniform1f(uu.uG, o.g != null ? o.g : t);
       gl.uniform1f(uu.uCell, (o.cell != null ? o.cell : 12) * dpr);
@@ -1269,5 +1297,157 @@
     return { draw, setWord, gl, canvas, isDead: () => dead, isLost: () => lost };
   }
 
-  root.PTLField = { mount, CLOSE };
+  /* Resolve a CSS length the only way that cannot be wrong about it: lay one
+     out and measure it. lvh in particular is not derivable from anything on
+     window — on iOS 26 innerHeight is 714 with the toolbar out and 754 with it
+     collapsed, and 754 is the number that matters. */
+  function resolve(css) {
+    const p = document.createElement('div');
+    p.style.cssText = 'position:absolute;top:-9999px;left:0;width:1px;height:' + css;
+    document.body.appendChild(p);
+    const h = p.getBoundingClientRect().height;
+    p.remove();
+    return h;
+  }
+
+  /* PIN — hand the film to the page's own scrolling so it can reach the edges.
+     ---------------------------------------------------------------------------
+     A full-screen `position: fixed` layer is clipped to the layout viewport on
+     iOS 26, which is why the film stops short of the bottom of the screen and
+     the page's own black shows under Safari's floating toolbar. Measured every
+     way that seemed likely — fixed with both edges, fixed with an explicit
+     height past lvh, an absolutely positioned child hanging out of a fixed
+     parent — and all three are cut at the same line. Only an absolutely
+     positioned layer in the scrolling content paints through, so the film is
+     unfixed and carried back to the viewport by a scroll-driven animation.
+
+     Everything here is measured rather than assumed: the page cannot know how
+     tall the chrome is and neither can a constant. Returns whether the offer
+     was taken, so the caller can tell. */
+  function pin(el) {
+    if (!el) return false;
+    const doc = document.documentElement;
+    const CELL = 12;               // CSS px — the cell both pages draw with
+
+    /* THE ENGINE, THEN THE DEVICE, BEFORE THE GAP IS ALLOWED TO MEAN ANYTHING.
+
+       WebKit, because this is a WebKit bug: nothing else clips a fixed layer to
+       the layout viewport, and unfixing the film anywhere else buys a scroll
+       animation and a taller buffer to fix nothing. `-webkit-touch-callout` is
+       the sentinel — measured, not assumed: false in Blink (Chrome 148) and
+       true on iOS 26.5. iOS Chrome and Firefox are WebKit too and have the same
+       bar, so they are meant to be in.
+
+       Then a touch device, because on a desktop `screen.height` is the MONITOR
+       and the viewport is a window inside it: the gap would be large, arbitrary
+       and would change when the window was dragged. Android needs the engine
+       check for the same reason in miniature — screen.height there takes in the
+       system status and navigation bars, which 100lvh never covers, so the gap
+       is positive on a browser that has no overlay toolbar to paint under. */
+    if (typeof CSS === 'undefined' || !CSS.supports ||
+        !CSS.supports('-webkit-touch-callout: none')) return false;
+    if (root.matchMedia &&
+        !root.matchMedia('(hover: none) and (pointer: coarse)').matches) return false;
+
+    /* BOTH NUMBERS, TOGETHER, EVERY TIME. They move for the same reasons: turn
+       the phone and lvh is a different length AND the chrome it leaves room for
+       is a different size. Republishing the travel alone — which is what the
+       first cut of this did — leaves the film cut to a portrait pocket in
+       landscape until the page is reloaded.
+
+       WHAT IS BEING COVERED. Not a safe-area inset: env(safe-area-inset-bottom)
+       is 0 here, because the toolbar's pocket is chrome and not a notch. It is
+       the difference between the LARGEST the layout viewport ever gets and the
+       screen. Zero or less on anything that does not overlay its chrome — which
+       makes this its own feature gate, and a truer one than sniffing an engine.
+
+       HOW FAR THE FILM TRAVELS, measured off something it cannot move.
+       Read from documentElement.scrollHeight this feeds back on itself: the
+       film is a viewport plus a bleed tall, so parked at the end it hangs that
+       bleed past the document, the document grows, the distance is republished
+       longer, and the film reaches further still. Solving for a fixed point
+       diverges — there isn't one — and the shipped version drifted 184px.
+       body's BORDER BOX is immune: an absolutely positioned child overflows it
+       without changing it. Measured on both pages, front and back: grew 0 the
+       whole way down, and travel steady at the value it was first given.
+
+       WHAT THIS DOES NOT FIX, and nothing can: at the very END of the document
+       the toolbar's pocket is below the last pixel there is. The film parked at
+       full travel reaches a bleed past the copy, the document takes that on
+       (measured: about grew 104 there, once, without feeding back), and the
+       pocket moves down with it and stays out of reach. So the bar loses the
+       film for the last ~120px of scroll and nothing else. Painting there would
+       need a layer that is neither in the document nor clipped to the layout
+       viewport, and on this engine there isn't one. */
+    let lastBleed = '', lastTravel = '', taken = false, refused = false;
+
+    const strip = () => {
+      delete doc.dataset.filmPinned;
+      delete doc.dataset.filmBleed;
+      doc.style.removeProperty('--film-bleed');
+      doc.style.removeProperty('--film-travel');
+      lastBleed = lastTravel = '';
+      taken = false;
+    };
+
+    const measure = () => {
+      if (refused) return false;
+      const lvh = resolve('100lvh');
+      const gap = (root.screen ? root.screen.height : 0) - lvh;
+      /* Snapped UP to a whole cell. The lattice counts from the BUFFER's
+         bottom, so a bleed that is a fraction of a cell shifts every mark in
+         the frame off the composition it was tuned against. */
+      const bleed = lvh > 0 && gap > 0 ? Math.ceil(gap / CELL) * CELL : 0;
+      /* Nothing overlaying the page in THIS orientation. Put the film back and
+         say so — but keep listening, because a phone that is in landscape now
+         can be in portrait in a second, and bailing out of pin() entirely here
+         is what would leave it fixed for the rest of the session. */
+      if (!bleed) {
+        if (taken) strip();
+        return false;
+      }
+      if (bleed + 'px' !== lastBleed) {
+        lastBleed = bleed + 'px';
+        /* Published twice, on the root, for two readers that cannot share one
+           form. CSS needs a length to put in a calc; the renderer needs a
+           number it can read on every frame, and reading a custom property
+           means getComputedStyle, which flushes style. An attribute is a plain
+           property access. Written here and nowhere else, so they cannot drift. */
+        doc.style.setProperty('--film-bleed', lastBleed);
+        doc.dataset.filmBleed = bleed;
+      }
+      const t = Math.max(0, Math.round(
+        document.body.getBoundingClientRect().height - lvh)) + 'px';
+      if (t !== lastTravel) {
+        lastTravel = t;
+        doc.style.setProperty('--film-travel', t);
+      }
+      if (!taken) {
+        doc.dataset.filmPinned = '';
+        if (getComputedStyle(el).position !== 'absolute') {
+          /* The page did not take it — an engine without the @supports, or
+             markup older than this script. That is a fact about the stylesheet
+             and turning the phone will not change it, so stop asking; the
+             geometry case above is the one worth retrying. */
+          refused = true;
+          strip();
+          return false;
+        }
+        taken = true;
+      }
+      return true;
+    };
+
+    /* Installed whatever the first measurement said. The gap is a property of
+       the orientation, not of the device, so a page that opens in landscape
+       with nothing to paint under must still be listening when it is turned. */
+    const pinned = measure();
+
+    root.addEventListener('resize', measure);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(measure);
+    if (root.ResizeObserver) new ResizeObserver(measure).observe(document.body);
+    return pinned;
+  }
+
+  root.PTLField = { mount, pin, CLOSE };
 })(window);
