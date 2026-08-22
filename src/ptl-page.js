@@ -69,12 +69,12 @@
 
   /* THE FILM'S LENGTH IS NOT A FUNCTION OF THE LIVE VIEWPORT.
      ------------------------------------------------------------------------
-     The body's height is set once, in `vh`, which on a phone resolves to the
-     LARGE viewport — the one with the browser chrome retracted — and never
-     changes again. innerHeight does: the URL bar hides and returns as you
-     scroll, by 56-81px. So `film = const - TAIL*innerHeight` moved under the
-     reader, and with it `p = scrollY/film`, which is the clock EVERYTHING on
-     this page is a pure function of.
+     The body's height is a multiple of the LARGE viewport — the one with the
+     browser chrome retracted — because `vh` is what it is written in, and it
+     does not move when the chrome does. innerHeight does: the URL bar hides
+     and returns as you scroll, by 56-81px. So `film = const - TAIL*innerHeight`
+     moved under the reader, and with it `p = scrollY/film`, which is the clock
+     EVERYTHING on this page is a pure function of.
 
      Sixteen separate defects were that one line. The toolbar returning at the
      bottom took the closing link from opacity 1.000 to 0.137 with no scroll
@@ -83,9 +83,36 @@
      boundary flipped the section index with dy = 0. Rotation and folding
      rescaled the clock by up to 2.16x.
 
-     So the film is measured against a latched large-viewport height instead.
-     It is re-latched only when the WIDTH changes, which is what distinguishes
-     a real orientation change from the toolbar sliding.
+     So the film is measured against a latched large-viewport height instead,
+     probed against the same viewport the document's own height is written
+     against, so that the two are describing one page rather than two.
+
+     LATCHED IS NOT CONSTANT, and reading it as though it were was the second
+     defect. The re-latch used to be gated on the WIDTH, on the argument that
+     the film's length is a function of the latch and of the weights and that
+     neither can move without the width moving. That is true of the weights,
+     which come off a max-width query. It is false of the latch on a DESK,
+     where the large viewport IS the window and follows every drag of its
+     bottom edge — and the document followed too, because CSS re-resolves `vh`,
+     while the film sat behind the guard and did not. Loaded at 1400x3200 and
+     dragged to 1400x800, the document correctly shrank from 40672px to 10168
+     and the film went on measuring itself against 35200 of them, four times
+     the whole of the page that was left: `p` topped out at 0.25, so the reader
+     reached the bottom of the document on BEAT 02 of 06 with the closing link
+     at --ending 0.000 and the film simply never finished. Growing inverts it
+     — the film ends at 25% of the scroll range and the rest of the page is
+     dead. Five of the ten acceptance cases were that one guard. The same drag
+     one pixel narrower was correct, which is the proof that the width was
+     never the thing being tested: it was standing in for "the large viewport
+     may have moved", which is right on a phone and wrong on a desk.
+
+     So the latch is re-taken on every measure, and the probe is what tells a
+     real change of the large viewport from the toolbar sliding: the bar moves
+     innerHeight by 56-81px and leaves the probe exactly where it was, so a
+     toolbar slide re-latches the identical number and is a no-op by arithmetic
+     rather than by guard. What is then DONE with that number — when the reader
+     is moved and when they are left alone — is the note above the resize
+     listener.
 
      NOT `dvh`: measured, that is six times worse, because the document's own
      height then tracks the chrome too. The film's length simply must not be a
@@ -93,11 +120,31 @@
   let LVH = 0;
   function latchLVH() {
     const p = document.createElement('div');
-    p.style.cssText = 'position:absolute;top:0;left:0;width:0;height:100lvh;' +
+    /* TWO DECLARATIONS, AND THE CASCADE IS THE WHOLE FALLBACK. An engine that
+       knows `lvh` drops the first, an engine that does not drops the second,
+       and both name the large viewport. What that replaces is `100lvh` alone
+       with `|| innerHeight` written under it — which is the LIVE viewport, the
+       one number that must never be in this clock, and it was survivable only
+       while the latch ran once per width change. Re-latching per measure would
+       have had pre-2022 engines re-reading the URL bar itself, on every slide
+       of it, and Chrome could never have shown that because Chrome has the
+       unit. `vh` cannot be a worse answer than innerHeight: it is the unit the
+       document's own height is written in, so an engine on which it tracked
+       the chrome would have had a document tracking the chrome all along. */
+    p.style.cssText = 'position:absolute;top:0;left:0;width:0;' +
+                      'height:100vh;height:100lvh;' +
                       'visibility:hidden;pointer-events:none';
     document.body.appendChild(p);
-    LVH = p.offsetHeight || innerHeight;   // 100lvh is unsupported pre-2022
+    /* Read fractionally, because CSS `vh` is fractional and this number has to
+       agree with a document written in it. offsetHeight rounds: at 390x844
+       under a 1.1 device scale factor 100vh is 844.545 and offsetHeight calls
+       it 845, which is 7.0px of film disagreeing with a document that used the
+       exact one. */
+    const h = p.getBoundingClientRect().height;
     p.remove();
+    /* A probe that comes back with nothing keeps the last good latch; only at
+       load, with nothing to keep, is the live viewport better than zero. */
+    LVH = h > 0 ? h : (LVH || innerHeight);
   }
   latchLVH();
   /* HOW MUCH SCROLL EACH BEAT COSTS, and the two directions between that and
@@ -473,10 +520,23 @@
     palette();
     phone = getComputedStyle(document.documentElement)
               .getPropertyValue('--phone').trim() === '1';
+    /* THE LARGE VIEWPORT IS RE-READ HERE, on the coalesced path, and that is
+       what makes re-reading it affordable at all. measure() already runs on
+       every resize — `remeasure` is set outside every guard, because type is
+       sized in vh and two of the stylesheet's queries are keyed on height —
+       and it already forces layout, so the probe rides along with a flush that
+       was happening anyway. In the resize listener it would be a forced layout
+       per EVENT instead, and a window edge under a hand fires those
+       continuously: 14 of them for a 280px drag in the harness's 8px steps,
+       and far more than that from a real one. */
+    latchLVH();
     /* The weights are the phone's, so the document's own height is too — it
        is set here rather than once at load because crossing the breakpoint
-       changes what the film costs. Still `vh`, still the large viewport,
-       still not a function of the live one: see the note above filmLen. */
+       changes what the film costs. Still `vh`, still the large viewport, still
+       not a function of the live one: see the note above filmLen. It stays in
+       `vh` rather than in the latched pixels on purpose — CSS re-resolves it
+       at the resize itself, so the scroll range is right even in the frames
+       the main thread is too busy to hand us. */
     weigh();
     document.body.style.height = ((SUM * SPAN + 1 + TAIL) * 100) + 'vh';
     /* The CSS default is 1 and .cta carries a transition, so on first entering
@@ -966,7 +1026,7 @@
      decision now sits in the head of index.html and this line is gone with it.
      What is still owed from this file is the report that it finished, at the
      very bottom. */
-  let raf = 0, shown = -1, remeasure = false, lastW = innerWidth;
+  let raf = 0, shown = -1, remeasure = false;
   let endU = -1;                          // last published --ending
   let resU = '';                          // last published --resolved
   /* True once the film has finished closing. Past PTLField.CLOSE.TO the
@@ -987,8 +1047,17 @@
      shorter — hands the handler a pixel the reader was never at. Measured at
      1280x800 rotating to 390x664: the end of the finale, y = 8785, arrives as
      7775, and so does every other position in the last 1600px of the page.
-     Re-deriving the beat from that is re-deriving it from the clamp. */
-  let lastBeat = [0, 0], lastTail = 0;
+     Re-deriving the beat from that is re-deriving it from the clamp.
+
+     AND WITH THE RULER IT WAS MEASURED WITH. `lastFilm` is the film's length
+     in pixels at the moment this beat was drawn, and it is the only honest
+     thing to compare a newly measured film against: measure() is not called by
+     the resize path alone — document.fonts.ready calls it, and so do both
+     WebGL context handlers — so "the film as it was before the most recent
+     measure" can already BE the film after the resize, and a gate built on
+     that would quietly decide nothing had changed and leave the reader where
+     the clamp put them. */
+  let lastBeat = [0, 0], lastTail = 0, lastFilm = 0;
 
   function render() {
     const max  = document.documentElement.scrollHeight - innerHeight;
@@ -1016,6 +1085,7 @@
     const ct    = t + tailU * TAIL_T;
     lastBeat = [idx, t];
     lastTail = tailU;
+    lastFilm = film;
 
     if (idx !== shown) {
       blocks.forEach((b, i) => b.el.classList.toggle('on', i === idx));
@@ -1119,10 +1189,23 @@
       remeasure = false;
       measure();
       if (keepP != null) {
-        const max1 = document.documentElement.scrollHeight - innerHeight;
         const f1 = filmLen();
-        window.scrollTo(0, Math.min(max1,
-          f1 * pOf(keepP[0], keepP[1]) + keepTail * Math.max(max1 - f1, 0)));
+        /* Only when the film is a different number of pixels from the one the
+           captured beat was drawn against. Where it is not, the restore is the
+           identity — pOf is beat()'s inverse — so the test skips nothing that
+           would otherwise have happened, and it is what keeps a URL bar out of
+           the reader's gesture: see the note above the listener. */
+        if (f1 !== keepFilm) {
+          const max1 = document.documentElement.scrollHeight - innerHeight;
+          window.scrollTo(0, Math.min(max1,
+            f1 * pOf(keepP[0], keepP[1]) + keepTail * Math.max(max1 - f1, 0)));
+          /* And the ambient clock must not hear that as a flick. `vel` below is
+             fed by the distance since lastY, and one 1400x3200 -> 800 restore
+             arrives as 13.8 of it — enough to pin the field's rate at its 8.7x
+             ceiling for a quarter of a second. It only ever cost a rotation
+             before. It costs every window drag now. */
+          lastY = window.scrollY;
+        }
         keepP = null;
       }
     }
@@ -1160,33 +1243,51 @@
      AND NOT MEASURED HERE AT ALL. This block used to work it out from
      scrollY, which is wrong twice over: latchLVH() was the first thing in it,
      so filmLen() below already answered for the viewport being arrived at and
-     the restore came out as the identity — in every case, since a width that
-     does not change does not change the film either. Nothing looked wrong,
-     because putting the reader back where they already were is exactly what
-     doing nothing looks like. And by the time this runs scrollY has been
-     clamped to a document that has already changed size. So the position is
-     simply the one the last frame drew; see lastBeat above.
+     the restore came out as the identity. Nothing looked wrong, because
+     putting the reader back where they already were is exactly what doing
+     nothing looks like. And by the time this runs scrollY has been clamped to
+     a document that has already changed size. So the position is simply the
+     one the last frame drew; see lastBeat above.
 
-     ONLY WHEN THE WIDTH MOVES, THOUGH, and that is not a tidiness clause.
-     The film's length is a function of the latched large-viewport height and
-     of the weights, and neither can move without the width moving — the
-     weights come off a max-width query. So a height-only resize has nothing
-     to re-anchor. It also has the reader's thumb on the glass: browser chrome
-     retracting IS a resize, it arrives mid-gesture, and scroll and resize are
-     both dispatched before the frame's rAF callbacks run. In that gap scrollY
-     already holds the new position while the last rendered frame still
-     describes the old one, so re-anchoring to it throws the gesture away.
-     Measured, before this guard: the whole of it, 600px of 600px, on every
-     beat, and worse where nothing is redrawing between frames — reduced
-     motion, or no WebGL to breathe. */
-  let keepP = null, keepTail = 0;
+     CAPTURED ON EVERY RESIZE, SPENT ONLY WHEN THE FILM'S LENGTH MOVED. The two
+     halves are split because they answer to different things. Capturing is
+     three variable reads and no layout, so there is nothing to be saved by
+     guarding it, and it has to happen HERE, ahead of everything else: the
+     browser dispatches scroll straight behind this event with scrollY already
+     clamped into the shortened document, and the ambient path in the scroll
+     listener draws through tick() without ever reaching frame(), so it would
+     overwrite the last frame's position with that clamped pixel before the
+     restore could read it. The film's length is captured alongside the beat,
+     off the same frame, so what frame() compares against is the ruler this
+     position was actually measured with.
+
+     SPENDING is the half that can do harm, and the width was the wrong gate
+     for it in both directions. It missed the desktop drag, which moves the
+     large viewport and the film with it while the reader's pixel stays where
+     it was — the note above latchLVH has what that cost, and it is the whole
+     of this change. And it fired on width changes that move neither the latch
+     nor the weights. The honest test is the film's own length in pixels,
+     SUM*SPAN*LVH: it catches a height drag, which moves LVH at a constant SUM,
+     and it catches a crossing of the 560px breakpoint, which moves SUM from 6
+     to 8.4375 at a constant LVH and is worth 40% of the film — which a test on
+     the height alone would have sailed straight past.
+
+     And it still excludes the case the width guard was written for, which is
+     the one with the reader's thumb on the glass: browser chrome retracting IS
+     a resize, it arrives mid-gesture, and scroll and resize are both dispatched
+     before the frame's rAF callbacks run. In that gap scrollY already holds the
+     new position while the last rendered frame still describes the old one, so
+     re-anchoring to it throws the gesture away — measured, ungated: the whole
+     of it, 600px of 600px, on every beat, and worse where nothing is redrawing
+     between frames, which is reduced motion or no WebGL to breathe. A toolbar
+     slide moves innerHeight and moves neither the probe nor the weights, so the
+     film comes back the same length to the pixel and nothing is spent. That is
+     exactly the case the width was standing in for, named directly instead. */
+  let keepP = null, keepTail = 0, keepFilm = 0;
   addEventListener('resize', () => {
-    if (innerWidth !== lastW) {
-      lastW = innerWidth;
-      keepP = lastBeat;
-      keepTail = lastTail;
-      latchLVH();
-    }
+    keepP    = lastBeat;
+    keepTail = lastTail;
+    keepFilm = lastFilm;
     remeasure = true;
     if (!raf) raf = requestAnimationFrame(frame);
   });
@@ -1222,6 +1323,15 @@
      what makes this the right grid to compare two builds on. On the last
      section t may run past 1, into the tail, up to 1 + TAIL_T. */
   window.AT = (i, t) => {
+    /* Settle first. The large viewport is latched in measure(), which runs on
+       the coalesced rAF slot, so between a resize and the next frame filmLen()
+       would still answer for the size the page has left while the document
+       already answers for the size it has arrived at — and a seek that lands
+       on the wrong pixel silently changes the units every render-equivalence
+       measurement is quoted in. The pending re-anchor goes with it, because
+       this is about to place the reader itself. Idle, `remeasure` is false and
+       this is nothing. */
+    if (remeasure) { remeasure = false; measure(); keepP = null; }
     const max  = document.documentElement.scrollHeight - innerHeight;
     const film = filmLen();
     /* Past the film there are no beats left to be in, only the tail, so t
