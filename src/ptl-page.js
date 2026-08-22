@@ -1323,15 +1323,31 @@
      what makes this the right grid to compare two builds on. On the last
      section t may run past 1, into the tail, up to 1 + TAIL_T. */
   window.AT = (i, t) => {
-    /* Settle first. The large viewport is latched in measure(), which runs on
-       the coalesced rAF slot, so between a resize and the next frame filmLen()
-       would still answer for the size the page has left while the document
-       already answers for the size it has arrived at — and a seek that lands
-       on the wrong pixel silently changes the units every render-equivalence
-       measurement is quoted in. The pending re-anchor goes with it, because
-       this is about to place the reader itself. Idle, `remeasure` is false and
-       this is nothing. */
-    if (remeasure) { remeasure = false; measure(); keepP = null; }
+    /* MEASURE FIRST, EVERY TIME, rather than asking whether a resize has been
+       heard yet. The large viewport is latched in measure(), which runs on the
+       coalesced rAF slot, so between a resize and the next frame filmLen()
+       still answers for the size the page has left while the document already
+       answers for the size it has arrived at — and a seek that lands on the
+       wrong pixel silently changes the units every render-equivalence
+       measurement is quoted in.
+
+       Gating that on `remeasure` looked equivalent and was not. The flag is
+       set by the resize LISTENER, but the geometry changes before the event is
+       delivered, so a harness that seeks straight after resizing races the
+       dispatch and the flag is false exactly when it is needed. Measured, 8
+       runs of seek-immediately-after-resize at 1400x3200 -> 1400x800: gated, 5
+       of 8 landed on the right frame while the other 3 landed 4235px away and
+       were then re-anchored to 2791px past it on the far side; ungated, 8 of
+       8. Reading the DOM cannot lose that race, because it does not wait to be
+       told.
+
+       The pending re-anchor goes with it — this is about to place the reader
+       itself — and once the seek itself is measured right the resize's own
+       re-anchor is the identity anyway, since the beat it would restore is the
+       one this just drew. The cost is one forced layout per seek, on a hook
+       nothing in the page calls: 33 seeks on an idle page come back
+       bit-identical to the gated version. */
+    remeasure = false; measure(); keepP = null;
     const max  = document.documentElement.scrollHeight - innerHeight;
     const film = filmLen();
     /* Past the film there are no beats left to be in, only the tail, so t
