@@ -13,7 +13,7 @@
   },
   "devDependencies": {
     "jscpd": "^5.0.0",
-    "knip": "^5.39.2",
+    "knip": "^6.0.0",
     "oxlint": "^0.18.0"
   }
 }
