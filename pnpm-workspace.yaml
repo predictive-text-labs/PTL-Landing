@@ -1,0 +1,2 @@
+# Keeps pnpm-lock.yaml a single YAML document so GitHub's dependency graph and Dependabot alerts can read it (pnpm/pnpm#13805, dependabot/dependabot-core#15904).
+pmOnFail: ignore
