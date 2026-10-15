@@ -368,6 +368,56 @@
         height: 100%;
         display: block;
       }
+      /* THE FILM, UNFIXED, SO IT REACHES THE EDGES.
+     --------------------------------------------------------------------------
+     iOS 26 draws a floating toolbar over the bottom of the screen and clips a
+     `position: fixed` layer to the band above it, so the film stopped 120pt
+     short and the page's own black was what showed through the glass. Measured
+     on iOS 26.5: screen 874, 100lvh 754, 100svh 714, and
+     env(safe-area-inset-bottom) 0 — the pocket is chrome, not a notch, so no
+     inset and no viewport unit reaches it.
+
+     Ruled four layouts against that line and sampled the pixels. `fixed` with
+     both edges, `fixed` with an explicit height past lvh, and an absolutely
+     positioned child hanging out of a fixed parent are all cut at exactly the
+     same place. Only an absolutely positioned layer in the scrolling content
+     paints through — and the glass is translucent enough to tint with it.
+
+     So the film is unfixed, given a bleed to hang past the frame, and carried
+     back to the viewport by the scroll itself. Every number comes from
+     PTLField.pin, which measures the machine rather than trusting a constant:
+     nothing here fires until it has set both properties AND this rule has
+     matched, and it checks that it did.
+
+     No fallback below: the attribute is only ever set by a script that has
+     already proved the layout took. Without the script the film stays fixed,
+     which is where it started. */
+      @supports (height: 100lvh) and (animation-timeline: scroll()) {
+        :root[data-film-pinned] .stage {
+          position: absolute;
+          top: 0;
+          bottom: auto;
+          height: calc(100lvh + var(--film-bleed, 0px));
+          animation: film-follow linear both;
+          animation-timeline: scroll(root block);
+          will-change: transform;
+        }
+        /* The canvas takes the taller box — it is the film, and the bleed is
+           what it is for. Everything else in .stage is measured in PERCENTAGES
+           OF THE FRAME and has to stay that way: the dome's mask is centred at
+           50% 100%, meaning the bottom of what the reader SEES, and .deep's ramp
+           runs from half of it. Left to inherit the taller box they would both
+           quietly slide the bleed down a picture they were tuned against. */
+        :root[data-film-pinned] .stage > .deep,
+        :root[data-film-pinned] .stage > .veil {
+          bottom: var(--film-bleed, 0px);
+        }
+      }
+      @keyframes film-follow {
+        to {
+          transform: translateY(var(--film-travel, 0px));
+        }
+      }
       /* The type is NOT inside .stage. .stage has to clip — it holds the canvas —
      and with the copy inside it, raising the browser's base font size grew the
      bottom-anchored block up past the top edge and the overflow rule deleted

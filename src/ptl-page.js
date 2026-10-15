@@ -201,6 +201,20 @@
      out of reach, because a beat above it got longer. */
   const TAIL_T = TAIL / SPAN;
 
+  /* THE PAGE'S OWN LENGTH, which stops being the DOCUMENT'S the moment the film
+     is unfixed — see PTLField.pin. The film is then a viewport plus a bleed
+     tall, so parked at the end of its travel it hangs that bleed past the copy
+     and scrollHeight takes it on: measured, about picked up 104px there. Left
+     reading scrollHeight, every clock below would want that much more scrolling
+     before p reached 1, and the last beat and the closing link would arrive a
+     toolbar's height late.
+
+     body's BORDER BOX does not move — an absolutely positioned child overflows
+     it without changing it — and the two are identical wherever the film is
+     still fixed, which is everywhere but iOS. Measured with it fixed: 12953 and
+     12953 here, 4287 and 4287 on about. */
+  const pageLen = () => Math.round(document.body.getBoundingClientRect().height);
+
   const clamp    = v => (v < 0 ? 0 : v > 1 ? 1 : v);
   const outCubic = v => 1 - Math.pow(1 - v, 3);
   /* Quadratic on the way out, cubic in. A cubic exit spends most of its time
@@ -1060,7 +1074,7 @@
   let lastBeat = [0, 0], lastTail = 0, lastFilm = 0;
 
   function render() {
-    const max  = document.documentElement.scrollHeight - innerHeight;
+    const max  = pageLen() - innerHeight;
     /* The film's own scroll, which is the document minus the tail. Everything
        the film does is a function of THIS, so the tail cannot stretch a single
        cue: past `film`, p is pinned at 1 and every track is already at its end
@@ -1196,7 +1210,7 @@
            would otherwise have happened, and it is what keeps a URL bar out of
            the reader's gesture: see the note above the listener. */
         if (f1 !== keepFilm) {
-          const max1 = document.documentElement.scrollHeight - innerHeight;
+          const max1 = pageLen() - innerHeight;
           window.scrollTo(0, Math.min(max1,
             f1 * pOf(keepP[0], keepP[1]) + keepTail * Math.max(max1 - f1, 0)));
           /* And the ambient clock must not hear that as a flick. `vel` below is
@@ -1313,6 +1327,21 @@
      would have given it, which is only knowable once Cormorant has loaded. */
   document.fonts.ready.then(() => { measure(); frame(); });
   measure();
+  /* AFTER the first measure() and never before: that is where the document's
+     height is set now, and pin measures the document. It re-reads on its own
+     after this — resize, fonts, and a ResizeObserver on body — which is what
+     covers measure() running again and giving the page a different height when
+     the phone breakpoint is crossed.
+
+     Keyed to the FIELD, because unfixing the stage buys a composited layer, a
+     scroll animation and a taller buffer, all to carry nothing if mount()
+     returned null for want of WebGL2. Keyed to the FUNCTION as well, because
+     these two files share no version with each other or with the markup that
+     loads them: a `pin` that is merely absent has to leave the film where it
+     was rather than throw halfway through setup. */
+  if (field && typeof PTLField.pin === 'function') {
+    PTLField.pin(document.querySelector('.stage'));
+  }
   lastY = window.scrollY;
   frame();
   tick();          // and the field starts breathing, with nobody having done anything
@@ -1348,7 +1377,7 @@
        nothing in the page calls: 33 seeks on an idle page come back
        bit-identical to the gated version. */
     remeasure = false; measure(); keepP = null;
-    const max  = document.documentElement.scrollHeight - innerHeight;
+    const max  = pageLen() - innerHeight;
     const film = filmLen();
     /* Past the film there are no beats left to be in, only the tail, so t
        continues in the units ct is measured in — which is the only clock
